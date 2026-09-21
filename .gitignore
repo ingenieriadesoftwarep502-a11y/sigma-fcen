@@ -1,0 +1,26 @@
+# Python / Django
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+staticfiles/
+media/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+build/
+
+# IDEs / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
