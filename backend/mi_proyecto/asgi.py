@@ -1,16 +1,9 @@
-"""
-ASGI config for mi_proyecto project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
-"""
-
-import os
+"""ASGI entry point. DJANGO_ENV selects the settings module (see mi_proyecto.bootstrap)."""
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mi_proyecto.settings')
+from mi_proyecto.bootstrap import configure_settings_module
+
+configure_settings_module()
 
 application = get_asgi_application()

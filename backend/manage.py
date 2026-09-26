@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
-import os
+
 import sys
 
 
-def main():
-    """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mi_proyecto.settings')
+def main() -> None:
+    """Run administrative tasks with the settings module selected by DJANGO_ENV."""
+    from mi_proyecto.bootstrap import configure_settings_module
+
+    configure_settings_module()
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -18,5 +20,5 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
