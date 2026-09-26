@@ -1,0 +1,28 @@
+# Ruff linter and formatter configuration (RNF-CAL-003).
+target-version = "py311"
+line-length = 100
+extend-exclude = [".venv", "**/migrations/*"]
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "DJ",   # flake8-django
+    "S",    # flake8-bandit
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+]
+
+[lint.per-file-ignores]
+# assert is the pytest idiom; test fixtures use throwaway credentials.
+"tests/**" = ["S101", "S105", "S106"]
+
+[lint.isort]
+known-first-party = ["mi_proyecto", "shared", "apps", "tests"]
+
+[format]
+quote-style = "double"

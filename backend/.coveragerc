@@ -1,0 +1,14 @@
+[run]
+branch = True
+source =
+    mi_proyecto
+    shared
+    apps
+omit =
+    */migrations/*
+
+[report]
+# Minimum coverage threshold. NOTE: 80 is a provisional value, not yet formally agreed by the team.
+fail_under = 80
+show_missing = True
+skip_covered = False
