@@ -171,14 +171,14 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 
 | ID | Categoría | Requisito | Criterio verificable | Estado |
 |---|---|---|---|---|
-| RNF-SEC-001 | Seguridad | Ningún secreto en el repositorio; toda configuración sensible por variables de entorno | `git grep` sin coincidencias de secretos; `SECRET_KEY` leída del entorno | `[PENDIENTE]` ADR-002 |
+| RNF-SEC-001 | Seguridad | Ningún secreto en el repositorio; toda configuración sensible por variables de entorno | `git grep` sin coincidencias de secretos; `SECRET_KEY` leída del entorno | `[CONFIRMADO]` ADR-002 |
 | RNF-SEC-002 | Seguridad | Contraseñas almacenadas con el hasher por defecto de Django (PBKDF2) | Revisión de `PASSWORD_HASHERS` | `[PROPUESTA]` |
 | RNF-SEC-003 | Seguridad | Todo endpoint distinto de autenticación exige usuario autenticado | Prueba automatizada: cada endpoint responde 401 sin credenciales | `[PROPUESTA]` |
 | RNF-SEC-004 | Seguridad | Autorización verificada por rol en cada endpoint, no solo en la interfaz | Prueba por rol y endpoint que confirma 403 | `[PENDIENTE]` ADR-008 |
-| RNF-SEC-005 | Seguridad | CORS restringido a los orígenes de `CORS_ALLOWED_ORIGINS` | Revisión de configuración + prueba | `[PENDIENTE]` ADR-002 |
-| RNF-CAL-001 | Calidad | Cobertura mínima del 80 % en la capa de dominio y servicios | Reporte de `pytest-cov` en CI | `[PENDIENTE]` ADR-004 |
+| RNF-SEC-005 | Seguridad | CORS restringido a los orígenes de `CORS_ALLOWED_ORIGINS` | Revisión de configuración + prueba | `[CONFIRMADO]` ADR-002 |
+| RNF-CAL-001 | Calidad | Cobertura mínima del 80 % en la capa de dominio y servicios | Reporte de `pytest-cov` en CI | `[PENDIENTE]` — herramienta confirmada (ADR-004); el umbral del 80 % aún no está acordado formalmente |
 | RNF-CAL-002 | Calidad | Toda regla de negocio `RN-xxx` con prueba de camino feliz y de violación | Matriz de trazabilidad §8 completa | `[PROPUESTA]` |
-| RNF-CAL-003 | Calidad | Linter y verificación de tipos sin errores en cada PR | CI en verde | `[PENDIENTE]` ADR-006 |
+| RNF-CAL-003 | Calidad | Linter y verificación de tipos sin errores en cada PR | CI en verde | `[CONFIRMADO]` ADR-006 |
 | RNF-PER-001 | Rendimiento | Consulta de disponibilidad responde en menos de 500 ms con 1 000 franjas | Prueba de carga básica | `[PROPUESTA]` |
 | RNF-PER-002 | Rendimiento | Sin consultas N+1 en los listados principales | Revisión con `django-debug-toolbar` o assert de número de queries | `[PROPUESTA]` |
 | RNF-USA-001 | Usabilidad | Interfaz responsiva desde 360 px de ancho | Verificación manual documentada | `[PROPUESTA]` |
@@ -187,7 +187,7 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 | RNF-MAN-001 | Mantenibilidad | Lógica de negocio fuera de vistas y serializers | Revisión arquitectónica en PR | `[PROPUESTA]` |
 | RNF-MAN-002 | Mantenibilidad | API versionada bajo el prefijo `/api/v1/` | Revisión de rutas | `[PROPUESTA]` |
 | RNF-OBS-001 | Observabilidad | Registro estructurado de errores con identificador de correlación | Revisión de configuración de logging | `[PROPUESTA]` |
-| RNF-OPS-001 | Operación | Entorno reproducible con un solo comando documentado | Un integrante ajeno levanta el proyecto siguiendo el README | `[PENDIENTE]` ADR-005 |
+| RNF-OPS-001 | Operación | Entorno reproducible con un solo comando documentado | Un integrante ajeno levanta el proyecto siguiendo el README | `[CONFIRMADO]` ADR-005 (PostgreSQL local) |
 | RNF-INT-001 | Integración | Compatibilidad futura con autenticación institucional | Diseño de capa de autenticación desacoplada | `[PENDIENTE]` ADR-015 |
 | RNF-DAT-001 | Datos | Todas las marcas de tiempo en UTC; presentación en `America/Bogota` | Prueba de conversión de zona horaria | `[PROPUESTA]` |
 | RNF-DAT-002 | Datos | Borrado lógico en usuarios, sesiones y evaluaciones | Revisión de modelos | `[PROPUESTA]` |

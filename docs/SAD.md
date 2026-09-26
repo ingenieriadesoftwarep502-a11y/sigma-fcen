@@ -59,12 +59,12 @@ Lo que realmente condiciona el diseño. Todo lo demás es consecuencia.
 |---|---|---|---|
 | Web | Next.js 16 · React 19 · TypeScript 5 | Interfaz, enrutamiento, renderizado, sesión de cliente | `[PENDIENTE]` ADR-014 |
 | API | Django 5.2 · Django REST Framework | Reglas de negocio, autorización, persistencia | `[PENDIENTE]` ADR-014 |
-| Base de datos | PostgreSQL 16 | Almacenamiento transaccional e invariantes | `[PENDIENTE]` ADR-005 / ADR-014 |
+| Base de datos | PostgreSQL 16 | Almacenamiento transaccional e invariantes | Desarrollo: PostgreSQL local `[CONFIRMADO]` ADR-005 · Producción: `[PENDIENTE]` ADR-014 |
 | Archivos | `[PENDIENTE]` ADR-012 | Material académico | `[PENDIENTE]` ADR-012 |
 
 **Comunicación:** Web → API mediante HTTPS + JSON bajo `/api/v1/`. API → Base de datos mediante Django ORM.
 
-> Las versiones de Django, Next.js y React corresponden a lo instalado hoy en el repositorio (`backend/mi_proyecto/settings.py`, `frontend/my-app/package.json`). DRF, PostgreSQL y las herramientas de prueba **aún no están instalados**.
+> Las versiones corresponden a lo fijado en el repositorio (`backend/requirements.txt`, `frontend/my-app/package.json`). DRF, PostgreSQL y las herramientas de prueba quedaron instalados en FASE-00.
 
 ---
 
@@ -96,13 +96,13 @@ Arquitectura **en capas con dominio aislado**: hexagonal en lo que aporta valor,
 
 **Regla de dependencia:** `api → services → domain` y `services → models`. Nunca al revés. `domain/` no importa nada de Django: es la prueba objetiva de que las reglas están aisladas.
 
-### 4.2 Estructura de carpetas propuesta · `[PROPUESTA]` ADR-003
+### 4.2 Estructura de carpetas · `[CONFIRMADO]` ADR-003 (opción B: se conservan los nombres `mi_proyecto` y `frontend/my-app`)
 
 Estructura *screaming*: los nombres de las carpetas gritan el negocio, no el framework.
 
 ```text
 backend/
-├── config/                      # antes "mi_proyecto" — ADR-003
+├── mi_proyecto/                 # configuración del proyecto (se conserva el nombre — ADR-003)
 │   ├── settings/
 │   │   ├── base.py              # configuración común
 │   │   ├── development.py
@@ -130,7 +130,8 @@ backend/
 │   ├── integration/             # servicios + base de datos
 │   └── api/                     # contrato HTTP extremo a extremo
 ├── manage.py
-└── pyproject.toml               # o requirements.txt — ADR-001
+├── requirements.txt             # dependencias fijadas — ADR-001
+└── requirements-dev.txt         # herramientas de desarrollo y CI — ADR-001
 ```
 
 **Anatomía interna de cada app:**
@@ -191,10 +192,10 @@ Client Component   → interacción y estado local (presentación)
 
 **Regla:** un componente que recibe datos por props y no consulta la API es presentacional y debe poder probarse sin red.
 
-### 5.2 Estructura propuesta · `[PROPUESTA]` ADR-003
+### 5.2 Estructura · `[CONFIRMADO]` ADR-003 (la raíz del frontend es `frontend/my-app/`)
 
 ```text
-frontend/
+frontend/my-app/
 ├── app/
 │   ├── (auth)/login/
 │   ├── (student)/monitorias/ · reservas/ · historial/
@@ -313,8 +314,8 @@ Formato único de error, inspirado en RFC 9457:
 |---|---|---|
 | Autenticación | JWT en cookies `HttpOnly` + `SameSite` | `[PENDIENTE]` ADR-007 |
 | Autorización | Clases de permiso DRF por rol y por propiedad del recurso | `[PENDIENTE]` ADR-008 |
-| Secretos | Solo por variables de entorno; `.env` fuera del repositorio | `[PENDIENTE]` ADR-002 |
-| CORS | Lista blanca desde `CORS_ALLOWED_ORIGINS` | `[PENDIENTE]` ADR-002 |
+| Secretos | Solo por variables de entorno; `.env` fuera del repositorio | `[CONFIRMADO]` ADR-002 |
+| CORS | Lista blanca desde `CORS_ALLOWED_ORIGINS` | `[CONFIRMADO]` ADR-002 |
 | CSRF | Activo para autenticación por cookies | `[PENDIENTE]` ADR-007 |
 | Transporte | HTTPS obligatorio; `SECURE_SSL_REDIRECT` en producción | `[PROPUESTA]` |
 | Contraseñas | Validadores nativos de Django; hasher PBKDF2 | `[PROPUESTA]` |
@@ -322,7 +323,7 @@ Formato único de error, inspirado en RFC 9457:
 | Auditoría | Registro de operaciones sensibles con actor, acción y marca de tiempo | `[PROPUESTA]` |
 | Archivos subidos | Validación de tipo y tamaño; nombres sanitizados; servidos con `Content-Disposition` | `[PENDIENTE]` ADR-012 |
 
-**Deuda de seguridad ya existente:** `SECRET_KEY` versionada en `backend/mi_proyecto/settings.py` y `DEBUG = True`. Se corrige en FASE-00 y la clave se rota. Registrado como R-07 en el TRD.
+**Deuda de seguridad corregida en FASE-00:** la `SECRET_KEY` que estaba versionada en `backend/mi_proyecto/settings.py` se eliminó del código y se lee del entorno; `DEBUG` se controla por entorno y es siempre `False` en producción. Una prueba falla si la clave activa coincide con la comprometida (R-07 del TRD).
 
 ---
 
@@ -351,16 +352,16 @@ Pirámide, no reloj de arena. Los detalles de herramientas dependen de ADR-004.
 ```text
 Desarrollo                          Producción (pendiente de ADR-014)
 ─────────────                       ──────────────────────────────────
-docker-compose                      Web      → Vercel / institucional
-  ├── postgres:16                   API      → Railway / Render / institucional
+Máquina del desarrollador          Web      → Vercel / institucional
+  ├── PostgreSQL local (ADR-005)    API      → Railway / Render / institucional
   ├── api (runserver)               DB       → PostgreSQL gestionado
   └── web (next dev)                Archivos → local o S3 (ADR-012)
 ```
 
 | Entorno | Rama | Base de datos | `DEBUG` |
 |---|---|---|---|
-| Local | `feature/*` | PostgreSQL en Docker | `True` |
-| Integración | `develop` | PostgreSQL efímera | `False` |
+| Local | `feature/*` | PostgreSQL instalado localmente | `True` |
+| Integración | `develop` | PostgreSQL efímera (servicio `postgres:16` de GitHub Actions) | `False` |
 | Producción | `main` | PostgreSQL gestionada con respaldo | `False` |
 
 ---

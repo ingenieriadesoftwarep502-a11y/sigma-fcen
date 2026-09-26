@@ -5,14 +5,14 @@
 | Sprint | 0 (semanas 1–2) |
 | Historias | Ninguna — habilitador técnico |
 | Puntos de backlog | 0 |
-| Estado | **Bloqueada** |
-| ADR bloqueantes | ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006 |
+| Estado | **En revisión** — implementación local completa (2026-09-25); pendientes: PR, CI en verde, protección de `develop` y verificación por un segundo integrante |
+| ADR de entrada | ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006 — todos `[CONFIRMADO]` el 2026-09-25 |
 
 ---
 
 ## 1. Objetivo
 
-Al cerrar esta fase, cualquier integrante debe poder clonar el repositorio, ejecutar **un** comando documentado y obtener el proyecto corriendo con base de datos PostgreSQL y una suite de pruebas que se ejecuta en verde.
+Al cerrar esta fase, cualquier integrante debe poder clonar el repositorio, seguir los pasos documentados en el `README.md` y obtener el proyecto corriendo sobre su PostgreSQL local, con una suite de pruebas que se ejecuta en verde.
 
 **Resultado observable:** un integrante que no participó en la fase levanta el entorno siguiendo el README, sin preguntar nada a nadie.
 
@@ -24,12 +24,12 @@ Al cerrar esta fase, cualquier integrante debe poder clonar el repositorio, ejec
 
 Bloqueante. Si alguno está abierto, no se escribe código.
 
-- [ ] ADR-001 — Gestión de dependencias del backend
-- [ ] ADR-002 — Configuración por entorno y secretos
-- [ ] ADR-003 — Estructura de carpetas y renombrado
-- [ ] ADR-004 — Estrategia de pruebas
-- [ ] ADR-005 — Entorno de base de datos local
-- [ ] ADR-006 — Integración continua
+- [x] ADR-001 — Gestión de dependencias del backend → opción B: `pip` + `requirements.txt` / `requirements-dev.txt`
+- [x] ADR-002 — Configuración por entorno y secretos → `django-environ` + `settings/` por entorno
+- [x] ADR-003 — Estructura de carpetas → opción B: **no se renombra** (`backend/mi_proyecto/`, `frontend/my-app/`)
+- [x] ADR-004 — Estrategia de pruebas → `pytest` + `pytest-django` + `factory-boy` + `pytest-cov`; `vitest` + Testing Library
+- [x] ADR-005 — Entorno de base de datos local → opción B: PostgreSQL local, **sin `docker-compose`**
+- [x] ADR-006 — Integración continua → GitHub Actions en PR hacia `develop`
 
 ---
 
@@ -46,9 +46,9 @@ Bloqueante. Si alguno está abierto, no se escribe código.
 - Linter y verificación de tipos en ambos proyectos.
 - Pipeline de CI en cada PR hacia `develop`.
 - Protección de la rama `develop`.
-- Renombrado de `mi_proyecto` → `config` y `frontend/my-app` → `frontend`.
+- Creación de `backend/apps/` y `backend/shared/` (sin renombrar carpetas existentes — ADR-003 opción B).
 - README de arranque.
-- `.env.example` versionado.
+- Un único `.env` en la raíz, compartido por backend y frontend (decisión del 2026-09-25). No se versionan plantillas `.env.*`; las claves se documentan en el README.
 
 ### No entra
 
@@ -56,13 +56,13 @@ Bloqueante. Si alguno está abierto, no se escribe código.
 - Modelo de usuario personalizado — es FASE-01 y depende de ADR-008.
 - Diseño visual del frontend.
 - Configuración de producción — es FASE-10.
-- Docker para producción.
+- Docker, tanto en desarrollo (ADR-005 opción B) como en producción.
 
 > **Advertencia para el agente:** la tentación de "ya que estoy, creo el modelo User" en esta fase es exactamente lo que el protocolo prohíbe. `AUTH_USER_MODEL` depende de ADR-008, que está abierto. Riesgo R-04.
 
 ---
 
-## 4. Estado técnico de partida (verificado)
+## 4. Estado técnico de partida (verificado el 2026-09-24, antes de la fase)
 
 | Hecho | Evidencia |
 |---|---|
@@ -85,9 +85,9 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** ADR-001
 
-- [ ] Declarar dependencias de producción: `django`, `djangorestframework`, `psycopg[binary]`, `django-cors-headers`, `drf-spectacular`, la librería de configuración de ADR-002.
-- [ ] Declarar dependencias de desarrollo: runner de pruebas de ADR-004, `ruff`, `mypy`, `django-stubs`, `factory-boy`, `pytest-cov`.
-- [ ] Generar el archivo de bloqueo (lockfile) y versionarlo.
+- [x] Declarar dependencias de producción en `backend/requirements.txt`: `django`, `djangorestframework`, `psycopg[binary]`, `django-cors-headers`, `drf-spectacular`, `django-environ`.
+- [x] Declarar dependencias de desarrollo en `backend/requirements-dev.txt` (incluye `-r requirements.txt`): `pytest`, `pytest-django`, `ruff`, `mypy`, `django-stubs`, `djangorestframework-stubs`, `factory-boy`, `pytest-cov`.
+- [x] Fijar versiones exactas (`==`), incluidas las dependencias transitivas. Con `pip` no hay lockfile real (costo aceptado en ADR-001).
 
 **Verificación:** instalación limpia en un entorno virtual nuevo, sin errores.
 
@@ -97,11 +97,11 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** ADR-002 · **Requisito:** RNF-SEC-001
 
-- [ ] Crear `config/settings/` con `base.py`, `development.py`, `production.py`, `test.py`.
-- [ ] Mover `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS` a variables de entorno.
-- [ ] **Rotar la `SECRET_KEY`** — la actual está comprometida por estar versionada.
-- [ ] Crear `.env.example` con las claves y valores de ejemplo, sin secretos reales.
-- [ ] Confirmar que `.env` sigue ignorado por Git.
+- [x] Crear `backend/mi_proyecto/settings/` con `base.py`, `development.py`, `production.py`, `test.py`. `DJANGO_ENV` selecciona el módulo (`mi_proyecto/bootstrap.py`).
+- [x] Mover `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS` a variables de entorno.
+- [x] **Rotar la `SECRET_KEY`** — eliminada del código; la prueba de rotación confirma que la clave activa no es la comprometida.
+- [x] ~~Crear `.env.example`~~ — descartado el 2026-09-25 por decisión de Alejandro Puerta Loaiza: el `.env` de la raíz es el único archivo de variables, compartido por backend y frontend (`frontend/my-app/next.config.ts` lo lee y expone solo las claves `NEXT_PUBLIC_*`). Las claves están documentadas en el README §2.1.
+- [x] Confirmar que `.env` sigue ignorado por Git.
 
 **Prueba (G2):** una prueba que falla si `settings.SECRET_KEY` coincide con el valor hardcodeado antiguo o si `DEBUG` es `True` bajo el entorno de producción.
 
@@ -109,14 +109,12 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 ---
 
-### T-00.3 · Renombrado estructural
+### T-00.3 · Estructura de carpetas (sin renombrado)
 
-**Depende de:** ADR-003
+**Depende de:** ADR-003 (opción B: se conservan los nombres actuales)
 
-- [ ] `backend/mi_proyecto/` → `backend/config/`.
-- [ ] Actualizar `manage.py`, `wsgi.py`, `asgi.py` y `DJANGO_SETTINGS_MODULE`.
-- [ ] `frontend/my-app/` → `frontend/`.
-- [ ] Crear `backend/apps/` y `backend/shared/` vacíos, con `__init__.py`.
+- [x] Actualizar `manage.py`, `wsgi.py`, `asgi.py` y `DJANGO_SETTINGS_MODULE` para usar `mi_proyecto.settings.<entorno>`.
+- [x] Crear `backend/apps/` y `backend/shared/` con `__init__.py`.
 
 **Verificación:** `python manage.py check` sin errores; `npm run build` en el frontend sin errores.
 
@@ -126,11 +124,11 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** ADR-005 · **Requisito:** RNF-OPS-001
 
-- [ ] `docker-compose.yml` con PostgreSQL 16 y volumen persistente.
-- [ ] Apuntar Django a PostgreSQL vía `DATABASE_URL`.
-- [ ] Ejecutar las migraciones nativas de Django sobre PostgreSQL.
+- [x] Usar el PostgreSQL instalado localmente por cada integrante (sin `docker-compose`).
+- [x] Apuntar Django a PostgreSQL vía `DATABASE_URL` (`env.db()`); SQLite eliminado.
+- [x] Ejecutar las migraciones nativas de Django sobre PostgreSQL.
 
-**Verificación:** `docker compose up -d` seguido de `python manage.py migrate` termina sin errores.
+**Verificación:** con PostgreSQL local en ejecución y la base creada, `python manage.py migrate` termina sin errores.
 
 ---
 
@@ -138,13 +136,13 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** T-00.1, T-00.2 · **Requisito:** RNF-MAN-002
 
-- [ ] Añadir `rest_framework`, `corsheaders` y `drf_spectacular` a `INSTALLED_APPS`.
-- [ ] Configurar `REST_FRAMEWORK`: autenticación por defecto, permiso por defecto `IsAuthenticated`, paginación, `throttling`.
-- [ ] Configurar CORS con lista blanca desde `CORS_ALLOWED_ORIGINS`.
-- [ ] Exponer `/api/v1/schema/` y la interfaz de documentación.
-- [ ] Crear `/api/v1/health/` como endpoint público de estado.
+- [x] Añadir `rest_framework`, `corsheaders` y `drf_spectacular` a `INSTALLED_APPS`.
+- [x] Configurar `REST_FRAMEWORK`: autenticación por defecto (solo `SessionAuthentication` hasta cerrar ADR-007), permiso por defecto `IsAuthenticated`, paginación (`shared/pagination.py`, máximo 100), `throttling` anónimo y por usuario.
+- [x] Configurar CORS con lista blanca desde `CORS_ALLOWED_ORIGINS`.
+- [x] Exponer `/api/v1/schema/` y la interfaz de documentación en `/api/v1/docs/`.
+- [x] Crear `/api/v1/health/` como endpoint público de estado (informa la conectividad con la base de datos; `503` si no hay conexión).
 
-**Prueba (G2):** `GET /api/v1/health/` devuelve `200` sin autenticación; un endpoint protegido de ejemplo devuelve `401` sin credenciales (RNF-SEC-003).
+**Prueba (G2):** `GET /api/v1/health/` devuelve `200` sin autenticación; un endpoint protegido de prueba (URLconf local de la suite) rechaza al anónimo. Con `SessionAuthentication` DRF responde **`403`**, no `401`: el `401` de RNF-SEC-003 depende del mecanismo de ADR-007.
 
 ---
 
@@ -152,11 +150,11 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** ADR-004 · **Requisito:** RNF-CAL-001 · **Crítica para el protocolo**
 
-- [ ] Configurar el runner con el módulo de settings de prueba.
-- [ ] Crear `tests/unit/`, `tests/integration/`, `tests/api/`.
-- [ ] Configurar `factory-boy`.
-- [ ] Configurar cobertura con el umbral acordado.
-- [ ] Escribir una prueba de humo real (no un `assert True`): el endpoint de salud responde `200`.
+- [x] Configurar el runner con el módulo de settings de prueba (`pytest.ini` → `mi_proyecto.settings.test`).
+- [x] Crear `tests/unit/`, `tests/integration/`, `tests/api/`.
+- [x] Instalar `factory-boy` (se usará con los primeros modelos, a partir de FASE-01).
+- [x] Configurar cobertura en `.coveragerc` con `fail_under = 80`. **El umbral es provisional: no ha sido acordado formalmente.**
+- [x] Escribir una prueba de humo real (no un `assert True`): el endpoint de salud responde `200`.
 
 **Verificación:** el comando de pruebas se ejecuta, descubre la prueba y reporta verde con cobertura.
 
@@ -166,11 +164,11 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** T-00.1 · **Requisito:** RNF-CAL-003
 
-- [ ] Configurar `ruff` (linter y formateador) en `pyproject.toml`.
-- [ ] Configurar `mypy` con `django-stubs`.
-- [ ] Corregir lo que reporten sobre el código existente.
+- [x] Configurar `ruff` (linter y formateador) en `ruff.toml`.
+- [x] Configurar `mypy` (modo estricto) con `django-stubs` y `djangorestframework-stubs` en `mypy.ini`.
+- [x] Corregir lo que reporten sobre el código existente.
 
-**Verificación:** `ruff check .` y `mypy .` sin errores.
+**Verificación:** `ruff check .`, `ruff format --check .` y `mypy .` sin errores.
 
 ---
 
@@ -178,10 +176,10 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** ADR-004
 
-- [ ] Instalar y configurar el runner de pruebas de ADR-004 con Testing Library.
-- [ ] Escribir una prueba real de un componente existente.
-- [ ] Verificar `eslint` y añadir el script `type-check` con `tsc --noEmit`.
-- [ ] Crear `lib/api-client.ts` con el cliente HTTP base y manejo de errores.
+- [x] Instalar y configurar `vitest` + Testing Library + `jsdom` (`vitest.config.mts`).
+- [x] Escribir una prueba real de un componente existente (`app/page.tsx`).
+- [x] Verificar `eslint` y añadir el script `type-check` (`next typegen && tsc --noEmit`).
+- [x] Crear `lib/api-client.ts` con el cliente HTTP base, `ApiError` tipado y sus pruebas.
 
 **Verificación:** pruebas en verde, `npm run lint` y `npm run type-check` sin errores.
 
@@ -191,10 +189,10 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 **Depende de:** ADR-006 · **Requisito:** RNF-CAL-003
 
-- [ ] Workflow de GitHub Actions disparado en PR hacia `develop`.
-- [ ] Trabajo de backend: servicio PostgreSQL, instalación, `ruff`, `mypy`, pruebas con cobertura.
-- [ ] Trabajo de frontend: instalación, `lint`, `type-check`, pruebas, `build`.
-- [ ] Proteger `develop`: CI en verde obligatorio y al menos una aprobación.
+- [x] Workflow de GitHub Actions disparado en PR hacia `develop` (`.github/workflows/ci.yml`).
+- [x] Trabajo de backend: servicio `postgres:16`, instalación, `ruff`, `mypy`, pruebas con cobertura.
+- [x] Trabajo de frontend (`frontend/my-app`): instalación, `lint`, `type-check`, pruebas, `build`.
+- [ ] Proteger `develop`: CI en verde obligatorio y al menos una aprobación. *(Regla documentada en `CONTRIBUTING.md`; debe aplicarla un administrador en GitHub.)*
 
 **Verificación:** un PR de prueba dispara el workflow y este termina en verde.
 
@@ -202,9 +200,9 @@ Orden estricto. Cada tarea entra en su propio PR.
 
 ### T-00.10 · Documentación de arranque
 
-- [ ] `README.md` raíz: requisitos previos, comando de arranque, comandos de prueba, estructura del repositorio, enlace a `docs/`.
-- [ ] `CONTRIBUTING.md`: flujo Git, convención de commits, plantilla de PR con la sección de evidencia TDD.
-- [ ] Plantilla de PR en `.github/pull_request_template.md` con los gates del protocolo.
+- [x] `README.md` raíz: requisitos previos, comandos de arranque, comandos de prueba, estructura del repositorio, enlace a `docs/`.
+- [x] `CONTRIBUTING.md`: flujo Git, convención de commits, plantilla de PR con la sección de evidencia TDD.
+- [x] Plantilla de PR en `.github/pull_request_template.md` con los gates del protocolo.
 
 **Verificación de aceptación:** un integrante que no trabajó en la fase levanta el proyecto siguiendo únicamente el README.
 
@@ -213,15 +211,15 @@ Orden estricto. Cada tarea entra en su propio PR.
 ## 6. Comandos de verificación de la fase
 
 ```bash
-# Backend
-docker compose up -d
+# Backend (desde backend/, con el entorno virtual activo y PostgreSQL local en ejecución)
 python manage.py check
 python manage.py migrate
-<comando de pruebas de ADR-004> --cov
+pytest --cov
 ruff check .
+ruff format --check .
 mypy .
 
-# Frontend
+# Frontend (desde frontend/my-app/)
 npm run lint
 npm run type-check
 npm test
@@ -235,19 +233,19 @@ git grep -n "django-insecure" || echo "sin secretos hardcodeados"
 
 ## 7. Definition of Done
 
-- [ ] Los seis ADR de la tanda 1 están `[CONFIRMADO]` y registrados en §2 de `DECISIONES-ABIERTAS.md`.
+- [x] Los seis ADR de la tanda 1 están `[CONFIRMADO]` y registrados en §2 de `DECISIONES-ABIERTAS.md`.
 - [ ] Instalación reproducible desde cero, verificada por un segundo integrante.
-- [ ] Ningún secreto en el repositorio; `SECRET_KEY` rotada.
-- [ ] `DEBUG` controlado por entorno.
-- [ ] PostgreSQL operativo en desarrollo; SQLite fuera del proyecto.
-- [ ] DRF configurado con permiso por defecto `IsAuthenticated`.
-- [ ] Suite de pruebas operativa y verde en ambos proyectos, con al menos una prueba real cada una.
-- [ ] Linter y verificación de tipos sin errores.
+- [x] Ningún secreto en el repositorio; `SECRET_KEY` rotada.
+- [x] `DEBUG` controlado por entorno.
+- [x] PostgreSQL operativo en desarrollo; SQLite fuera del proyecto.
+- [x] DRF configurado con permiso por defecto `IsAuthenticated`.
+- [x] Suite de pruebas operativa y verde en ambos proyectos, con al menos una prueba real cada una.
+- [x] Linter y verificación de tipos sin errores.
 - [ ] CI en verde en un PR de prueba.
 - [ ] `develop` protegida.
-- [ ] README y CONTRIBUTING publicados.
-- [ ] Estructura de carpetas alineada con `SAD.md` §4.2 y §5.2.
-- [ ] **Cero modelos de dominio creados** — se verifica que no existen migraciones de negocio.
+- [ ] README y CONTRIBUTING publicados. *(Redactados; se publican al integrar el PR en `develop`.)*
+- [x] Estructura de carpetas alineada con `SAD.md` §4.2 y §5.2 (con los nombres conservados por ADR-003).
+- [x] **Cero modelos de dominio creados** — `showmigrations` solo lista `admin`, `auth`, `contenttypes` y `sessions`.
 
 ---
 
@@ -255,8 +253,8 @@ git grep -n "django-insecure" || echo "sin secretos hardcodeados"
 
 | Riesgo | Mitigación |
 |---|---|
-| Docker no disponible en alguna máquina del equipo | Resolver en ADR-005 **antes** de iniciar, no durante |
-| El renombrado rompe importaciones silenciosamente | Hacerlo en un PR aislado, verificar con `manage.py check` y `npm run build` |
+| Diferencias de versión de PostgreSQL entre máquinas locales | Documentar PostgreSQL 16 como versión de referencia; CI usa `postgres:16` |
+| En Windows, una ruta con mayúsculas distintas a las reales (`desktop` en lugar de `Desktop`) rompe `next build` | Ejecutar los comandos desde la ruta con las mayúsculas reales del sistema de archivos |
 | Tentación de "avanzar" creando modelos | El DoD lo verifica explícitamente; sin ADR-008, ninguna migración de negocio |
 | CI lento por levantar PostgreSQL | Usar el servicio nativo de GitHub Actions, con caché de dependencias |
 | La `SECRET_KEY` vieja sigue activa en algún entorno | Rotarla es tarea explícita de T-00.2, no un comentario al margen |

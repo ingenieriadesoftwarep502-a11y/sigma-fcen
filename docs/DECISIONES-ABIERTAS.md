@@ -18,93 +18,7 @@ Ordenadas por urgencia. Las de tanda 1 bloquean el inicio del proyecto.
 
 ### Tanda 1 — Bloquean FASE-00 (infraestructura)
 
----
-
-#### ADR-001 · Gestión de dependencias del backend
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-00, y por transitividad todo el backend
-- **Contexto:** `backend/` no tiene `requirements.txt` ni `pyproject.toml`. Hoy no es posible reproducir el entorno en otra máquina.
-
-| Opción | Ventaja | Costo |
-|---|---|---|
-| **A. `uv` + `pyproject.toml`** (recomendada) | Resolución e instalación muy rápidas, lockfile determinista, estándar moderno | Herramienta nueva para el equipo |
-| B. `pip` + `requirements.txt` + `requirements-dev.txt` | Conocido por todos, cero curva de aprendizaje | Sin lockfile real; entornos divergentes entre integrantes |
-
-- **Pregunta:** ¿Usamos `uv` con `pyproject.toml`, o nos quedamos con `pip` y `requirements.txt`?
-
----
-
-#### ADR-002 · Configuración por entorno y manejo de secretos
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-00, RNF-SEC-001
-- **Contexto:** `backend/mi_proyecto/settings.py` tiene `SECRET_KEY` hardcodeada y `DEBUG = True`. El archivo `.env` ya define `DJANGO_ENV`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`, `NEXT_PUBLIC_API_URL`, `COOKIE_SAMESITE`, pero `settings.py` **no los lee**. Es una vulnerabilidad activa, no una preferencia de estilo.
-
-| Opción | Ventaja | Costo |
-|---|---|---|
-| **A. `django-environ` + `settings/` por entorno** (recomendada) | Idiomático en Django, lee `DATABASE_URL` directo | Sin validación de tipos estricta |
-| B. `pydantic-settings` | Validación fuerte y tipada, falla temprano | Menos convencional en proyectos Django |
-
-- **Nota:** la `SECRET_KEY` actual ya está expuesta en el repositorio y **debe rotarse** al cerrar este ADR.
-- **Pregunta:** ¿`django-environ` con módulo `settings/` dividido por entorno (`base`, `dev`, `prod`, `test`)?
-
----
-
-#### ADR-003 · Estructura definitiva de carpetas y renombrado
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-00, todas las fases posteriores
-- **Contexto:** hoy existen `backend/mi_proyecto/` y `frontend/my-app/`, nombres de scaffold. La documentación base propone `backend/config/` + `backend/apps/*` y `frontend/app/...`. Renombrar después de tener código cuesta mucho más que ahora.
-
-| Opción | Ventaja | Costo |
-|---|---|---|
-| **A. Renombrar ahora** (recomendada): `mi_proyecto` → `config`, `frontend/my-app` → `frontend` | Alineado con la arquitectura documentada; se hace con el repo vacío | Un PR de reestructura inicial |
-| B. Conservar los nombres actuales | Cero trabajo inmediato | Documentación y código divergentes de forma permanente |
-
-- **Pregunta:** ¿Renombramos a `backend/config/` y `frontend/` en el PR de FASE-00?
-
----
-
-#### ADR-004 · Estrategia de pruebas
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-00 y, por la Ley de la prueba primero, **absolutamente todo el desarrollo**
-- **Contexto:** no hay suite de pruebas en ninguno de los dos proyectos. Sin runner definido, el gate G2 no se puede ejecutar.
-
-| Capa | Opción recomendada | Alternativa |
-|---|---|---|
-| Backend unitario / integración | `pytest` + `pytest-django` + `factory-boy` | `unittest` nativo de Django |
-| Cobertura backend | `pytest-cov`, umbral mínimo a definir | — |
-| Frontend unitario / componentes | `vitest` + `@testing-library/react` | `jest` |
-| End-to-end | `playwright` | `cypress` |
-
-- **Pregunta:** ¿Confirmas `pytest` + `pytest-django` en backend y `vitest` + Testing Library en frontend, con Playwright para E2E a partir de FASE-04?
-
----
-
-#### ADR-005 · Entorno de base de datos local
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-00
-- **Contexto:** la arquitectura exige PostgreSQL; Django usa SQLite por defecto. Desarrollar sobre SQLite y desplegar sobre PostgreSQL genera fallos que solo aparecen en producción.
-
-| Opción | Ventaja | Costo |
-|---|---|---|
-| **A. `docker-compose` con PostgreSQL 16** (recomendada) | Paridad exacta dev/prod, arranque de un comando | Requiere Docker instalado en las tres máquinas |
-| B. PostgreSQL instalado localmente | Sin Docker | Configuración manual repetida por integrante |
-
-- **Pregunta:** ¿Todos los integrantes pueden usar Docker Desktop, o hay que ir por instalación local de PostgreSQL?
-
----
-
-#### ADR-006 · Integración continua
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-00, gate G4 automatizado
-- **Contexto:** el gate G4 exige suite verde antes del merge. Sin CI, la verificación depende de la memoria de cada persona.
-- **Propuesta:** GitHub Actions con un workflow que corra, en cada PR hacia `develop`: `ruff` + `mypy` + `pytest` (backend) y `eslint` + `tsc --noEmit` + `vitest` (frontend). Rama `develop` protegida: sin CI en verde y sin una aprobación, no hay merge.
-- **Pregunta:** ¿Activamos protección de rama en `develop` exigiendo CI verde + 1 aprobación?
+Cerrada el 2026-09-25. Los seis ADR (ADR-001 a ADR-006) están confirmados y registrados en [§2](#2-decisiones-cerradas).
 
 ---
 
@@ -269,7 +183,110 @@ Se registran aquí al confirmarse. Formato obligatorio:
 
 | ID | Decisión | Estado | Confirmado por | Fecha | Documentos actualizados |
 |---|---|---|---|---|---|
-| — | _(ninguna aún)_ | — | — | — | — |
+| ADR-001 | Gestión de dependencias del backend: **Opción B** — `pip` + `backend/requirements.txt` + `backend/requirements-dev.txt`, con versiones fijadas exactas (`==`). Sin `uv` ni `poetry`. La configuración de herramientas vive en `ruff.toml`, `mypy.ini`, `pytest.ini` y `.coveragerc`. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, SAD §4.2, README, CONTRIBUTING |
+| ADR-002 | Configuración por entorno y manejo de secretos: **Opción A** — `django-environ` + paquete `settings/` dividido por entorno (`base`, `development`, `production`, `test`). `DJANGO_ENV` selecciona el módulo. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, SAD §7, TRD §5 |
+| ADR-003 | Estructura definitiva de carpetas y renombrado: **Opción B** — se conservan los nombres actuales: `backend/mi_proyecto/` y `frontend/my-app/`. Se crean `backend/apps/` y `backend/shared/`. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, SAD §4.2 y §5.2 |
+| ADR-004 | Estrategia de pruebas: `pytest` + `pytest-django` + `factory-boy` + `pytest-cov` en backend; `vitest` + `@testing-library/react` + `jsdom` en frontend. Playwright queda fuera por ahora. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, SAD §8 |
+| ADR-005 | Entorno de base de datos local: **Opción B** — PostgreSQL instalado localmente por cada integrante, sin `docker-compose`. Django lee `DATABASE_URL`; SQLite queda fuera del proyecto. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, SAD §3 y §9, TRD §5, README |
+| ADR-006 | Integración continua: GitHub Actions en cada PR hacia `develop` (backend con servicio `postgres:16`, frontend en `frontend/my-app`). Protección de `develop`: CI en verde + 1 aprobación (regla documentada en `CONTRIBUTING.md`; su aplicación en GitHub la realiza un administrador del repositorio). | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, TRD §5, CONTRIBUTING, `.github/workflows/ci.yml` |
+
+---
+
+### Detalle de las decisiones cerradas
+
+Se conserva el contexto original de cada ADR para trazabilidad.
+
+#### ADR-001 · Gestión de dependencias del backend
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
+- **Decisión:** **Opción B** — `pip` + `backend/requirements.txt` + `backend/requirements-dev.txt`, con versiones fijadas exactas (`==`). Sin `uv` ni `poetry`. La configuración de herramientas vive en `ruff.toml`, `mypy.ini`, `pytest.ini` y `.coveragerc`.
+- **Bloqueaba:** FASE-00, y por transitividad todo el backend
+- **Contexto:** `backend/` no tiene `requirements.txt` ni `pyproject.toml`. Hoy no es posible reproducir el entorno en otra máquina.
+
+| Opción | Ventaja | Costo |
+|---|---|---|
+| **A. `uv` + `pyproject.toml`** (recomendada) | Resolución e instalación muy rápidas, lockfile determinista, estándar moderno | Herramienta nueva para el equipo |
+| B. `pip` + `requirements.txt` + `requirements-dev.txt` | Conocido por todos, cero curva de aprendizaje | Sin lockfile real; entornos divergentes entre integrantes |
+
+- **Pregunta:** ¿Usamos `uv` con `pyproject.toml`, o nos quedamos con `pip` y `requirements.txt`?
+
+---
+
+#### ADR-002 · Configuración por entorno y manejo de secretos
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
+- **Decisión:** **Opción A** — `django-environ` + paquete `settings/` dividido por entorno (`base`, `development`, `production`, `test`). `DJANGO_ENV` selecciona el módulo.
+- **Bloqueaba:** FASE-00, RNF-SEC-001
+- **Contexto:** `backend/mi_proyecto/settings.py` tiene `SECRET_KEY` hardcodeada y `DEBUG = True`. El archivo `.env` ya define `DJANGO_ENV`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`, `NEXT_PUBLIC_API_URL`, `COOKIE_SAMESITE`, pero `settings.py` **no los lee**. Es una vulnerabilidad activa, no una preferencia de estilo.
+
+| Opción | Ventaja | Costo |
+|---|---|---|
+| **A. `django-environ` + `settings/` por entorno** (recomendada) | Idiomático en Django, lee `DATABASE_URL` directo | Sin validación de tipos estricta |
+| B. `pydantic-settings` | Validación fuerte y tipada, falla temprano | Menos convencional en proyectos Django |
+
+- **Nota:** la `SECRET_KEY` actual ya está expuesta en el repositorio y **debe rotarse** al cerrar este ADR.
+- **Pregunta:** ¿`django-environ` con módulo `settings/` dividido por entorno (`base`, `dev`, `prod`, `test`)?
+
+---
+
+#### ADR-003 · Estructura definitiva de carpetas y renombrado
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
+- **Decisión:** **Opción B** — se conservan los nombres actuales: `backend/mi_proyecto/` y `frontend/my-app/`. Se crean `backend/apps/` y `backend/shared/`.
+- **Bloqueaba:** FASE-00, todas las fases posteriores
+- **Contexto:** hoy existen `backend/mi_proyecto/` y `frontend/my-app/`, nombres de scaffold. La documentación base propone `backend/config/` + `backend/apps/*` y `frontend/app/...`. Renombrar después de tener código cuesta mucho más que ahora.
+
+| Opción | Ventaja | Costo |
+|---|---|---|
+| **A. Renombrar ahora** (recomendada): `mi_proyecto` → `config`, `frontend/my-app` → `frontend` | Alineado con la arquitectura documentada; se hace con el repo vacío | Un PR de reestructura inicial |
+| B. Conservar los nombres actuales | Cero trabajo inmediato | Documentación y código divergentes de forma permanente |
+
+- **Pregunta:** ¿Renombramos a `backend/config/` y `frontend/` en el PR de FASE-00?
+
+---
+
+#### ADR-004 · Estrategia de pruebas
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
+- **Decisión:** `pytest` + `pytest-django` + `factory-boy` + `pytest-cov` en backend; `vitest` + `@testing-library/react` + `jsdom` en frontend. Playwright queda fuera por ahora.
+- **Bloqueaba:** FASE-00 y, por la Ley de la prueba primero, **absolutamente todo el desarrollo**
+- **Contexto:** no hay suite de pruebas en ninguno de los dos proyectos. Sin runner definido, el gate G2 no se puede ejecutar.
+
+| Capa | Opción recomendada | Alternativa |
+|---|---|---|
+| Backend unitario / integración | `pytest` + `pytest-django` + `factory-boy` | `unittest` nativo de Django |
+| Cobertura backend | `pytest-cov`, umbral mínimo a definir | — |
+| Frontend unitario / componentes | `vitest` + `@testing-library/react` | `jest` |
+| End-to-end | `playwright` | `cypress` |
+
+- **Pregunta:** ¿Confirmas `pytest` + `pytest-django` en backend y `vitest` + Testing Library en frontend, con Playwright para E2E a partir de FASE-04?
+
+---
+
+#### ADR-005 · Entorno de base de datos local
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
+- **Decisión:** **Opción B** — PostgreSQL instalado localmente por cada integrante, sin `docker-compose`. Django lee `DATABASE_URL`; SQLite queda fuera del proyecto.
+- **Bloqueaba:** FASE-00
+- **Contexto:** la arquitectura exige PostgreSQL; Django usa SQLite por defecto. Desarrollar sobre SQLite y desplegar sobre PostgreSQL genera fallos que solo aparecen en producción.
+
+| Opción | Ventaja | Costo |
+|---|---|---|
+| **A. `docker-compose` con PostgreSQL 16** (recomendada) | Paridad exacta dev/prod, arranque de un comando | Requiere Docker instalado en las tres máquinas |
+| B. PostgreSQL instalado localmente | Sin Docker | Configuración manual repetida por integrante |
+
+- **Pregunta:** ¿Todos los integrantes pueden usar Docker Desktop, o hay que ir por instalación local de PostgreSQL?
+
+---
+
+#### ADR-006 · Integración continua
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
+- **Decisión:** GitHub Actions en cada PR hacia `develop` (backend con servicio `postgres:16`, frontend en `frontend/my-app`). Protección de `develop`: CI en verde + 1 aprobación (regla documentada en `CONTRIBUTING.md`; su aplicación en GitHub la realiza un administrador del repositorio).
+- **Bloqueaba:** FASE-00, gate G4 automatizado
+- **Contexto:** el gate G4 exige suite verde antes del merge. Sin CI, la verificación depende de la memoria de cada persona.
+- **Propuesta:** GitHub Actions con un workflow que corra, en cada PR hacia `develop`: `ruff` + `mypy` + `pytest` (backend) y `eslint` + `tsc --noEmit` + `vitest` (frontend). Rama `develop` protegida: sin CI en verde y sin una aprobación, no hay merge.
+- **Pregunta:** ¿Activamos protección de rama en `develop` exigiendo CI verde + 1 aprobación?
 
 ---
 
@@ -294,7 +311,7 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 
 | Fase | ADR que debe cerrarse antes de iniciar |
 |---|---|
-| FASE-00 | ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006 |
+| FASE-00 | Ninguno (ADR-001 a ADR-006 confirmados el 2026-09-25) |
 | FASE-01 | ADR-007, ADR-008, ADR-009 |
 | FASE-02 | ADR-008 |
 | FASE-03 | ADR-010 |
@@ -306,4 +323,4 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-09 | ADR-013 |
 | FASE-10 | ADR-014, ADR-015 |
 
-> **15 decisiones abiertas. 0 cerradas. Ninguna fase puede iniciar implementación hoy.**
+> **9 decisiones abiertas. 6 cerradas. Solo FASE-00 puede iniciar implementación hoy.**

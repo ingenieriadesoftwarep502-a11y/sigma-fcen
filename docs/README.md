@@ -42,19 +42,19 @@ Esto no es una recomendación. Es un gate bloqueante descrito en [`PROTOCOLO-AGE
 
 ---
 
-## Estado actual del proyecto (verificado el 2026-09-24)
+## Estado actual del proyecto (verificado el 2026-09-25)
 
 | Componente | Estado real | Evidencia |
 |---|---|---|
-| Backend Django | `mi_proyecto` scaffold, **sin apps, sin DRF** | `backend/mi_proyecto/settings.py` |
-| Gestión de dependencias Python | **Inexistente** (no hay `requirements.txt` ni `pyproject.toml`) | `backend/` |
-| Configuración por entorno | **No aplicada**: `SECRET_KEY` y `DEBUG` hardcodeados | `backend/mi_proyecto/settings.py:23,27` |
-| Base de datos | SQLite por defecto; PostgreSQL **no configurado** | `backend/mi_proyecto/settings.py` |
-| Frontend Next.js | Scaffold `create-next-app` en `frontend/my-app` | `frontend/my-app/package.json` |
-| Pruebas | **Ninguna suite configurada** en backend ni frontend | — |
-| CI/CD | **Inexistente** | — |
+| Backend Django | `mi_proyecto` con DRF, CORS, OpenAPI y `/api/v1/health/`; **sin apps de dominio** | `backend/mi_proyecto/` |
+| Gestión de dependencias Python | `pip` con versiones fijadas (ADR-001) | `backend/requirements*.txt` |
+| Configuración por entorno | `django-environ` + `settings/` por entorno (ADR-002) | `backend/mi_proyecto/settings/` |
+| Base de datos | PostgreSQL local vía `DATABASE_URL` (ADR-005); SQLite eliminado | `backend/mi_proyecto/settings/base.py` |
+| Frontend Next.js | `frontend/my-app` con `lib/api-client.ts` y pruebas | `frontend/my-app/package.json` |
+| Pruebas | `pytest` (backend) y `vitest` (frontend) operativos (ADR-004) | `backend/tests/`, `frontend/my-app/tests/` |
+| CI/CD | Workflow de CI en PR hacia `develop` (ADR-006); sin CD | `.github/workflows/ci.yml` |
 
-> Conclusión: el proyecto está en **Fase 0**. Ninguna historia de usuario puede iniciarse antes de cerrar [`fases/FASE-00-fundaciones.md`](fases/FASE-00-fundaciones.md).
+> Conclusión: el proyecto está en **Fase 0, en revisión**. Ninguna historia de usuario puede iniciarse antes de cerrar el DoD de [`fases/FASE-00-fundaciones.md`](fases/FASE-00-fundaciones.md).
 
 ---
 

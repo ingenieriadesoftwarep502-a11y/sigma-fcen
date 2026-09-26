@@ -23,7 +23,7 @@
 
 | Fase | Nombre | Historias | Puntos | ADR bloqueantes | Estado |
 |---|---|---|---:|---|---|
-| [00](FASE-00-fundaciones.md) | Fundaciones técnicas | — | 0 | 001, 002, 003, 004, 005, 006 | Bloqueada |
+| [00](FASE-00-fundaciones.md) | Fundaciones técnicas | — | 0 | 001, 002, 003, 004, 005, 006 (confirmados) | En revisión |
 | [01](FASE-01-identidad-acceso.md) | Identidad y acceso | HU-01, HU-11 | 13 | 007, 008, 009 | Bloqueada |
 | [02](FASE-02-catalogo-academico.md) | Catálogo académico | HU-11 (parcial) | 5 | 008 | Bloqueada |
 | [03](FASE-03-disponibilidad.md) | Disponibilidad y búsqueda | HU-05, HU-02 | 10 | 010 | Bloqueada |
