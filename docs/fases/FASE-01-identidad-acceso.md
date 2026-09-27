@@ -5,8 +5,8 @@
 | Sprints | 1 y 2 (semanas 3–6) |
 | Historias | HU-01 Registro (5 pts) · HU-11 Gestión de usuarios y roles (8 pts) |
 | Puntos | 13 |
-| Estado | **Bloqueada** |
-| ADR bloqueantes | ADR-007, ADR-008, ADR-009 |
+| Estado | **Lista para iniciar** — G0 y G1 superados (ADR, contratos y criterios confirmados); FASE-00 cerrada (2026-09-27) |
+| ADR bloqueantes | Ninguno (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27) |
 | Requisitos | RF-010 a RF-014, RF-020, RF-021, RF-025 |
 
 ---
@@ -21,10 +21,10 @@ Que una persona pueda registrarse, autenticarse y acceder únicamente a lo que s
 
 ## 2. Gate de entrada
 
-- [ ] FASE-00 cerrada con su DoD completa
-- [ ] ADR-007 — Mecanismo de autenticación
-- [ ] ADR-008 — Modelo de usuario y representación de roles
-- [ ] ADR-009 — Política de registro y verificación institucional
+- [x] FASE-00 cerrada con su DoD completa *(2026-09-27)*
+- [x] ADR-007 — Mecanismo de autenticación: JWT en cookies `HttpOnly` *(2026-09-27)*
+- [x] ADR-008 — Modelo de usuario y representación de roles: `User` + `UserRole` N:M *(2026-09-27)*
+- [x] ADR-009 — Política de registro: `@unal.edu.co`, auto-registro como Estudiante, sin verificación por correo *(2026-09-27)*
 
 > **La decisión más cara del proyecto está aquí.** `AUTH_USER_MODEL` debe definirse en la **primera migración**. Cambiarlo después obliga a recrear la base de datos. Riesgo R-04 del TRD. Si ADR-008 no está cerrado, **no se ejecuta `makemigrations`**.
 
@@ -35,7 +35,7 @@ Que una persona pueda registrarse, autenticarse y acceder únicamente a lo que s
 ### Entra
 
 - Modelo `User` personalizado con `email` como identificador de acceso.
-- Representación de roles según ADR-008.
+- Roles múltiples y simultáneos mediante `UserRole` (ADR-008).
 - Registro, inicio y cierre de sesión, renovación de credenciales.
 - Endpoint de perfil propio.
 - Clases de permiso por rol, reutilizables.
@@ -47,17 +47,17 @@ Que una persona pueda registrarse, autenticarse y acceder únicamente a lo que s
 ### No entra
 
 - Inicio de sesión único institucional (ADR-015, fuera de alcance de la versión 1).
-- Recuperación de contraseña si ADR-009 no define el servicio de correo — se traslada a FASE-10.
+- Recuperación de contraseña — ADR-009 descarta SMTP en v1; se traslada a FASE-10.
 - Asignaturas y asignaciones de monitoría — es FASE-02.
 
 ---
 
-## 4. Contratos propuestos · `[PROPUESTA]`
+## 4. Contratos · `[CONFIRMADO]` (Nicolás García Orozco, 2026-09-27)
 
 | Método | Ruta | Rol | Respuesta esperada |
 |---|---|---|---|
 | `POST` | `/api/v1/auth/register/` | público | `201` con usuario creado |
-| `POST` | `/api/v1/auth/login/` | público | `200`, credencial emitida según ADR-007 |
+| `POST` | `/api/v1/auth/login/` | público | `200`, JWT de acceso y de refresco en cookies `HttpOnly` (ADR-007) |
 | `POST` | `/api/v1/auth/logout/` | autenticado | `204` |
 | `POST` | `/api/v1/auth/refresh/` | autenticado | `200` |
 | `GET` | `/api/v1/users/me/` | autenticado | `200` con perfil y roles |
@@ -67,7 +67,7 @@ Que una persona pueda registrarse, autenticarse y acceder únicamente a lo que s
 | `POST` | `/api/v1/users/{id}/deactivate/` | admin | `200` |
 | `POST` | `/api/v1/users/{id}/roles/` | admin | `200` |
 
-**Modelo:** ver [`../DDD.md`](../DDD.md) §4.1. La forma final depende de ADR-008.
+**Modelo:** ver [`../DDD.md`](../DDD.md) §4.1. `User` + `UserRole` N:M (ADR-008).
 
 ---
 
@@ -78,10 +78,10 @@ Cada tarea empieza por la prueba. Si la prueba pasa antes de implementar, está 
 | # | Tarea | Prueba primero (G2) | Criterios |
 |---|---|---|---|
 | T-01.1 | Modelo `User` personalizado | Crear usuario con email; email duplicado falla | RN-001.1 |
-| T-01.2 | Representación de roles (ADR-008) | Asignar rol y comprobarlo; rol duplicado falla | RN-002 |
+| T-01.2 | Roles N:M con `UserRole` (ADR-008) | Asignar rol y comprobarlo; rol duplicado falla | RN-002 |
 | T-01.3 | Primera migración | Migración aplica en base limpia; `AUTH_USER_MODEL` apunta al modelo propio | — |
 | T-01.4 | Endpoint de registro | Registro válido → `201`; email repetido → `400` | CA-HU01-1, CA-HU01-2 |
-| T-01.5 | Validación de dominio institucional | Dominio no institucional → rechazo | CA-HU01-3 |
+| T-01.5 | Validación de dominio institucional | Correo fuera de `@unal.edu.co` → `400` | CA-HU01-3 |
 | T-01.6 | Política de contraseña | Contraseña débil → `400` con el detalle de la regla | CA-HU01-4 |
 | T-01.7 | Inicio de sesión y emisión de credencial | Credenciales válidas → `200`; inválidas → `401` | — |
 | T-01.8 | Usuario inactivo no autentica | Cuenta desactivada → `401` | RN-002.4, CA-HU11-2 |
@@ -119,7 +119,7 @@ npm test && npm run type-check
 
 ## 8. Definition of Done
 
-- [ ] ADR-007, ADR-008 y ADR-009 cerrados antes de la primera migración.
+- [x] ADR-007, ADR-008 y ADR-009 cerrados antes de la primera migración. *(2026-09-27)*
 - [ ] `AUTH_USER_MODEL` definido en la migración inicial.
 - [ ] Los 10 criterios de aceptación tienen prueba automatizada.
 - [ ] Cada endpoint tiene prueba de `401` sin autenticación y `403` por rol incorrecto.

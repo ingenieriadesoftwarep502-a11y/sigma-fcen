@@ -312,11 +312,11 @@ Formato único de error, inspirado en RFC 9457:
 
 | Aspecto | Decisión | Estado |
 |---|---|---|
-| Autenticación | JWT en cookies `HttpOnly` + `SameSite` | `[PENDIENTE]` ADR-007 |
-| Autorización | Clases de permiso DRF por rol y por propiedad del recurso | `[PENDIENTE]` ADR-008 |
+| Autenticación | JWT (`simplejwt`) en cookies `HttpOnly` + `SameSite`, con token de refresco | `[CONFIRMADO]` ADR-007 |
+| Autorización | Clases de permiso DRF por rol (roles múltiples vía `UserRole`) y por propiedad del recurso | `[CONFIRMADO]` ADR-008 |
 | Secretos | Solo por variables de entorno; `.env` fuera del repositorio | `[CONFIRMADO]` ADR-002 |
 | CORS | Lista blanca desde `CORS_ALLOWED_ORIGINS` | `[CONFIRMADO]` ADR-002 |
-| CSRF | Activo para autenticación por cookies | `[PENDIENTE]` ADR-007 |
+| CSRF | Activo para autenticación por cookies | `[CONFIRMADO]` ADR-007 |
 | Transporte | HTTPS obligatorio; `SECURE_SSL_REDIRECT` en producción | `[PROPUESTA]` |
 | Contraseñas | Validadores nativos de Django; hasher PBKDF2 | `[PROPUESTA]` |
 | Limitación de tasa | `throttling` de DRF en autenticación y reservas | `[PROPUESTA]` |

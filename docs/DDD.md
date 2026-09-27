@@ -5,10 +5,10 @@
 | Sistema | SIGMA-FCEN |
 | Versión | 1.0 |
 | Fecha | 2026-09-24 |
-| Estado global | `[PROPUESTA]` — el modelo de dominio no se implementa hasta cerrar ADR-008 y ADR-010 |
+| Estado global | `[PROPUESTA]` — ADR-008 cerrado (2026-09-27); el resto del modelo de dominio no se implementa hasta cerrar ADR-010 |
 | Documentos relacionados | [`TRD.md`](TRD.md) · [`SAD.md`](SAD.md) · [`DECISIONES-ABIERTAS.md`](DECISIONES-ABIERTAS.md) |
 
-> **Advertencia crítica:** cambiar `AUTH_USER_MODEL` o el modelo de agregados después de la primera migración es una de las operaciones más caras en Django. **Ninguna migración se genera antes de cerrar ADR-008.** Riesgo R-04 del TRD.
+> **Advertencia crítica:** cambiar `AUTH_USER_MODEL` o el modelo de agregados después de la primera migración es una de las operaciones más caras en Django. ADR-008 quedó cerrado el 2026-09-27: `AUTH_USER_MODEL` va en la **primera** migración de `apps/accounts`. Riesgo R-04 del TRD.
 
 ---
 
@@ -113,13 +113,13 @@ Un **agregado** es la frontera de consistencia: todo lo que dentro de él debe s
 | Campo | Tipo | Notas |
 |---|---|---|
 | `id` | UUID | Recomendado sobre entero secuencial: no revela volumen ni permite enumeración |
-| `email` | Email único | Identificador institucional |
+| `email` | Email único | Identificador de acceso; dominio `@unal.edu.co` — `[CONFIRMADO]` ADR-009 |
 | `first_name`, `last_name` | Texto | — |
-| `institutional_id` | Texto único | Código de estudiante o empleado — `[PENDIENTE]` ADR-009 |
+| ~~`institutional_id`~~ | — | `[OBSOLETO]` — descartado: el correo `@unal.edu.co` es el único identificador (Nicolás García Orozco, 2026-09-27) |
 | `is_active` | Booleano | Desactivación lógica; nunca se borra físicamente (RF-025) |
 | `date_joined` | Marca de tiempo | UTC |
 
-**Relación con roles:** `[PENDIENTE]` ADR-008. Si un usuario puede tener varios roles simultáneos, se requiere una tabla `UserRole` con `unique_together(user, role)`. Si solo puede tener uno, basta un campo. **Esta decisión cambia el modelo entero.**
+**Relación con roles:** `[CONFIRMADO]` ADR-008. Un usuario puede tener varios roles simultáneos; se modela con la tabla `UserRole` (N:M entre `User` y `Role`) con restricción única `(user, role)`.
 
 **Invariante:** un usuario inactivo no puede autenticarse ni ser destinatario de reservas nuevas.
 
@@ -246,23 +246,23 @@ Un **agregado** es la frontera de consistencia: todo lo que dentro de él debe s
 
 Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y violación** (RNF-CAL-002).
 
-### RN-001 · Registro e identidad · `[PENDIENTE]` ADR-009
+### RN-001 · Registro e identidad · `[CONFIRMADO]`
 
 | # | Regla | Estado |
 |---|---|---|
-| 001.1 | El correo es único en todo el sistema | `[PROPUESTA]` |
-| 001.2 | El correo debe pertenecer al dominio institucional | `[PENDIENTE]` |
-| 001.3 | La contraseña cumple la política mínima de Django | `[PROPUESTA]` |
-| 001.4 | El rol inicial lo determina la política de ADR-009 | `[PENDIENTE]` |
+| 001.1 | El correo es único en todo el sistema | `[CONFIRMADO]` |
+| 001.2 | El correo debe pertenecer al dominio `@unal.edu.co` | `[CONFIRMADO]` ADR-009 |
+| 001.3 | La contraseña cumple la política mínima de Django | `[CONFIRMADO]` |
+| 001.4 | El auto-registro asigna únicamente el rol Estudiante; Monitor, Docente y Administrador los asigna un administrador. La cuenta queda activa sin verificación por correo | `[CONFIRMADO]` ADR-009 |
 
-### RN-002 · Autorización · `[PENDIENTE]` ADR-008
+### RN-002 · Autorización · `[CONFIRMADO]`
 
 | # | Regla | Estado |
 |---|---|---|
-| 002.1 | Toda operación verifica el rol en el servidor, nunca solo en la interfaz | `[PROPUESTA]` |
-| 002.2 | Un usuario solo accede a sus propios recursos, salvo rol administrativo | `[PROPUESTA]` |
-| 002.3 | Un docente accede únicamente a información de sus cursos | `[PROPUESTA]` |
-| 002.4 | Un usuario inactivo no puede autenticarse | `[PROPUESTA]` |
+| 002.1 | Toda operación verifica el rol en el servidor, nunca solo en la interfaz | `[CONFIRMADO]` |
+| 002.2 | Un usuario solo accede a sus propios recursos, salvo rol administrativo | `[CONFIRMADO]` |
+| 002.3 | Un docente accede únicamente a información de sus cursos | `[CONFIRMADO]` |
+| 002.4 | Un usuario inactivo no puede autenticarse | `[CONFIRMADO]` |
 
 ### RN-003 · Disponibilidad · `[PENDIENTE]` ADR-010
 
@@ -272,7 +272,7 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | 003.2 | Una franja no se crea en el pasado | `[PROPUESTA]` |
 | 003.3 | Dos franjas del mismo monitor no se solapan | `[PROPUESTA]` |
 | 003.4 | Una franja con reserva confirmada no se elimina ni se modifica en su horario | `[PROPUESTA]` |
-| 003.5 | El monitor solo publica franjas de asignaturas que tiene asignadas | `[PENDIENTE]` ADR-009 |
+| 003.5 | El monitor solo publica franjas de asignaturas que tiene asignadas | `[PROPUESTA]` (ADR-009 cerrado) |
 | 003.6 | Duración estándar de la franja | `[PENDIENTE]` ADR-010 |
 
 ### RN-004 · Reserva · `[PENDIENTE]` ADR-010
@@ -416,7 +416,7 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
 ## 8. Modelo entidad-relación propuesto · `[PROPUESTA]`
 
 ```text
-  User ──┬──< UserRole >── Role          (N:M — [PENDIENTE] ADR-008)
+  User ──┬──< UserRole >── Role          (N:M — [CONFIRMADO] ADR-008)
          │
          ├──< MonitorAssignment >── Subject
          │
