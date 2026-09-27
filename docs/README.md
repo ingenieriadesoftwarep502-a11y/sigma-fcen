@@ -54,7 +54,7 @@ Esto no es una recomendación. Es un gate bloqueante descrito en [`PROTOCOLO-AGE
 | Pruebas | `pytest` (backend) y `vitest` (frontend) operativos (ADR-004) | `backend/tests/`, `frontend/my-app/tests/` |
 | CI/CD | Workflow de CI en PR hacia `develop`, verificado en verde; `develop` protegida (ADR-006); sin CD | `.github/workflows/ci.yml`, PR #1 |
 
-> Conclusión: el proyecto está en **Fase 0, en revisión**; solo falta que un segundo integrante verifique la instalación desde cero. Ninguna historia de usuario puede iniciarse antes de cerrar el DoD de [`fases/FASE-00-fundaciones.md`](fases/FASE-00-fundaciones.md).
+> Conclusión: **FASE-00 cerrada** el 2026-09-27 con su DoD completa. [`FASE-01`](fases/FASE-01-identidad-acceso.md) tiene sus ADR, contratos y criterios confirmados y puede iniciarse.
 
 ---
 
@@ -76,4 +76,4 @@ Cada elemento tiene un identificador estable. Nunca los renumeres; si algo se de
 
 ## Siguiente paso
 
-Ir a [`fases/README.md`](fases/README.md) y revisar el gate de entrada de `FASE-00`.
+Ir a [`fases/FASE-01-identidad-acceso.md`](fases/FASE-01-identidad-acceso.md) y empezar por T-01.1 (modelo `User`), prueba primero.

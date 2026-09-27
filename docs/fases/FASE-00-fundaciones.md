@@ -5,7 +5,7 @@
 | Sprint | 0 (semanas 1–2) |
 | Historias | Ninguna — habilitador técnico |
 | Puntos de backlog | 0 |
-| Estado | **En revisión** — implementación completa (2026-09-25); CI en verde y `develop` protegida (2026-09-27); único pendiente: verificación de la instalación por un segundo integrante |
+| Estado | **Cerrada** — implementación completa (2026-09-25); CI en verde, `develop` protegida e instalación verificada por un segundo integrante (2026-09-27) |
 | ADR de entrada | ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006 — todos `[CONFIRMADO]` el 2026-09-25 |
 
 ---
@@ -234,7 +234,7 @@ git grep -n "django-insecure" || echo "sin secretos hardcodeados"
 ## 7. Definition of Done
 
 - [x] Los seis ADR de la tanda 1 están `[CONFIRMADO]` y registrados en §2 de `DECISIONES-ABIERTAS.md`.
-- [ ] Instalación reproducible desde cero, verificada por un segundo integrante.
+- [x] Instalación reproducible desde cero, verificada por un segundo integrante. *(Nicolás García Orozco, 2026-09-27: clon limpio de `develop` en Windows 11 con Python 3.11.9, Node 24.21 y PostgreSQL 18.6 — `migrate` ok, `pytest --cov` 32 pruebas en verde (88 %), `ruff`, `mypy`, `npm run lint`, `type-check`, 14 pruebas de `vitest` y `build` en verde; `/api/v1/health/` responde `{"status":"ok","database":"ok"}`.)*
 - [x] Ningún secreto en el repositorio; `SECRET_KEY` rotada.
 - [x] `DEBUG` controlado por entorno.
 - [x] PostgreSQL operativo en desarrollo; SQLite fuera del proyecto.
