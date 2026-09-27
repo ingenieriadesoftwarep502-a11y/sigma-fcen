@@ -283,6 +283,7 @@ Se conserva el contexto original de cada ADR para trazabilidad.
 
 - **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
 - **Decisión:** GitHub Actions en cada PR hacia `develop` (backend con servicio `postgres:16`, frontend en `frontend/my-app`). Protección de `develop`: CI en verde + 1 aprobación (regla documentada en `CONTRIBUTING.md`; su aplicación en GitHub la realiza un administrador del repositorio).
+- **Aplicación:** protección de `develop` activa desde el 2026-09-27. Para habilitarla, el repositorio se hizo público (en cuentas gratuitas GitHub no protege ramas de repositorios privados); antes se revisó el historial y no contiene secretos vigentes.
 - **Bloqueaba:** FASE-00, gate G4 automatizado
 - **Contexto:** el gate G4 exige suite verde antes del merge. Sin CI, la verificación depende de la memoria de cada persona.
 - **Propuesta:** GitHub Actions con un workflow que corra, en cada PR hacia `develop`: `ruff` + `mypy` + `pytest` (backend) y `eslint` + `tsc --noEmit` + `vitest` (frontend). Rama `develop` protegida: sin CI en verde y sin una aprobación, no hay merge.

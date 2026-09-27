@@ -32,13 +32,15 @@ git switch -c feature/HU-03-reserva-monitoria
 
 ### Protección obligatoria de `develop`
 
-Un administrador del repositorio debe configurar en GitHub (*Settings → Branches → Branch protection rules*) para la rama `develop`:
+Configurada en GitHub (*Settings → Branches → Branch protection rules*) para la rama `develop` desde el 2026-09-27:
 
-- [ ] Exigir Pull Request antes de integrar.
-- [ ] Exigir **al menos 1 aprobación** de un integrante distinto del autor.
-- [ ] Exigir que los checks de CI estén en verde: `Backend (ruff, mypy, pytest)` y `Frontend (eslint, tsc, vitest, build)`.
-- [ ] Exigir que la rama esté actualizada con `develop` antes de integrar.
-- [ ] Bloquear *force push* y borrado de la rama.
+- [x] Exigir Pull Request antes de integrar.
+- [x] Exigir **al menos 1 aprobación** de un integrante distinto del autor.
+- [x] Exigir que los checks de CI estén en verde: `Backend (ruff, mypy, pytest)` y `Frontend (eslint, tsc, vitest, build)`.
+- [x] Exigir que la rama esté actualizada con `develop` antes de integrar.
+- [x] Bloquear *force push* y borrado de la rama.
+
+Los administradores pueden saltarse la regla (`enforce_admins` desactivado); hacerlo es una excepción y debe justificarse en el PR.
 
 Se recomienda la misma protección para `main`.
 

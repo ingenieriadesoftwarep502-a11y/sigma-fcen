@@ -172,7 +172,7 @@ Se actualiza al cerrar cada fase.
 
 | Fase | Gate de entrada | Implementación | DoD | Fecha de cierre |
 |---|---|---|---|---|
-| FASE-00 | Bloqueado | No iniciada | — | — |
+| FASE-00 | Abierto (ADR 001–006) | Completa | Pendiente: verificación por 2.º integrante | — |
 | FASE-01 | Bloqueado | No iniciada | — | — |
 | FASE-02 | Bloqueado | No iniciada | — | — |
 | FASE-03 | Bloqueado | No iniciada | — | — |
