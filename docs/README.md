@@ -42,7 +42,7 @@ Esto no es una recomendación. Es un gate bloqueante descrito en [`PROTOCOLO-AGE
 
 ---
 
-## Estado actual del proyecto (verificado el 2026-09-25)
+## Estado actual del proyecto (verificado el 2026-09-27)
 
 | Componente | Estado real | Evidencia |
 |---|---|---|
@@ -52,9 +52,9 @@ Esto no es una recomendación. Es un gate bloqueante descrito en [`PROTOCOLO-AGE
 | Base de datos | PostgreSQL local vía `DATABASE_URL` (ADR-005); SQLite eliminado | `backend/mi_proyecto/settings/base.py` |
 | Frontend Next.js | `frontend/my-app` con `lib/api-client.ts` y pruebas | `frontend/my-app/package.json` |
 | Pruebas | `pytest` (backend) y `vitest` (frontend) operativos (ADR-004) | `backend/tests/`, `frontend/my-app/tests/` |
-| CI/CD | Workflow de CI en PR hacia `develop` (ADR-006); sin CD | `.github/workflows/ci.yml` |
+| CI/CD | Workflow de CI en PR hacia `develop`, verificado en verde; `develop` protegida (ADR-006); sin CD | `.github/workflows/ci.yml`, PR #1 |
 
-> Conclusión: el proyecto está en **Fase 0, en revisión**. Ninguna historia de usuario puede iniciarse antes de cerrar el DoD de [`fases/FASE-00-fundaciones.md`](fases/FASE-00-fundaciones.md).
+> Conclusión: **FASE-00 cerrada** el 2026-09-27 con su DoD completa. [`FASE-01`](fases/FASE-01-identidad-acceso.md) tiene sus ADR, contratos y criterios confirmados y puede iniciarse.
 
 ---
 
@@ -76,4 +76,4 @@ Cada elemento tiene un identificador estable. Nunca los renumeres; si algo se de
 
 ## Siguiente paso
 
-Ir a [`fases/README.md`](fases/README.md) y revisar el gate de entrada de `FASE-00`.
+Ir a [`fases/FASE-01-identidad-acceso.md`](fases/FASE-01-identidad-acceso.md) y empezar por T-01.1 (modelo `User`), prueba primero.

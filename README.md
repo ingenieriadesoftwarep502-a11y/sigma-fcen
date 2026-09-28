@@ -64,7 +64,7 @@ createdb -U <usuario> <nombre_bd>
 
 ```powershell
 cd backend
-python -m venv .venv
+py -3.11 -m venv .venv   # usa 3.11 aunque tengas otra versión por defecto
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements-dev.txt
 python manage.py migrate
