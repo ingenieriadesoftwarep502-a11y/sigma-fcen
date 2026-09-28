@@ -2,9 +2,10 @@
 
 from django.urls import path
 
-from apps.accounts.views import LoginView, LogoutView, MeView, RefreshView, RegisterView
+from apps.accounts.views import CsrfView, LoginView, LogoutView, MeView, RefreshView, RegisterView
 
 auth_patterns = [
+    path("csrf/", CsrfView.as_view(), name="csrf"),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("refresh/", RefreshView.as_view(), name="token-refresh"),

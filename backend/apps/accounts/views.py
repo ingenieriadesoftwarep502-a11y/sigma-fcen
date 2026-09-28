@@ -7,6 +7,8 @@ from typing import cast
 from django.contrib.auth import authenticate
 from django.db import IntegrityError
 from django.middleware.csrf import get_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import serializers, status
 from rest_framework.exceptions import AuthenticationFailed
@@ -47,6 +49,18 @@ def _unauthorized(detail: str) -> Response:
     return Response({"detail": detail}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+class CsrfView(APIView):
+    """Sets the csrftoken cookie the frontend echoes in X-CSRFToken before login (ADR-007)."""
+
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+
+    @extend_schema(request=None, responses={204: None})
+    @method_decorator(ensure_csrf_cookie)
+    def get(self, request: Request) -> Response:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class RegisterView(APIView):
     """Public self-registration with an institutional email (HU-01)."""
 
@@ -55,6 +69,8 @@ class RegisterView(APIView):
 
     @extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
     def post(self, request: Request) -> Response:
+        # No authentication runs here, so CSRF is checked explicitly (login CSRF, ADR-007).
+        enforce_csrf(request)
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -76,6 +92,8 @@ class LoginView(APIView):
         responses={200: UserSerializer, 401: OpenApiResponse(description="Invalid credentials")},
     )
     def post(self, request: Request) -> Response:
+        # Prevents login CSRF: a third-party page cannot sign the browser into another account.
+        enforce_csrf(request)
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         # ModelBackend also rejects inactive accounts (RN-002.4).

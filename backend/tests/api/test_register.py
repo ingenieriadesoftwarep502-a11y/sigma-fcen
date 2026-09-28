@@ -121,3 +121,16 @@ def test_t01_4_required_fields(api_client: APIClient, missing: str) -> None:
 
     assert response.status_code == 400
     assert missing in response.json()
+
+
+@pytest.mark.django_db
+def test_adr_007_register_requires_csrf_token() -> None:
+    client = APIClient(enforce_csrf_checks=True)
+    token = client.get("/api/v1/auth/csrf/").cookies["csrftoken"].value
+
+    without_token = client.post(REGISTER_URL, _payload(), format="json")
+    with_token = client.post(REGISTER_URL, _payload(), format="json", HTTP_X_CSRFTOKEN=token)
+
+    assert without_token.status_code == 403
+    assert with_token.status_code == 201
+    assert User.objects.count() == 1

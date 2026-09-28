@@ -14,6 +14,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from apps.accounts.models import User
 from apps.accounts.services import register_student
 
+CSRF_URL = "/api/v1/auth/csrf/"
 LOGIN_URL = "/api/v1/auth/login/"
 REFRESH_URL = "/api/v1/auth/refresh/"
 LOGOUT_URL = "/api/v1/auth/logout/"
@@ -28,8 +29,36 @@ def student(db: None) -> User:
     return register_student(email=EMAIL, password=PASSWORD, first_name="Ana", last_name="Pérez")
 
 
-def _login(client: APIClient, email: str = EMAIL, password: str = PASSWORD) -> Any:
-    return client.post(LOGIN_URL, {"email": email, "password": password}, format="json")
+def _login(client: APIClient, email: str = EMAIL, password: str = PASSWORD, **extra: Any) -> Any:
+    return client.post(LOGIN_URL, {"email": email, "password": password}, format="json", **extra)
+
+
+def _csrf_client() -> tuple[APIClient, str]:
+    """A browser-like client that enforces CSRF and already holds the csrftoken cookie."""
+    client = APIClient(enforce_csrf_checks=True)
+    token = client.get(CSRF_URL).cookies["csrftoken"].value
+    return client, token
+
+
+@pytest.mark.django_db
+def test_adr_007_csrf_endpoint_sets_the_csrf_cookie_without_content() -> None:
+    client = APIClient(enforce_csrf_checks=True)
+
+    response = client.get(CSRF_URL)
+
+    assert response.status_code == 204
+    assert response.cookies["csrftoken"].value
+
+
+def test_adr_007_login_requires_csrf_token(student: User) -> None:
+    client, token = _csrf_client()
+
+    without_token = _login(client)
+    with_token = _login(client, HTTP_X_CSRFTOKEN=token)
+
+    assert without_token.status_code == 403
+    assert "access_token" not in without_token.cookies
+    assert with_token.status_code == 200
 
 
 def test_t01_7_valid_credentials_set_httponly_token_cookies(
@@ -197,22 +226,22 @@ def test_t01_7_logout_clears_the_token_cookies(api_client: APIClient, student: U
 
 
 def test_adr_007_cookie_authenticated_unsafe_request_requires_csrf_token(student: User) -> None:
-    client = APIClient(enforce_csrf_checks=True)
-    login = _login(client)
+    client, token = _csrf_client()
+    _login(client, HTTP_X_CSRFTOKEN=token)
 
     without_token = client.post(LOGOUT_URL)
-    with_token = client.post(LOGOUT_URL, HTTP_X_CSRFTOKEN=login.cookies["csrftoken"].value)
+    with_token = client.post(LOGOUT_URL, HTTP_X_CSRFTOKEN=token)
 
     assert without_token.status_code == 403
     assert with_token.status_code == 204
 
 
 def test_adr_007_refresh_requires_csrf_token(student: User) -> None:
-    client = APIClient(enforce_csrf_checks=True)
-    login = _login(client)
+    client, token = _csrf_client()
+    _login(client, HTTP_X_CSRFTOKEN=token)
 
     without_token = client.post(REFRESH_URL)
-    with_token = client.post(REFRESH_URL, HTTP_X_CSRFTOKEN=login.cookies["csrftoken"].value)
+    with_token = client.post(REFRESH_URL, HTTP_X_CSRFTOKEN=token)
 
     assert without_token.status_code == 403
     assert with_token.status_code == 200
