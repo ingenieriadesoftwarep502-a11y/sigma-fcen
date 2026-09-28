@@ -2,7 +2,16 @@
 
 from django.urls import path
 
-from apps.accounts.views import CsrfView, LoginView, LogoutView, MeView, RefreshView, RegisterView
+from apps.accounts.views import (
+    CsrfView,
+    LoginView,
+    LogoutView,
+    MeView,
+    RefreshView,
+    RegisterView,
+    UserDetailView,
+    UserListCreateView,
+)
 
 auth_patterns = [
     path("csrf/", CsrfView.as_view(), name="csrf"),
@@ -13,5 +22,7 @@ auth_patterns = [
 ]
 
 users_patterns = [
+    path("", UserListCreateView.as_view(), name="user-list"),
     path("me/", MeView.as_view(), name="me"),
+    path("<uuid:pk>/", UserDetailView.as_view(), name="user-detail"),
 ]

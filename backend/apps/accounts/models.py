@@ -141,3 +141,27 @@ class UserRole(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} · {self.role}"
+
+
+class AuditLog(models.Model):
+    """Who did what to which account, and when (CA-HU11-5). Never stores credentials."""
+
+    class Action(models.TextChoices):
+        USER_CREATED = "USER_CREATED", "Usuario creado"
+        USER_UPDATED = "USER_UPDATED", "Usuario editado"
+        USER_ACTIVATED = "USER_ACTIVATED", "Usuario activado"
+        USER_DEACTIVATED = "USER_DEACTIVATED", "Usuario desactivado"
+        ROLES_CHANGED = "ROLES_CHANGED", "Roles modificados"
+
+    actor = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    target = models.ForeignKey(User, on_delete=models.PROTECT, related_name="audit_entries")
+    action = models.CharField(max_length=32, choices=Action.choices)
+    # Field name -> [before, after]; for creations, the initial values.
+    changes = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering: ClassVar[list[str]] = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.created_at:%Y-%m-%d %H:%M} {self.actor} {self.action} {self.target}"

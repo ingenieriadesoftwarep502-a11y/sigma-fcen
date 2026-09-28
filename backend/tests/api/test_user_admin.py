@@ -1,0 +1,214 @@
+"""Administrative user management with audit trail (HU-11, T-01.11, T-01.13).
+
+CA-HU11-1, CA-HU11-4, CA-HU11-5, RF-020, RF-021, RNF-SEC-003, RNF-SEC-004.
+"""
+
+from typing import Any
+from unittest import mock
+
+import pytest
+from django.db import IntegrityError
+from rest_framework.test import APIClient
+
+from apps.accounts.models import AuditLog, Role, User, UserRole
+from apps.accounts.services import register_student
+
+pytestmark = pytest.mark.django_db
+
+USERS_URL = "/api/v1/users/"
+PASSWORD = "Str0ng-Passw0rd!"
+
+
+def _user(email: str, *codes: str) -> User:
+    user = User.objects.create_user(email=email, password=PASSWORD, first_name="N", last_name="N")
+    for code in codes:
+        UserRole.objects.create(user=user, role=Role.objects.get(code=code))
+    return user
+
+
+def _client_for(user: User) -> APIClient:
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
+
+
+@pytest.fixture
+def admin() -> User:
+    return _user("admin@unal.edu.co", Role.Code.ADMIN)
+
+
+@pytest.fixture
+def admin_client(admin: User) -> APIClient:
+    return _client_for(admin)
+
+
+@pytest.fixture
+def student() -> User:
+    return register_student(
+        email="ana.perez@unal.edu.co", password=PASSWORD, first_name="Ana", last_name="Pérez"
+    )
+
+
+def _new_user_payload(**overrides: Any) -> dict[str, Any]:
+    return {
+        "email": "docente@unal.edu.co",
+        "password": PASSWORD,
+        "first_name": "Laura",
+        "last_name": "Gómez",
+        "roles": ["TEACHER"],
+        **overrides,
+    }
+
+
+def _endpoints(student: User) -> list[tuple[str, str]]:
+    detail = f"{USERS_URL}{student.pk}/"
+    return [
+        ("get", USERS_URL),
+        ("post", USERS_URL),
+        ("get", detail),
+    ]
+
+
+# --- Authorization: every endpoint, every non-admin role -------------------------------------
+
+
+def test_rnf_sec_003_every_management_endpoint_returns_401_without_credentials(
+    student: User,
+) -> None:
+    for method, url in _endpoints(student):
+        assert getattr(APIClient(), method)(url).status_code == 401, (method, url)
+
+
+@pytest.mark.parametrize("code", [Role.Code.STUDENT, Role.Code.MONITOR, Role.Code.TEACHER])
+def test_ca_hu11_4_non_admin_roles_get_403_on_every_management_endpoint(
+    student: User, code: str
+) -> None:
+    client = _client_for(_user(f"{code.lower()}@unal.edu.co", code))
+
+    for method, url in _endpoints(student):
+        response = getattr(client, method)(url, {}, format="json")
+        assert response.status_code == 403, (method, url)
+
+
+# --- Create --------------------------------------------------------------------------------
+
+
+def test_ca_hu11_1_admin_creates_active_user_with_role_that_can_log_in(
+    admin_client: APIClient,
+) -> None:
+    response = admin_client.post(USERS_URL, _new_user_payload(), format="json")
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["email"] == "docente@unal.edu.co"
+    assert body["roles"] == ["TEACHER"]
+    assert body["is_active"] is True
+    assert "password" not in body
+
+    login = APIClient().post(
+        "/api/v1/auth/login/",
+        {"email": "docente@unal.edu.co", "password": PASSWORD},
+        format="json",
+    )
+    assert login.status_code == 200
+    assert login.json()["roles"] == ["TEACHER"]
+
+
+def test_rf_021_admin_creates_user_with_several_roles(admin_client: APIClient) -> None:
+    response = admin_client.post(
+        USERS_URL, _new_user_payload(roles=["STUDENT", "MONITOR"]), format="json"
+    )
+
+    assert response.status_code == 201
+    assert sorted(response.json()["roles"]) == ["MONITOR", "STUDENT"]
+
+
+@pytest.mark.parametrize(
+    ("overrides", "field"),
+    [
+        ({"email": "docente@gmail.com"}, "email"),
+        ({"password": "12345678"}, "password"),
+        ({"roles": ["DEAN"]}, "roles"),
+        ({"roles": []}, "roles"),
+    ],
+)
+def test_t01_11_create_rejects_invalid_data(
+    admin_client: APIClient, overrides: dict[str, Any], field: str
+) -> None:
+    response = admin_client.post(USERS_URL, _new_user_payload(**overrides), format="json")
+
+    assert response.status_code == 400
+    assert field in response.json()
+    assert not User.objects.filter(email__iexact="docente@unal.edu.co").exists()
+
+
+def test_rn_001_1_create_rejects_existing_email_in_any_case(
+    admin_client: APIClient, student: User
+) -> None:
+    response = admin_client.post(
+        USERS_URL, _new_user_payload(email="ANA.PEREZ@unal.edu.co"), format="json"
+    )
+
+    assert response.status_code == 400
+    assert response.json()["email"] == ["Ya existe una cuenta con este correo."]
+
+
+# --- List and retrieve ---------------------------------------------------------------------
+
+
+def test_rf_020_admin_lists_users_paginated(admin_client: APIClient, student: User) -> None:
+    response = admin_client.get(USERS_URL)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 2
+    emails = [row["email"] for row in body["results"]]
+    assert emails == ["admin@unal.edu.co", "ana.perez@unal.edu.co"]
+    row = body["results"][1]
+    assert row["roles"] == ["STUDENT"]
+    assert row["is_active"] is True
+    assert "password" not in row
+
+
+def test_rf_020_admin_retrieves_one_user(admin_client: APIClient, student: User) -> None:
+    response = admin_client.get(f"{USERS_URL}{student.pk}/")
+
+    assert response.status_code == 200
+    assert response.json()["email"] == "ana.perez@unal.edu.co"
+
+
+def test_rf_020_unknown_user_returns_404(admin_client: APIClient) -> None:
+    response = admin_client.get(f"{USERS_URL}00000000-0000-0000-0000-000000000000/")
+
+    assert response.status_code == 404
+
+
+# --- Audit (CA-HU11-5) ---------------------------------------------------------------------
+
+
+def test_ca_hu11_5_create_is_audited_without_the_password(
+    admin_client: APIClient, admin: User
+) -> None:
+    admin_client.post(USERS_URL, _new_user_payload(), format="json")
+
+    entry = AuditLog.objects.get()
+    assert entry.actor == admin
+    assert entry.target.email == "docente@unal.edu.co"
+    assert entry.action == AuditLog.Action.USER_CREATED
+    assert entry.created_at is not None
+    assert PASSWORD not in str(entry.changes)
+    assert "password" not in entry.changes
+
+
+def test_ca_hu11_5_rejected_operations_leave_no_audit_entry(admin_client: APIClient) -> None:
+    admin_client.post(USERS_URL, _new_user_payload(email="x@gmail.com"), format="json")
+
+    assert not AuditLog.objects.exists()
+
+
+def test_rn_001_1_concurrent_duplicate_email_returns_400(admin_client: APIClient) -> None:
+    with mock.patch("apps.accounts.views.create_user", side_effect=IntegrityError("duplicate")):
+        response = admin_client.post(USERS_URL, _new_user_payload(), format="json")
+
+    assert response.status_code == 400
+    assert response.json()["email"] == ["Ya existe una cuenta con este correo."]
