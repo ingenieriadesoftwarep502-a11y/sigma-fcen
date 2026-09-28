@@ -113,6 +113,17 @@ describe("RegisterForm (T-01.14, HU-01)", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("sends the user to sign in when the account exists but the auto login fails", async () => {
+    registerMock.mockResolvedValue(USER);
+    loginMock.mockRejectedValue(new ApiError(0, "Network error"));
+    fillValidForm();
+
+    submit();
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/login?registered=1"));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("explains when the server cannot be reached", async () => {
     registerMock.mockRejectedValue(new ApiError(0, "Network error"));
     fillValidForm();

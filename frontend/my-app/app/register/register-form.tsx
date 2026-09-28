@@ -55,9 +55,6 @@ export default function RegisterForm() {
     setSubmitting(true);
     try {
       await register(payload);
-      // Self-registration yields an active account (ADR-009): sign in right away.
-      await login(payload.email, payload.password);
-      router.push("/");
     } catch (error) {
       const serverErrors = fieldErrors(error);
       if (Object.keys(serverErrors).length > 0) {
@@ -66,6 +63,16 @@ export default function RegisterForm() {
         setFormError(requestErrorMessage(error));
       }
       setSubmitting(false);
+      return;
+    }
+
+    try {
+      // Self-registration yields an active account (ADR-009): sign in right away.
+      await login(payload.email, payload.password);
+      router.push("/");
+    } catch {
+      // The account already exists, so a registration error would mislead.
+      router.push("/login?registered=1");
     }
   }
 
