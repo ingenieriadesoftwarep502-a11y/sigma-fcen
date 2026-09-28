@@ -163,18 +163,25 @@ class AuditLogQuerySet(models.QuerySet["AuditLog"]):
         raise AuditLogImmutableError
 
 
+class AuditAction(models.TextChoices):
+    USER_CREATED = "USER_CREATED", "Usuario creado"
+    USER_UPDATED = "USER_UPDATED", "Usuario editado"
+    USER_ACTIVATED = "USER_ACTIVATED", "Usuario activado"
+    USER_DEACTIVATED = "USER_DEACTIVATED", "Usuario desactivado"
+    ROLES_CHANGED = "ROLES_CHANGED", "Roles modificados"
+
+
 class AuditLog(models.Model):
     """Who did what to which account, and when (CA-HU11-5). Never stores credentials."""
 
-    class Action(models.TextChoices):
-        USER_CREATED = "USER_CREATED", "Usuario creado"
-        USER_UPDATED = "USER_UPDATED", "Usuario editado"
-        USER_ACTIVATED = "USER_ACTIVATED", "Usuario activado"
-        USER_DEACTIVATED = "USER_DEACTIVATED", "Usuario desactivado"
-        ROLES_CHANGED = "ROLES_CHANGED", "Roles modificados"
+    # Module-level so Meta can reference it; AuditLog.Action stays the public name.
+    Action: TypeAlias = AuditAction
 
     actor = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
-    target = models.ForeignKey(User, on_delete=models.PROTECT, related_name="audit_entries")
+    # Indexed by the (target, -created_at) composite index below.
+    target = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="audit_entries", db_index=False
+    )
     action = models.CharField(max_length=32, choices=Action.choices)
     # Field name -> [before, after]; for creations, the initial values.
     changes = models.JSONField(default=dict)
@@ -184,6 +191,18 @@ class AuditLog(models.Model):
 
     class Meta:
         ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list[models.Index]] = [
+            # One user's history, newest first (CA-HU11-5).
+            models.Index(fields=["target", "-created_at"], name="accounts_audit_target_created"),
+            # The global feed, newest first.
+            models.Index(fields=["-created_at"], name="accounts_audit_created"),
+        ]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.CheckConstraint(
+                condition=models.Q(action__in=AuditAction.values),
+                name="accounts_auditlog_action_valid",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.created_at:%Y-%m-%d %H:%M} {self.actor} {self.action} {self.target}"

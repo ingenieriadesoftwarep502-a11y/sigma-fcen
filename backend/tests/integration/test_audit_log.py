@@ -3,7 +3,7 @@
 import importlib
 
 import pytest
-from django.db import DatabaseError, connection, transaction
+from django.db import DatabaseError, IntegrityError, connection, transaction
 
 from apps.accounts.models import AuditLog, AuditLogImmutableError, User
 
@@ -83,3 +83,29 @@ def test_d6_reversing_the_trigger_migration_allows_changes_again(entry: AuditLog
 
     entry.refresh_from_db()
     assert entry.action == AuditLog.Action.USER_UPDATED
+
+
+def test_d6_database_rejects_unknown_actions(entry: AuditLog) -> None:
+    with pytest.raises(IntegrityError), transaction.atomic():
+        AuditLog.objects.create(actor=entry.actor, target=entry.target, action="USER_ERASED")
+
+
+def _index_orders() -> list[tuple[list[str], list[str]]]:
+    with connection.cursor() as cursor:
+        constraints = connection.introspection.get_constraints(cursor, "accounts_auditlog")
+    return [
+        (list(info["columns"]), [str(order) for order in info["orders"]])
+        for info in constraints.values()
+        if info["index"] and not info["primary_key"]
+    ]
+
+
+@pytest.mark.django_db
+def test_ca_hu11_5_history_is_indexed_by_target_and_newest_first() -> None:
+    indexes = _index_orders()
+
+    # A user's history, newest first, and the global feed, newest first.
+    assert (["target_id", "created_at"], ["ASC", "DESC"]) in indexes
+    assert (["created_at"], ["DESC"]) in indexes
+    # The composite index already serves lookups by target alone.
+    assert (["target_id"], ["ASC"]) not in indexes
