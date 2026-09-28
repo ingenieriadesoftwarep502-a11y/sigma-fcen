@@ -140,6 +140,95 @@ describe("apiRequest", () => {
     });
   });
 
+  describe("session refresh on 401", () => {
+    const REFRESH_URL = `${BASE_URL}/auth/refresh/`;
+    const expired = { detail: "Given token not valid for any token type" };
+
+    function callsTo(url: string) {
+      return fetchMock.mock.calls.filter(([calledUrl]) => calledUrl === url);
+    }
+
+    it("refreshes the session once and retries the original request", async () => {
+      fetchMock
+        .mockResolvedValueOnce(jsonResponse(expired, 401))
+        .mockResolvedValueOnce(jsonResponse({ detail: "ok" }))
+        .mockResolvedValueOnce(jsonResponse({ id: 1 }));
+
+      const body = await apiRequest("/items/1/");
+
+      expect(body).toEqual({ id: 1 });
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        `${BASE_URL}/items/1/`,
+        REFRESH_URL,
+        `${BASE_URL}/items/1/`,
+      ]);
+      const [, refreshInit] = fetchMock.mock.calls[1];
+      expect(refreshInit?.method).toBe("POST");
+      expect(refreshInit?.credentials).toBe("include");
+    });
+
+    it("shares one refresh between concurrent 401 responses", async () => {
+      let resolveRefresh: (response: Response) => void = () => {};
+      fetchMock.mockImplementation((url) => {
+        if (url === REFRESH_URL) {
+          return new Promise<Response>((resolve) => {
+            resolveRefresh = resolve;
+          });
+        }
+        const isRetry = fetchMock.mock.calls.filter(([u]) => u === url).length > 1;
+        return Promise.resolve(isRetry ? jsonResponse({ url }) : jsonResponse(expired, 401));
+      });
+
+      const requests = Promise.all([apiRequest("/a/"), apiRequest("/b/")]);
+      await vi.waitFor(() => expect(callsTo(REFRESH_URL)).toHaveLength(1));
+      resolveRefresh(jsonResponse({ detail: "ok" }));
+
+      await expect(requests).resolves.toEqual([
+        { url: `${BASE_URL}/a/` },
+        { url: `${BASE_URL}/b/` },
+      ]);
+      expect(callsTo(REFRESH_URL)).toHaveLength(1);
+    });
+
+    it("surfaces the original 401 when the refresh fails", async () => {
+      fetchMock
+        .mockResolvedValueOnce(jsonResponse(expired, 401))
+        .mockResolvedValueOnce(jsonResponse({ detail: "Token is blacklisted" }, 401));
+
+      const error = await apiRequest("/items/1/").catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ status: 401, body: expired });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries only once when the retried request is still unauthorized", async () => {
+      fetchMock
+        .mockResolvedValueOnce(jsonResponse(expired, 401))
+        .mockResolvedValueOnce(jsonResponse({ detail: "ok" }))
+        .mockResolvedValueOnce(jsonResponse(expired, 401));
+
+      const error = await apiRequest("/items/1/").catch((e: unknown) => e);
+
+      expect(error).toMatchObject({ status: 401 });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it.each(["/auth/login/", "/auth/register/", "/auth/refresh/"])(
+      "does not try to refresh after a 401 from %s",
+      async (path) => {
+        fetchMock.mockResolvedValue(
+          jsonResponse({ detail: "Correo o contraseña incorrectos." }, 401),
+        );
+
+        const error = await apiRequest(path, { method: "POST", body: {} }).catch((e: unknown) => e);
+
+        expect(error).toMatchObject({ status: 401 });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      },
+    );
+  });
+
   it("rejects paths that do not start with a slash", async () => {
     await expect(apiRequest("health/")).rejects.toThrow(/must start with "\/"/);
     expect(fetchMock).not.toHaveBeenCalled();

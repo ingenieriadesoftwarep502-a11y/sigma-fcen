@@ -68,11 +68,10 @@ function readCsrfToken(): string | null {
   return null;
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  if (!path.startsWith("/")) {
-    throw new Error(`API path must start with "/": received "${path}".`);
-  }
+/** Endpoints whose 401 means bad credentials or a dead session, never an expired access token. */
+const NO_REFRESH_PATHS = new Set(["/auth/login/", "/auth/register/", "/auth/refresh/"]);
 
+async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
   const { body, headers, ...init } = options;
   const requestHeaders = new Headers(headers);
   requestHeaders.set("Accept", "application/json");
@@ -111,6 +110,37 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     );
   }
   return parsed as T;
+}
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+/** Renews the access cookie; concurrent callers share a single refresh request. */
+function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= send("/auth/refresh/", { method: "POST" })
+    .then(
+      () => true,
+      () => false,
+    )
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  if (!path.startsWith("/")) {
+    throw new Error(`API path must start with "/": received "${path}".`);
+  }
+
+  try {
+    return await send<T>(path, options);
+  } catch (error) {
+    const expired = error instanceof ApiError && error.status === 401;
+    if (!expired || NO_REFRESH_PATHS.has(path) || !(await refreshSession())) {
+      throw error;
+    }
+  }
+  return send<T>(path, options);
 }
 
 /** Per-field messages of a DRF validation error (`{"field": ["message", ...]}`). */
