@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useState } from "react";
 
-import TextField from "@/components/text-field";
-import { fieldErrors, requestErrorMessage } from "@/lib/api-client";
+import Alert from "@/components/ui/alert";
+import Button from "@/components/ui/button";
+import TextField from "@/components/ui/text-field";
+import { formErrors } from "@/lib/api-client";
 import {
+  HOME_PATH,
   INSTITUTIONAL_EMAIL_DOMAIN,
   isInstitutionalEmail,
   login,
@@ -14,7 +17,10 @@ import {
   type RegisterData,
 } from "@/lib/auth";
 
-type Field = keyof RegisterData;
+import styles from "./auth-form.module.css";
+
+const FIELDS = ["first_name", "last_name", "email", "password"] as const;
+type Field = (typeof FIELDS)[number];
 type Errors = Partial<Record<Field, string[]>>;
 
 const EMPTY: RegisterData = { first_name: "", last_name: "", email: "", password: "" };
@@ -40,7 +46,7 @@ export default function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
 
   function update(field: Field) {
-    return (event: React.ChangeEvent<HTMLInputElement>) =>
+    return (event: ChangeEvent<HTMLInputElement>) =>
       setData((current) => ({ ...current, [field]: event.target.value }));
   }
 
@@ -56,12 +62,9 @@ export default function RegisterForm() {
     try {
       await register(payload);
     } catch (error) {
-      const serverErrors = fieldErrors(error);
-      if (Object.keys(serverErrors).length > 0) {
-        setErrors(serverErrors);
-      } else {
-        setFormError(requestErrorMessage(error));
-      }
+      const { byField, message } = formErrors(error, FIELDS);
+      setErrors(byField);
+      setFormError(message);
       setSubmitting(false);
       return;
     }
@@ -69,20 +72,16 @@ export default function RegisterForm() {
     try {
       // Self-registration yields an active account (ADR-009): sign in right away.
       await login(payload.email, payload.password);
-      router.push("/");
+      router.replace(HOME_PATH);
     } catch {
       // The account already exists, so a registration error would mislead.
-      router.push("/login?registered=1");
+      router.replace("/login?registered=1");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      {formError && (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-          {formError}
-        </p>
-      )}
+    <form onSubmit={handleSubmit} noValidate className={styles.form}>
+      {formError && <Alert tone="error">{formError}</Alert>}
       <TextField
         id="first_name"
         label="Nombre"
@@ -90,6 +89,7 @@ export default function RegisterForm() {
         value={data.first_name}
         onChange={update("first_name")}
         errors={errors.first_name}
+        variant="glass"
       />
       <TextField
         id="last_name"
@@ -98,6 +98,7 @@ export default function RegisterForm() {
         value={data.last_name}
         onChange={update("last_name")}
         errors={errors.last_name}
+        variant="glass"
       />
       <TextField
         id="email"
@@ -108,6 +109,7 @@ export default function RegisterForm() {
         value={data.email}
         onChange={update("email")}
         errors={errors.email}
+        variant="glass"
       />
       <TextField
         id="password"
@@ -117,17 +119,14 @@ export default function RegisterForm() {
         value={data.password}
         onChange={update("password")}
         errors={errors.password}
+        variant="glass"
       />
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-md bg-zinc-900 px-4 py-2 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
-      >
+      <Button type="submit" disabled={submitting} className={styles.submit}>
         {submitting ? "Creando cuenta…" : "Crear cuenta"}
-      </button>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      </Button>
+      <p className={styles.footer}>
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="font-medium underline">
+        <Link href="/login" className={styles.link}>
           Iniciar sesión
         </Link>
       </p>

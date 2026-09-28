@@ -1,0 +1,19 @@
+.alert {
+  border-radius: 0.875rem;
+  border: 1px solid;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.alert[data-tone="error"] {
+  border-color: rgb(253 164 175 / 0.45);
+  background: rgb(244 63 94 / 0.18);
+  color: #ffe4e8;
+}
+
+.alert[data-tone="success"] {
+  border-color: rgb(185 220 90 / 0.45);
+  background: rgb(185 220 90 / 0.16);
+  color: #eef7d6;
+}

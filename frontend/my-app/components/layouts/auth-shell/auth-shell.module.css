@@ -1,0 +1,104 @@
+.scene {
+  position: relative;
+  isolation: isolate;
+  flex: 1;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--ink);
+  color: #fff;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
+  align-items: center;
+  gap: 3rem;
+  min-height: 100dvh;
+  padding: clamp(1.5rem, 5vw, 4.5rem);
+  padding-bottom: 6rem;
+}
+
+.brand {
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.45);
+}
+
+.wordmark {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+}
+
+.wordmarkAccent {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.tagline {
+  max-width: 30ch;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.85);
+  text-wrap: balance;
+}
+
+.logo {
+  width: 11rem;
+  height: auto;
+}
+
+.rule {
+  height: 1px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.4), transparent);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.title {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgb(255 255 255 / 0.72);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: 2rem;
+    padding: 2rem 1rem 5rem;
+  }
+
+  .brand {
+    align-self: auto;
+    gap: 0.5rem;
+  }
+
+  .wordmark {
+    font-size: 3rem;
+  }
+
+  .tagline {
+    font-size: 1rem;
+  }
+
+  .slot {
+    width: 100%;
+    max-width: 27rem;
+    justify-self: center;
+  }
+}

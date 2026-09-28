@@ -1,0 +1,79 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #27272a;
+}
+
+.input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  color: #18181b;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #18181b;
+  box-shadow: 0 0 0 3px rgb(24 24 27 / 0.12);
+}
+
+.input[aria-invalid="true"] {
+  border-color: #b91c1c;
+}
+
+.errors {
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
+/* Over photography: translucent field, accent focus. */
+.field[data-variant="glass"] .label {
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 0.8);
+}
+
+.field[data-variant="glass"] .input {
+  padding: 0.8rem 1rem;
+  border-radius: 0.875rem;
+  border-color: rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  caret-color: var(--accent);
+}
+
+.field[data-variant="glass"] .input:hover {
+  border-color: rgb(255 255 255 / 0.35);
+}
+
+.field[data-variant="glass"] .input:focus {
+  border-color: var(--accent);
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: 0 0 0 4px rgb(185 220 90 / 0.2);
+}
+
+.field[data-variant="glass"] .input[aria-invalid="true"] {
+  border-color: rgb(253 164 175 / 0.75);
+}
+
+.field[data-variant="glass"] .input::placeholder {
+  color: rgb(255 255 255 / 0.45);
+}
+
+.field[data-variant="glass"] .input:-webkit-autofill {
+  -webkit-text-fill-color: #fff;
+  transition: background-color 9999s;
+}
+
+.field[data-variant="glass"] .errors {
+  color: #fecdd3;
+}

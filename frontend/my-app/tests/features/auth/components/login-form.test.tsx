@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import LoginForm from "@/app/login/login-form";
+import LoginForm from "@/features/auth/components/login-form";
 import { ApiError } from "@/lib/api-client";
 import { login } from "@/lib/auth";
 
-const push = vi.fn();
+const replace = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 vi.mock("@/lib/auth", () => ({ login: vi.fn() }));
 
 const loginMock = vi.mocked(login);
@@ -22,7 +22,7 @@ function submit() {
 
 describe("LoginForm (T-01.14)", () => {
   beforeEach(() => {
-    render(<LoginForm />);
+    render(<LoginForm redirectTo="/inicio" />);
   });
 
   afterEach(() => {
@@ -46,7 +46,7 @@ describe("LoginForm (T-01.14)", () => {
     expect(loginMock).not.toHaveBeenCalled();
   });
 
-  it("logs in and goes to the home page", async () => {
+  it("logs in and replaces the login page with the requested one", async () => {
     loginMock.mockResolvedValue({
       id: "1",
       email: "ana.perez@unal.edu.co",
@@ -59,7 +59,7 @@ describe("LoginForm (T-01.14)", () => {
 
     submit();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/inicio"));
     expect(loginMock).toHaveBeenCalledWith("ana.perez@unal.edu.co", "Str0ng-Passw0rd!");
   });
 
@@ -72,7 +72,7 @@ describe("LoginForm (T-01.14)", () => {
     submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Correo o contraseña incorrectos.");
-    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it("explains when the server cannot be reached", async () => {
@@ -95,5 +95,22 @@ describe("LoginForm (T-01.14)", () => {
     submit();
 
     expect(await screen.findByRole("button", { name: "Ingresando…" })).toBeDisabled();
+  });
+
+  it("shows the server's validation message next to the field", async () => {
+    loginMock.mockRejectedValue(
+      new ApiError(400, "Bad request", {
+        email: ["Introduzca una dirección de correo electrónico válida."],
+      }),
+    );
+    fill(/correo institucional/i, "ana");
+    fill(/contraseña/i, "Str0ng-Passw0rd!");
+
+    submit();
+
+    expect(
+      await screen.findByText("Introduzca una dirección de correo electrónico válida."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

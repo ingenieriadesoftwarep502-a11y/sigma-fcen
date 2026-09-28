@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import RegisterForm from "@/app/register/register-form";
+import RegisterForm from "@/features/auth/components/register-form";
 import { ApiError } from "@/lib/api-client";
 import { login, register } from "@/lib/auth";
 
-const push = vi.fn();
+const replace = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 vi.mock("@/lib/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/auth")>()),
   login: vi.fn(),
@@ -86,7 +86,7 @@ describe("RegisterForm (T-01.14, HU-01)", () => {
 
     submit();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/inicio"));
     expect(registerMock).toHaveBeenCalledWith({
       email: "ana.perez@unal.edu.co",
       password: "Str0ng-Passw0rd!",
@@ -100,7 +100,7 @@ describe("RegisterForm (T-01.14, HU-01)", () => {
     registerMock.mockRejectedValue(
       new ApiError(400, "Bad request", {
         email: ["Ya existe una cuenta con este correo."],
-        password: ["This password is too common."],
+        password: ["Esta contraseña es demasiado común."],
       }),
     );
     fillValidForm();
@@ -108,9 +108,9 @@ describe("RegisterForm (T-01.14, HU-01)", () => {
     submit();
 
     expect(await screen.findByText("Ya existe una cuenta con este correo.")).toBeInTheDocument();
-    expect(screen.getByText("This password is too common.")).toBeInTheDocument();
+    expect(screen.getByText("Esta contraseña es demasiado común.")).toBeInTheDocument();
     expect(loginMock).not.toHaveBeenCalled();
-    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it("sends the user to sign in when the account exists but the auto login fails", async () => {
@@ -120,7 +120,7 @@ describe("RegisterForm (T-01.14, HU-01)", () => {
 
     submit();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/login?registered=1"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login?registered=1"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -133,5 +133,16 @@ describe("RegisterForm (T-01.14, HU-01)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No pudimos conectar con el servidor. Intenta de nuevo.",
     );
+  });
+
+  it("shows errors that belong to no field instead of dropping them", async () => {
+    registerMock.mockRejectedValue(
+      new ApiError(400, "Bad request", { non_field_errors: ["No se pudo crear la cuenta."] }),
+    );
+    fillValidForm();
+
+    submit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo crear la cuenta.");
   });
 });

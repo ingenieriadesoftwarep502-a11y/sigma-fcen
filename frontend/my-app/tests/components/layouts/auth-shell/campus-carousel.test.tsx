@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import CampusCarousel from "@/components/login/campus-carousel";
+import CampusCarousel from "@/components/layouts/auth-shell/campus-carousel";
 
 // jsdom has no CSS animations, so React listens for the vendor-prefixed event name.
 function finishProgress(element: HTMLElement) {
@@ -41,5 +41,42 @@ describe("CampusCarousel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Pausar fotos" }));
 
     expect(screen.getByRole("button", { name: "Reanudar fotos" })).toBeInTheDocument();
+  });
+
+  describe("with reduced motion", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    function preferReducedMotion() {
+      vi.stubGlobal(
+        "matchMedia",
+        (query: string) =>
+          ({
+            matches: query === "(prefers-reduced-motion: reduce)",
+            addEventListener: () => {},
+            removeEventListener: () => {},
+          }) as unknown as MediaQueryList,
+      );
+    }
+
+    it("starts paused so the photos do not change on their own", () => {
+      preferReducedMotion();
+      render(<CampusCarousel />);
+
+      expect(screen.getByRole("button", { name: "Reanudar fotos" })).toBeInTheDocument();
+      finishProgress(screen.getByTestId("slide-progress-0"));
+      expect(activeSlide()).toHaveAttribute("data-slide", "0");
+    });
+
+    it("still lets the viewer resume the rotation", () => {
+      preferReducedMotion();
+      render(<CampusCarousel />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Reanudar fotos" }));
+      finishProgress(screen.getByTestId("slide-progress-0"));
+
+      expect(activeSlide()).toHaveAttribute("data-slide", "1");
+    });
   });
 });

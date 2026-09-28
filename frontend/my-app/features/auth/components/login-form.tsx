@@ -4,13 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
-import TextField from "@/components/text-field";
-import { requestErrorMessage } from "@/lib/api-client";
+import Alert from "@/components/ui/alert";
+import Button from "@/components/ui/button";
+import TextField from "@/components/ui/text-field";
+import { formErrors } from "@/lib/api-client";
 import { login } from "@/lib/auth";
 
-type Errors = { email?: string[]; password?: string[] };
+import styles from "./auth-form.module.css";
 
-export default function LoginForm() {
+const FIELDS = ["email", "password"] as const;
+type Errors = Partial<Record<(typeof FIELDS)[number], string[]>>;
+
+type LoginFormProps = {
+  /** Internal path to open after signing in; already checked by `safeRedirectPath`. */
+  redirectTo: string;
+};
+
+export default function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,20 +40,20 @@ export default function LoginForm() {
     setSubmitting(true);
     try {
       await login(email.trim(), password);
-      router.push("/");
     } catch (error) {
-      setFormError(requestErrorMessage(error));
+      const { byField, message } = formErrors(error, FIELDS);
+      setErrors(byField);
+      setFormError(message);
       setSubmitting(false);
+      return;
     }
+    // Replace, not push: going back must not return to the login form.
+    router.replace(redirectTo);
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-      {formError && (
-        <p role="alert" className="login-alert">
-          {formError}
-        </p>
-      )}
+    <form onSubmit={handleSubmit} noValidate className={styles.form}>
+      {formError && <Alert tone="error">{formError}</Alert>}
       <TextField
         id="email"
         label="Correo institucional"
@@ -64,16 +74,12 @@ export default function LoginForm() {
         errors={errors.password}
         variant="glass"
       />
-      <button
-        type="submit"
-        disabled={submitting}
-        className="login-submit"
-      >
+      <Button type="submit" disabled={submitting} className={styles.submit}>
         {submitting ? "Ingresando…" : "Iniciar sesión"}
-      </button>
-      <p className="text-center text-sm text-white/70">
+      </Button>
+      <p className={styles.footer}>
         ¿No tienes cuenta?{" "}
-        <Link href="/register" className="login-link">
+        <Link href="/register" className={styles.link}>
           Crear una cuenta
         </Link>
       </p>

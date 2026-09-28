@@ -1,0 +1,40 @@
+.shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100dvh;
+  background:
+    radial-gradient(80rem 40rem at 90% -10%, rgb(185 220 90 / 0.08), transparent 60%),
+    var(--ink);
+  color: #fff;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.brand {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.brandAccent {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 4rem) clamp(1rem, 4vw, 3rem);
+}
