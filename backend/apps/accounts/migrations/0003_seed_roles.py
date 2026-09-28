@@ -14,7 +14,9 @@ def seed_roles(apps: Apps, schema_editor: BaseDatabaseSchemaEditor) -> None:
 
 
 def remove_roles(apps: Apps, schema_editor: BaseDatabaseSchemaEditor) -> None:
-    apps.get_model("accounts", "Role").objects.filter(code__in=ROLE_CODES).delete()
+    # UserRole.role is PROTECT: roles already assigned to users are kept.
+    role_model = apps.get_model("accounts", "Role")
+    role_model.objects.filter(code__in=ROLE_CODES, user_roles__isnull=True).delete()
 
 
 class Migration(migrations.Migration):
