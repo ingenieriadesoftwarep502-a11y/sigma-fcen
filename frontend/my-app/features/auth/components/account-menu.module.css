@@ -1,0 +1,40 @@
+.menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+}
+
+.name {
+  font-weight: 500;
+}
+
+.email {
+  font-size: 0.8125rem;
+  color: rgb(255 255 255 / 0.6);
+}
+
+.error {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: max-content;
+  max-width: 18rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgb(244 63 94 / 0.9);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 640px) {
+  .identity {
+    display: none;
+  }
+}

@@ -1,0 +1,43 @@
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.title {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: clamp(3rem, 7vw, 5rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, max-content));
+  gap: 1.5rem 3rem;
+}
+
+.facts dt {
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  color: rgb(255 255 255 / 0.6);
+}
+
+.facts dd {
+  font-size: 1.0625rem;
+}
+
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.role {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgb(185 220 90 / 0.14);
+  color: var(--accent);
+  font-size: 0.875rem;
+}
