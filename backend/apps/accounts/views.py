@@ -133,10 +133,17 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
-    """Revokes the refresh token and clears the token cookies."""
+    """Revokes the refresh token and clears the token cookies.
+
+    No authentication: an expired access cookie must not prevent revoking the refresh token.
+    """
+
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
 
     @extend_schema(request=None, responses={204: None})
     def post(self, request: Request) -> Response:
+        enforce_csrf(request)
         raw_refresh = request.COOKIES.get(REFRESH_COOKIE)
         if raw_refresh:
             # An invalid, expired or already revoked token leaves nothing to revoke.

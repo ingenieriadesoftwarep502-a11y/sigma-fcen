@@ -4,10 +4,12 @@ T-01.7 to T-01.9, CA-HU01-5, CA-HU11-2, RN-002.4, RNF-SEC-003, ADR-007.
 """
 
 import logging
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import AccessToken
 
 from apps.accounts.models import User
 from apps.accounts.services import register_student
@@ -100,13 +102,36 @@ def test_ca_hu01_5_profile_shows_the_student_role(api_client: APIClient, student
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(("method", "url"), [("get", ME_URL), ("post", LOGOUT_URL)])
-def test_rnf_sec_003_protected_endpoints_return_401_without_credentials(
-    api_client: APIClient, method: str, url: str
-) -> None:
-    response = getattr(api_client, method)(url)
+def test_rnf_sec_003_profile_returns_401_without_credentials(api_client: APIClient) -> None:
+    response = api_client.get(ME_URL)
 
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_adr_007_logout_without_any_cookie_returns_204(api_client: APIClient) -> None:
+    # Logging out is idempotent: there is nothing to revoke, but cookies are still cleared.
+    response = api_client.post(LOGOUT_URL)
+
+    assert response.status_code == 204
+    assert response.cookies["access_token"].value == ""
+
+
+def test_adr_007_logout_with_expired_access_cookie_revokes_refresh_and_clears_cookies(
+    api_client: APIClient, student: User
+) -> None:
+    refresh = _login(api_client).cookies["refresh_token"].value
+    expired = AccessToken.for_user(student)
+    expired.set_exp(lifetime=-timedelta(minutes=1))
+    api_client.cookies["access_token"] = str(expired)
+
+    response = api_client.post(LOGOUT_URL)
+
+    assert response.status_code == 204
+    assert response.cookies["access_token"].value == ""
+    assert response.cookies["refresh_token"].value == ""
+    api_client.cookies["refresh_token"] = refresh
+    assert api_client.post(REFRESH_URL).status_code == 401
 
 
 def test_ca_hu11_2_deactivation_invalidates_an_already_issued_access_token(
