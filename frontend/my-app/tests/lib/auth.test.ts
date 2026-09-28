@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isInstitutionalEmail, login, register } from "@/lib/auth";
+import { isInstitutionalEmail, login, logout, register } from "@/lib/auth";
 
 const BASE_URL = "http://api.test/api/v1";
 const USER = {
@@ -66,6 +66,18 @@ describe("auth API", () => {
     expect(url).toBe(`${BASE_URL}/auth/register/`);
     expect(init?.method).toBe("POST");
     expect(JSON.parse(String(init?.body))).toEqual(data);
+  });
+
+  it("logs out so the API clears the session cookies", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(logout()).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE_URL}/auth/logout/`);
+    expect(init?.method).toBe("POST");
+    expect(init?.credentials).toBe("include");
+    expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("test-token");
   });
 });
 

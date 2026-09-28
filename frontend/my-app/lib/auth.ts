@@ -37,3 +37,8 @@ export function login(email: string, password: string): Promise<User> {
 export function register(data: RegisterData): Promise<User> {
   return apiRequest<User>("/auth/register/", { method: "POST", body: data });
 }
+
+/** Revokes the refresh token and clears the session cookies on the API side. */
+export function logout(): Promise<void> {
+  return apiRequest<void>("/auth/logout/", { method: "POST" });
+}
