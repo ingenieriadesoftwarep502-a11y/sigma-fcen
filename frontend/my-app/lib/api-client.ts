@@ -20,7 +20,11 @@ export class ApiError extends Error {
 export type ApiRequestOptions = Omit<RequestInit, "body"> & {
   /** Plain value serialized as JSON. */
   body?: unknown;
+  /** Milliseconds before the request is aborted (default 15 s). */
+  timeoutMs?: number;
 };
+
+export const DEFAULT_TIMEOUT_MS = 15_000;
 
 export function getApiBaseUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -68,11 +72,15 @@ function readCsrfToken(): string | null {
   return null;
 }
 
+const NETWORK_ERROR_MESSAGE = "No pudimos conectar con el servidor. Intenta de nuevo.";
+const TIMEOUT_ERROR_MESSAGE = "El servidor tardó demasiado en responder. Intenta de nuevo.";
+const GENERIC_ERROR_MESSAGE = "Algo salió mal. Intenta de nuevo.";
+
 /** Endpoints whose 401 means bad credentials or a dead session, never an expired access token. */
 const NO_REFRESH_PATHS = new Set(["/auth/login/", "/auth/register/", "/auth/refresh/"]);
 
 async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
-  const { body, headers, ...init } = options;
+  const { body, headers, timeoutMs = DEFAULT_TIMEOUT_MS, signal, ...init } = options;
   const requestHeaders = new Headers(headers);
   requestHeaders.set("Accept", "application/json");
   if (body !== undefined) {
@@ -84,7 +92,20 @@ async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
     requestHeaders.set("X-CSRFToken", csrfToken);
   }
 
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const forwardAbort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) {
+    forwardAbort();
+  }
+  signal?.addEventListener("abort", forwardAbort);
+
   let response: Response;
+  let parsed: unknown;
   try {
     response = await fetch(`${getApiBaseUrl()}${path}`, {
       ...init,
@@ -92,16 +113,25 @@ async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
       credentials: "include",
       headers: requestHeaders,
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
     });
+    parsed = response.status === 204 ? undefined : await parseBody(response);
   } catch (cause) {
+    if (timedOut) {
+      throw new ApiError(0, `Timeout: the API did not respond within ${timeoutMs} ms.`, {
+        detail: TIMEOUT_ERROR_MESSAGE,
+      });
+    }
     throw new ApiError(0, "Network error: the API could not be reached.", cause);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", forwardAbort);
   }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  const parsed = await parseBody(response);
   if (!response.ok) {
     throw new ApiError(
       response.status,
@@ -157,8 +187,6 @@ export function fieldErrors(error: unknown): Record<string, string[]> {
   return errors;
 }
 
-const NETWORK_ERROR_MESSAGE = "No pudimos conectar con el servidor. Intenta de nuevo.";
-const GENERIC_ERROR_MESSAGE = "Algo salió mal. Intenta de nuevo.";
 
 /** A message fit for the interface: the API's `detail` when it sent one. */
 export function requestErrorMessage(error: unknown): string {
@@ -166,7 +194,7 @@ export function requestErrorMessage(error: unknown): string {
     return GENERIC_ERROR_MESSAGE;
   }
   if (error.status === 0) {
-    return NETWORK_ERROR_MESSAGE;
+    return errorMessage(error.body, NETWORK_ERROR_MESSAGE);
   }
   const body = error.body;
   if (typeof body === "object" && body !== null && "detail" in body) {

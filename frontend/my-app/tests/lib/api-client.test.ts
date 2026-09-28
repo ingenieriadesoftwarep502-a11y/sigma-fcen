@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, apiRequest, fieldErrors, getApiBaseUrl } from "@/lib/api-client";
+import {
+  ApiError,
+  apiRequest,
+  fieldErrors,
+  getApiBaseUrl,
+  requestErrorMessage,
+} from "@/lib/api-client";
 
 const BASE_URL = "http://api.test/api/v1";
 
@@ -227,6 +233,63 @@ describe("apiRequest", () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
       },
     );
+  });
+
+  describe("timeout", () => {
+    function hangUntilAborted(_url: RequestInfo | URL, init?: RequestInit) {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("aborts after 15 seconds by default with a timeout ApiError", async () => {
+      fetchMock.mockImplementation(hangUntilAborted);
+
+      const pending = apiRequest("/health/").catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(14_999);
+      expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      const error = await pending;
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ status: 0 });
+      expect(requestErrorMessage(error)).toBe(
+        "El servidor tardó demasiado en responder. Intenta de nuevo.",
+      );
+    });
+
+    it("accepts a custom timeout", async () => {
+      fetchMock.mockImplementation(hangUntilAborted);
+
+      const pending = apiRequest("/health/", { timeoutMs: 500 }).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(await pending).toMatchObject({ status: 0 });
+    });
+
+    it("still honors the caller's own abort signal", async () => {
+      fetchMock.mockImplementation(hangUntilAborted);
+      const controller = new AbortController();
+
+      const pending = apiRequest("/health/", { signal: controller.signal }).catch(
+        (e: unknown) => e,
+      );
+      controller.abort();
+      const error = await pending;
+
+      expect(error).toMatchObject({ status: 0 });
+      expect(requestErrorMessage(error)).toBe(
+        "No pudimos conectar con el servidor. Intenta de nuevo.",
+      );
+    });
   });
 
   it("rejects paths that do not start with a slash", async () => {
