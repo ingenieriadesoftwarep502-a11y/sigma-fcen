@@ -1,15 +1,14 @@
 """HTTP endpoints of the identity and access context."""
 
 import logging
-from contextlib import suppress
 from typing import cast
 
 from django.contrib.auth import authenticate
 from django.db import IntegrityError
-from django.middleware.csrf import get_token
+from django.middleware.csrf import get_token, rotate_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import generics, serializers, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
@@ -18,16 +17,14 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.serializers import (
-    TokenBlacklistSerializer,
-    TokenRefreshSerializer,
-)
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.authentication import (
     REFRESH_COOKIE,
+    SessionRefreshSerializer,
     clear_token_cookies,
     enforce_csrf,
+    revoke_refresh_token,
     set_token_cookies,
 )
 from apps.accounts.domain.rules import AdminLockoutError
@@ -70,15 +67,24 @@ def _unauthorized(detail: str) -> Response:
 
 
 class CsrfView(APIView):
-    """Sets the csrftoken cookie the frontend echoes in X-CSRFToken before login (ADR-007)."""
+    """Hands out the CSRF token the frontend echoes in X-CSRFToken (ADR-007).
+
+    The token travels in the body because the frontend may run on another host, where it
+    cannot read the API's cookies; the csrftoken cookie itself stays HttpOnly.
+    """
 
     permission_classes = (AllowAny,)
     authentication_classes = ()
 
-    @extend_schema(request=None, responses={204: None})
+    @extend_schema(
+        request=None,
+        responses={
+            200: inline_serializer("CsrfToken", {"csrfToken": serializers.CharField()}),
+        },
+    )
     @method_decorator(ensure_csrf_cookie)
     def get(self, request: Request) -> Response:
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"csrfToken": get_token(request._request)})
 
 
 class RegisterView(APIView):
@@ -129,11 +135,15 @@ class LoginView(APIView):
             # Neither the password nor the submitted email is logged.
             logger.warning("Failed login attempt.")
             return _unauthorized(INVALID_CREDENTIALS_MESSAGE)
+        # A session left behind in this browser must not outlive the new one.
+        previous_refresh = request.COOKIES.get(REFRESH_COOKIE)
+        if previous_refresh:
+            revoke_refresh_token(previous_refresh)
         refresh = RefreshToken.for_user(user)
         response = Response(UserSerializer(user).data)
         set_token_cookies(response, access=str(refresh.access_token), refresh=str(refresh))
-        # Makes CsrfViewMiddleware send the csrftoken cookie the frontend echoes back.
-        get_token(request._request)
+        # Like django.contrib.auth.login: a CSRF token seen before signing in stops working.
+        rotate_token(request._request)
         return response
 
 
@@ -154,7 +164,7 @@ class RefreshView(APIView):
         raw_refresh = request.COOKIES.get(REFRESH_COOKIE)
         if not raw_refresh:
             return _unauthorized(INVALID_SESSION_MESSAGE)
-        serializer = TokenRefreshSerializer(data={"refresh": raw_refresh})
+        serializer = SessionRefreshSerializer(data={"refresh": raw_refresh})
         try:
             # Also rejects refresh tokens of deactivated users (CA-HU11-2).
             serializer.is_valid(raise_exception=True)
@@ -191,9 +201,7 @@ class LogoutView(APIView):
         enforce_csrf(request)
         raw_refresh = request.COOKIES.get(REFRESH_COOKIE)
         if raw_refresh:
-            # An invalid, expired or already revoked token leaves nothing to revoke.
-            with suppress(TokenError):
-                TokenBlacklistSerializer(data={"refresh": raw_refresh}).is_valid()
+            revoke_refresh_token(raw_refresh)
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_token_cookies(response)
         return response

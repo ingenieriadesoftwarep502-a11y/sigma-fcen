@@ -33,20 +33,25 @@ def _login(client: APIClient, email: str = EMAIL, password: str = PASSWORD, **ex
     return client.post(LOGIN_URL, {"email": email, "password": password}, format="json", **extra)
 
 
+def _csrf_token(client: APIClient) -> str:
+    token = client.get(CSRF_URL).json()["csrfToken"]
+    assert isinstance(token, str)
+    return token
+
+
 def _csrf_client() -> tuple[APIClient, str]:
     """A browser-like client that enforces CSRF and already holds the csrftoken cookie."""
     client = APIClient(enforce_csrf_checks=True)
-    token = client.get(CSRF_URL).cookies["csrftoken"].value
-    return client, token
+    return client, _csrf_token(client)
 
 
 @pytest.mark.django_db
-def test_adr_007_csrf_endpoint_sets_the_csrf_cookie_without_content() -> None:
+def test_adr_007_csrf_endpoint_sets_the_csrf_cookie() -> None:
     client = APIClient(enforce_csrf_checks=True)
 
     response = client.get(CSRF_URL)
 
-    assert response.status_code == 204
+    assert response.status_code == 200
     assert response.cookies["csrftoken"].value
 
 
@@ -228,6 +233,8 @@ def test_t01_7_logout_clears_the_token_cookies(api_client: APIClient, student: U
 def test_adr_007_cookie_authenticated_unsafe_request_requires_csrf_token(student: User) -> None:
     client, token = _csrf_client()
     _login(client, HTTP_X_CSRFTOKEN=token)
+    # Signing in rotated the CSRF secret, so the browser asks for a new token.
+    token = _csrf_token(client)
 
     without_token = client.post(LOGOUT_URL)
     with_token = client.post(LOGOUT_URL, HTTP_X_CSRFTOKEN=token)
@@ -239,6 +246,8 @@ def test_adr_007_cookie_authenticated_unsafe_request_requires_csrf_token(student
 def test_adr_007_refresh_requires_csrf_token(student: User) -> None:
     client, token = _csrf_client()
     _login(client, HTTP_X_CSRFTOKEN=token)
+    # Signing in rotated the CSRF secret, so the browser asks for a new token.
+    token = _csrf_token(client)
 
     without_token = client.post(REFRESH_URL)
     with_token = client.post(REFRESH_URL, HTTP_X_CSRFTOKEN=token)

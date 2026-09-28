@@ -98,6 +98,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 SESSION_COOKIE_SAMESITE = env.str("COOKIE_SAMESITE", default="Lax")
 CSRF_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
+# Scripts receive the token from GET /api/v1/auth/csrf/, never from the cookie.
+CSRF_COOKIE_HTTPONLY = True
 
 # --- CORS (whitelist only) ------------------------------------------------------------------
 
@@ -141,6 +143,9 @@ SIMPLE_JWT = {
     # Every refresh issues a new refresh token and revokes the previous one.
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    # Tokens carry a hash of the password: changing it ends every open session.
+    "CHECK_REVOKE_TOKEN": True,
 }
 
 SPECTACULAR_SETTINGS = {
