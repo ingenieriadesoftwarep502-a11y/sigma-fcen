@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Q
 
 from apps.accounts.domain.rules import AdminChange, ensure_admin_remains, normalize_email
 from apps.accounts.models import AuditLog, Role, User, UserRole
@@ -30,17 +31,28 @@ def _replace_roles(user: User, codes: Iterable[str]) -> None:
     )
 
 
-def _ensure_admin_remains(*, actor: User, user: User, change: AdminChange) -> None:
-    """Checks the lockout rule against the active admins, locked until the transaction ends.
+def _lock_target_and_admins(user: User) -> set[Any]:
+    """Locks the target and every active admin in one pk-ordered query; returns the admins.
 
-    Locking the admin rows serializes concurrent demotions and deactivations, so two
-    administrators cannot remove each other at the same time and leave none behind.
+    One global lock order keeps concurrent demotions and deactivations from deadlocking,
+    and holding the admin rows keeps two administrators from removing each other at once.
     """
-    active_admins = set(
+    list(
         User.objects.select_for_update(of=("self",))
-        .filter(is_active=True, roles__code=Role.Code.ADMIN)
+        .filter(Q(pk=user.pk) | Q(is_active=True, roles__code=Role.Code.ADMIN))
+        .order_by("pk")
         .values_list("pk", flat=True)
     )
+    return set(
+        User.objects.filter(is_active=True, roles__code=Role.Code.ADMIN).values_list(
+            "pk", flat=True
+        )
+    )
+
+
+def _ensure_admin_remains(
+    *, actor: User, user: User, change: AdminChange, active_admins: set[Any]
+) -> None:
     ensure_admin_remains(
         change=change,
         by_self=actor.pk == user.pk,
@@ -92,7 +104,12 @@ def update_user(*, actor: User, user: User, data: dict[str, Any]) -> User:
     if not changes:
         return user
     if changes.get("is_active") == [True, False]:
-        _ensure_admin_remains(actor=actor, user=user, change=AdminChange.DEACTIVATE)
+        _ensure_admin_remains(
+            actor=actor,
+            user=user,
+            change=AdminChange.DEACTIVATE,
+            active_admins=_lock_target_and_admins(user),
+        )
     for field, (_, value) in changes.items():
         setattr(user, field, value)
     user.save(update_fields=list(changes))
@@ -110,10 +127,12 @@ def update_user(*, actor: User, user: User, data: dict[str, Any]) -> User:
 def set_roles(*, actor: User, user: User, roles: list[str]) -> User:
     """Replaces the user's roles: assigns the new ones and removes the rest (RF-021)."""
     # Serializes concurrent assignments to this user, so "before" is what this change replaces.
-    User.objects.select_for_update().filter(pk=user.pk).values_list("pk", flat=True).get()
+    active_admins = _lock_target_and_admins(user)
     before = _role_codes(user)
     if Role.Code.ADMIN in before and Role.Code.ADMIN not in roles:
-        _ensure_admin_remains(actor=actor, user=user, change=AdminChange.REVOKE_ADMIN)
+        _ensure_admin_remains(
+            actor=actor, user=user, change=AdminChange.REVOKE_ADMIN, active_admins=active_admins
+        )
     _replace_roles(user, roles)
     after = _role_codes(user)
     if before != after:
@@ -141,7 +160,12 @@ def deactivate_user(*, actor: User, user: User) -> dict[str, int]:
     """Blocks the account at once: its tokens stop working on the next request (CA-HU11-2)."""
     impact = deactivation_impact(user)
     if user.is_active:
-        _ensure_admin_remains(actor=actor, user=user, change=AdminChange.DEACTIVATE)
+        _ensure_admin_remains(
+            actor=actor,
+            user=user,
+            change=AdminChange.DEACTIVATE,
+            active_admins=_lock_target_and_admins(user),
+        )
         user.is_active = False
         user.save(update_fields=["is_active"])
         AuditLog.objects.create(
