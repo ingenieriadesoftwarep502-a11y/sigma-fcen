@@ -23,6 +23,10 @@ class UserManager(BaseUserManager["User"]):
         extra.setdefault("is_superuser", True)
         return self.create_user(email, password, **extra)
 
+    def get_by_natural_key(self, username: str | None) -> "User":
+        # Emails are unique regardless of case (RN-001.1), so login is case-insensitive too.
+        return self.get(email__iexact=username)
+
 
 class Role(models.Model):
     """A set of capabilities. The four roles are seeded by migration 0003."""

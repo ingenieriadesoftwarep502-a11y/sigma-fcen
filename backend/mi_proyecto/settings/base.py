@@ -106,9 +106,9 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 # --- Django REST Framework ----------------------------------------------------------------
 
 REST_FRAMEWORK = {
-    # Only session auth until ADR-007 (authentication mechanism) is confirmed.
+    # JWT in HttpOnly cookies with CSRF protection (ADR-007).
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "apps.accounts.authentication.CookieJWTAuthentication",
     ],
     # Every endpoint is private unless it explicitly opts out.
     "DEFAULT_PERMISSION_CLASSES": [

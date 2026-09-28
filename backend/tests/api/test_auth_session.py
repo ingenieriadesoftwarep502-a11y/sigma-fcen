@@ -1,0 +1,192 @@
+"""Login, token refresh, logout and own profile with JWT in HttpOnly cookies.
+
+T-01.7 to T-01.9, CA-HU01-5, CA-HU11-2, RN-002.4, RNF-SEC-003, ADR-007.
+"""
+
+from typing import Any
+
+import pytest
+from rest_framework.test import APIClient
+
+from apps.accounts.models import User
+from apps.accounts.services import register_student
+
+LOGIN_URL = "/api/v1/auth/login/"
+REFRESH_URL = "/api/v1/auth/refresh/"
+LOGOUT_URL = "/api/v1/auth/logout/"
+ME_URL = "/api/v1/users/me/"
+EMAIL = "ana.perez@unal.edu.co"
+PASSWORD = "Str0ng-Passw0rd!"
+INVALID_CREDENTIALS = "Correo o contraseña incorrectos."
+
+
+@pytest.fixture
+def student(db: None) -> User:
+    return register_student(email=EMAIL, password=PASSWORD, first_name="Ana", last_name="Pérez")
+
+
+def _login(client: APIClient, email: str = EMAIL, password: str = PASSWORD) -> Any:
+    return client.post(LOGIN_URL, {"email": email, "password": password}, format="json")
+
+
+def test_t01_7_valid_credentials_set_httponly_token_cookies(
+    api_client: APIClient, student: User
+) -> None:
+    response = _login(api_client)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["email"] == EMAIL
+    assert body["roles"] == ["STUDENT"]
+    # Tokens travel only in HttpOnly cookies, never in the body (ADR-007).
+    assert "access" not in body
+    assert "refresh" not in body
+    access = response.cookies["access_token"]
+    refresh = response.cookies["refresh_token"]
+    assert access.value
+    assert access["httponly"]
+    assert access["samesite"] == "Lax"
+    assert refresh.value
+    assert refresh["httponly"]
+    assert refresh["path"] == "/api/v1/auth/"
+    # The frontend needs a CSRF cookie to send unsafe requests.
+    assert response.cookies["csrftoken"].value
+
+
+def test_t01_7_email_is_case_insensitive_at_login(api_client: APIClient, student: User) -> None:
+    response = _login(api_client, email="Ana.Perez@UNAL.edu.co")
+
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("email", "password"),
+    [(EMAIL, "wrong-password"), ("nadie@unal.edu.co", PASSWORD)],
+)
+def test_t01_7_invalid_credentials_return_401(
+    api_client: APIClient, student: User, email: str, password: str
+) -> None:
+    response = _login(api_client, email=email, password=password)
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": INVALID_CREDENTIALS}
+    assert "access_token" not in response.cookies
+
+
+def test_rn_002_4_inactive_account_cannot_log_in(api_client: APIClient, student: User) -> None:
+    student.is_active = False
+    student.save()
+
+    response = _login(api_client)
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": INVALID_CREDENTIALS}
+
+
+def test_ca_hu01_5_profile_shows_the_student_role(api_client: APIClient, student: User) -> None:
+    _login(api_client)
+
+    response = api_client.get(ME_URL)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(student.pk),
+        "email": EMAIL,
+        "first_name": "Ana",
+        "last_name": "Pérez",
+        "roles": ["STUDENT"],
+    }
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(("method", "url"), [("get", ME_URL), ("post", LOGOUT_URL)])
+def test_rnf_sec_003_protected_endpoints_return_401_without_credentials(
+    api_client: APIClient, method: str, url: str
+) -> None:
+    response = getattr(api_client, method)(url)
+
+    assert response.status_code == 401
+
+
+def test_ca_hu11_2_deactivation_invalidates_an_already_issued_access_token(
+    api_client: APIClient, student: User
+) -> None:
+    _login(api_client)
+    User.objects.filter(pk=student.pk).update(is_active=False)
+
+    response = api_client.get(ME_URL)
+
+    assert response.status_code == 401
+
+
+def test_t01_7_refresh_issues_a_new_access_cookie(api_client: APIClient, student: User) -> None:
+    first_access = _login(api_client).cookies["access_token"].value
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 200
+    new_access = response.cookies["access_token"]
+    assert new_access.value
+    assert new_access.value != first_access
+    assert new_access["httponly"]
+
+
+@pytest.mark.django_db
+def test_t01_7_refresh_without_cookie_returns_401(api_client: APIClient) -> None:
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 401
+
+
+def test_t01_7_refresh_with_tampered_cookie_returns_401(
+    api_client: APIClient, student: User
+) -> None:
+    _login(api_client)
+    api_client.cookies["refresh_token"] = "not-a-jwt"
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 401
+
+
+def test_ca_hu11_2_deactivated_user_cannot_refresh(api_client: APIClient, student: User) -> None:
+    _login(api_client)
+    User.objects.filter(pk=student.pk).update(is_active=False)
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 401
+
+
+def test_t01_7_logout_clears_the_token_cookies(api_client: APIClient, student: User) -> None:
+    _login(api_client)
+
+    response = api_client.post(LOGOUT_URL)
+
+    assert response.status_code == 204
+    assert response.cookies["access_token"].value == ""
+    assert response.cookies["refresh_token"].value == ""
+    assert response.cookies["refresh_token"]["path"] == "/api/v1/auth/"
+    assert api_client.get(ME_URL).status_code == 401
+
+
+def test_adr_007_cookie_authenticated_unsafe_request_requires_csrf_token(student: User) -> None:
+    client = APIClient(enforce_csrf_checks=True)
+    login = _login(client)
+
+    without_token = client.post(LOGOUT_URL)
+    with_token = client.post(LOGOUT_URL, HTTP_X_CSRFTOKEN=login.cookies["csrftoken"].value)
+
+    assert without_token.status_code == 403
+    assert with_token.status_code == 204
+
+
+def test_adr_007_refresh_requires_csrf_token(student: User) -> None:
+    client = APIClient(enforce_csrf_checks=True)
+    login = _login(client)
+
+    without_token = client.post(REFRESH_URL)
+    with_token = client.post(REFRESH_URL, HTTP_X_CSRFTOKEN=login.cookies["csrftoken"].value)
+
+    assert without_token.status_code == 403
+    assert with_token.status_code == 200

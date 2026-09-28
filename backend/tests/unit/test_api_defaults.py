@@ -9,10 +9,10 @@ from rest_framework.test import APIRequestFactory
 from shared.pagination import DefaultPagination
 
 
-def test_session_authentication_is_the_only_default_scheme() -> None:
-    # ADR-007 (auth mechanism) is still open: no token/JWT scheme is configured yet.
+def test_adr_007_cookie_jwt_is_the_only_default_scheme() -> None:
+    # JWT in HttpOnly cookies (ADR-007); no header, session or basic auth fallback.
     assert settings.REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] == [
-        "rest_framework.authentication.SessionAuthentication",
+        "apps.accounts.authentication.CookieJWTAuthentication",
     ]
 
 
