@@ -8,8 +8,15 @@ from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
 
+from apps.accounts.domain.rules import normalize_email
+
 
 class UserManager(BaseUserManager["User"]):
+    @classmethod
+    def normalize_email(cls, email: str | None) -> str:
+        # Django only lowercases the domain; RN-001.1 makes the whole address case-insensitive.
+        return normalize_email(email or "")
+
     def create_user(self, email: str, password: str | None = None, **extra: Any) -> "User":
         if not email:
             raise ValueError("Users must have an email address.")
@@ -24,8 +31,9 @@ class UserManager(BaseUserManager["User"]):
         return self.create_user(email, password, **extra)
 
     def get_by_natural_key(self, username: str | None) -> "User":
-        # Emails are unique regardless of case (RN-001.1), so login is case-insensitive too.
-        return self.get(email__iexact=username)
+        # Stored emails are lowercase (RN-001.1): an exact match keeps login case-insensitive
+        # while still using the unique index.
+        return self.get(email=self.normalize_email(username))
 
 
 class Role(models.Model):

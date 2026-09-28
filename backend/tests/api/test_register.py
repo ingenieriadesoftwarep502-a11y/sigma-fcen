@@ -52,7 +52,7 @@ def test_ca_hu01_2_registered_email_returns_400_without_second_account(
 
     assert response.status_code == 400
     assert response.json()["email"] == ["Ya existe una cuenta con este correo."]
-    assert User.objects.filter(email__iexact="ana.perez@unal.edu.co").count() == 1
+    assert User.objects.count() == 1
 
 
 @pytest.mark.django_db
@@ -134,3 +134,14 @@ def test_adr_007_register_requires_csrf_token() -> None:
     assert without_token.status_code == 403
     assert with_token.status_code == 201
     assert User.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_rn_001_1_mixed_case_email_is_stored_and_returned_in_lowercase(
+    api_client: APIClient,
+) -> None:
+    response = api_client.post(REGISTER_URL, _payload(email="Ana.Perez@UNAL.edu.co"), format="json")
+
+    assert response.status_code == 201
+    assert response.json()["email"] == "ana.perez@unal.edu.co"
+    assert User.objects.get().email == "ana.perez@unal.edu.co"

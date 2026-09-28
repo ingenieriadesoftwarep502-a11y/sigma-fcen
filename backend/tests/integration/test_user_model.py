@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.db import IntegrityError, connection, migrations
 from django.db.migrations.loader import MigrationLoader
+from django.test.utils import CaptureQueriesContext
 
 PASSWORD = "Str0ng-Passw0rd!"
 
@@ -78,3 +79,25 @@ def test_t01_1_create_superuser_grants_admin_site_access() -> None:
     assert admin.is_staff
     assert admin.is_superuser
     assert admin.is_active
+
+
+@pytest.mark.django_db
+def test_rn_001_1_create_user_stores_the_whole_email_in_lowercase() -> None:
+    user = get_user_model().objects.create_user(email="Ana.Perez@UNAL.edu.co", password=PASSWORD)
+
+    user.refresh_from_db()
+    assert user.email == "ana.perez@unal.edu.co"
+
+
+@pytest.mark.django_db
+def test_rn_001_1_natural_key_lookup_is_case_insensitive_and_uses_exact_match() -> None:
+    user_model = get_user_model()
+    user = user_model.objects.create_user(email="ana.perez@unal.edu.co", password=PASSWORD)
+
+    with CaptureQueriesContext(connection) as queries:
+        found = user_model.objects.get_by_natural_key("Ana.Perez@UNAL.edu.co")
+
+    assert found == user
+    # An exact match on the stored lowercase value can use the unique index.
+    assert "UPPER(" not in queries[0]["sql"]
+    assert "LOWER(" not in queries[0]["sql"]

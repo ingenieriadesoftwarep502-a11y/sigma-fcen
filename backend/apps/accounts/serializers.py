@@ -6,7 +6,11 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from apps.accounts.domain.rules import INSTITUTIONAL_EMAIL_DOMAIN, is_institutional_email
+from apps.accounts.domain.rules import (
+    INSTITUTIONAL_EMAIL_DOMAIN,
+    is_institutional_email,
+    normalize_email,
+)
 from apps.accounts.models import Role, User
 
 DUPLICATE_EMAIL_MESSAGE = "Ya existe una cuenta con este correo."
@@ -35,11 +39,12 @@ class RegisterSerializer(serializers.Serializer[User]):
     last_name = serializers.CharField(max_length=150)
 
     def validate_email(self, value: str) -> str:
+        value = normalize_email(value)
         if not is_institutional_email(value):
             raise serializers.ValidationError(
                 f"Usa tu correo institucional @{INSTITUTIONAL_EMAIL_DOMAIN}."
             )
-        if User.objects.filter(email__iexact=value).exists():
+        if User.objects.filter(email=value).exists():
             raise serializers.ValidationError(DUPLICATE_EMAIL_MESSAGE)
         return value
 
