@@ -1,6 +1,7 @@
 """Identity use cases that span several models in one transaction."""
 
 from collections.abc import Iterable
+from typing import Any
 
 from django.db import transaction
 
@@ -54,4 +55,43 @@ def create_user(
             "roles": _role_codes(user),
         },
     )
+    return user
+
+
+@transaction.atomic
+def update_user(*, actor: User, user: User, data: dict[str, Any]) -> User:
+    """Edits identity fields or reactivates the account; deactivation has its own flow."""
+    changes = {
+        field: [getattr(user, field), value]
+        for field, value in data.items()
+        if getattr(user, field) != value
+    }
+    if not changes:
+        return user
+    for field, (_, value) in changes.items():
+        setattr(user, field, value)
+    user.save(update_fields=list(changes))
+    reactivated = changes.get("is_active") == [False, True]
+    AuditLog.objects.create(
+        actor=actor,
+        target=user,
+        action=AuditLog.Action.USER_ACTIVATED if reactivated else AuditLog.Action.USER_UPDATED,
+        changes=changes,
+    )
+    return user
+
+
+@transaction.atomic
+def set_roles(*, actor: User, user: User, roles: list[str]) -> User:
+    """Replaces the user's roles: assigns the new ones and removes the rest (RF-021)."""
+    before = _role_codes(user)
+    _replace_roles(user, roles)
+    after = _role_codes(user)
+    if before != after:
+        AuditLog.objects.create(
+            actor=actor,
+            target=user,
+            action=AuditLog.Action.ROLES_CHANGED,
+            changes={"roles": [before, after]},
+        )
     return user
