@@ -91,6 +91,55 @@ describe("apiRequest", () => {
     expect(error).toMatchObject({ status: 0 });
   });
 
+  describe("CSRF protection", () => {
+    afterEach(() => {
+      document.cookie = "csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+    });
+
+    it.each(["POST", "PUT", "PATCH", "DELETE"])(
+      "sends the csrftoken cookie as X-CSRFToken on %s",
+      async (method) => {
+        document.cookie = "other=1; path=/";
+        document.cookie = "csrftoken=abc%20123; path=/";
+        fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+        await apiRequest("/items/1/", { method });
+
+        const [, init] = fetchMock.mock.calls[0];
+        expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("abc 123");
+        expect(init?.credentials).toBe("include");
+      },
+    );
+
+    it("does not send X-CSRFToken on safe methods", async () => {
+      document.cookie = "csrftoken=abc123; path=/";
+      fetchMock.mockResolvedValue(jsonResponse({}));
+
+      await apiRequest("/items/");
+
+      const [, init] = fetchMock.mock.calls[0];
+      expect(new Headers(init?.headers).has("X-CSRFToken")).toBe(false);
+    });
+
+    it("omits X-CSRFToken when there is no csrftoken cookie", async () => {
+      fetchMock.mockResolvedValue(jsonResponse({}));
+
+      await apiRequest("/items/", { method: "POST", body: {} });
+
+      const [, init] = fetchMock.mock.calls[0];
+      expect(new Headers(init?.headers).has("X-CSRFToken")).toBe(false);
+    });
+
+    it("always includes credentials so the auth cookies travel", async () => {
+      fetchMock.mockResolvedValue(jsonResponse({}));
+
+      await apiRequest("/items/", { credentials: "omit" });
+
+      const [, init] = fetchMock.mock.calls[0];
+      expect(init?.credentials).toBe("include");
+    });
+  });
+
   it("rejects paths that do not start with a slash", async () => {
     await expect(apiRequest("health/")).rejects.toThrow(/must start with "\/"/);
     expect(fetchMock).not.toHaveBeenCalled();

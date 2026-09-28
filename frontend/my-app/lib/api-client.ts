@@ -52,6 +52,22 @@ function errorMessage(body: unknown, fallback: string): string {
   return fallback;
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+
+/** Django's CSRF cookie, readable by design so it can be echoed in a header. */
+function readCsrfToken(): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  for (const pair of document.cookie.split(";")) {
+    const [name, ...value] = pair.trim().split("=");
+    if (name === "csrftoken") {
+      return decodeURIComponent(value.join("=")) || null;
+    }
+  }
+  return null;
+}
+
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   if (!path.startsWith("/")) {
     throw new Error(`API path must start with "/": received "${path}".`);
@@ -63,12 +79,18 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   if (body !== undefined) {
     requestHeaders.set("Content-Type", "application/json");
   }
+  const method = (init.method ?? "GET").toUpperCase();
+  const csrfToken = SAFE_METHODS.has(method) ? null : readCsrfToken();
+  if (csrfToken) {
+    requestHeaders.set("X-CSRFToken", csrfToken);
+  }
 
   let response: Response;
   try {
     response = await fetch(`${getApiBaseUrl()}${path}`, {
-      credentials: "include",
       ...init,
+      // The session lives in HttpOnly cookies (ADR-007): they must always travel.
+      credentials: "include",
       headers: requestHeaders,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
