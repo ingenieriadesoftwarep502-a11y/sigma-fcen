@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate
 from django.db import IntegrityError
 from django.middleware.csrf import get_token
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import serializers, status
+from rest_framework import generics, serializers, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -25,11 +25,14 @@ from apps.accounts.authentication import (
 from apps.accounts.models import User
 from apps.accounts.serializers import (
     DUPLICATE_EMAIL_MESSAGE,
+    AdminUserSerializer,
     LoginSerializer,
     RegisterSerializer,
+    UserCreateSerializer,
     UserSerializer,
 )
-from apps.accounts.services import register_student
+from apps.accounts.services import create_user, register_student
+from shared.permissions import IsAdmin
 
 # Same message for unknown email, wrong password and inactive account: no account enumeration.
 INVALID_CREDENTIALS_MESSAGE = "Correo o contraseña incorrectos."
@@ -53,8 +56,7 @@ class RegisterView(APIView):
         try:
             user = register_student(**serializer.validated_data)
         except IntegrityError as error:
-            # Two concurrent requests for the same email: the database constraint wins.
-            raise serializers.ValidationError({"email": [DUPLICATE_EMAIL_MESSAGE]}) from error
+            raise _duplicate_email(error) from error
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -128,3 +130,34 @@ class MeView(APIView):
     def get(self, request: Request) -> Response:
         # IsAuthenticated (the default permission) guarantees a real user here.
         return Response(UserSerializer(cast(User, request.user)).data)
+
+
+def _duplicate_email(error: IntegrityError) -> serializers.ValidationError:
+    # Two concurrent requests for the same email: the database constraint wins.
+    return serializers.ValidationError({"email": [DUPLICATE_EMAIL_MESSAGE]})
+
+
+class UserListCreateView(generics.ListAPIView[User]):
+    """Administrators list every account and create new ones with roles (RF-020, RF-021)."""
+
+    permission_classes = (IsAdmin,)
+    queryset = User.objects.prefetch_related("roles").order_by("email")
+    serializer_class = AdminUserSerializer
+
+    @extend_schema(request=UserCreateSerializer, responses={201: AdminUserSerializer})
+    def post(self, request: Request) -> Response:
+        serializer = UserCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = create_user(actor=cast(User, request.user), **serializer.validated_data)
+        except IntegrityError as error:
+            raise _duplicate_email(error) from error
+        return Response(AdminUserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class UserDetailView(generics.RetrieveAPIView[User]):
+    """Administrators read one account."""
+
+    permission_classes = (IsAdmin,)
+    queryset = User.objects.all()
+    serializer_class = AdminUserSerializer
