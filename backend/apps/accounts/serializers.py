@@ -1,0 +1,50 @@
+"""Request and response shapes of the accounts API."""
+
+from typing import Any, ClassVar
+
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework import serializers
+
+from apps.accounts.domain.rules import INSTITUTIONAL_EMAIL_DOMAIN, is_institutional_email
+from apps.accounts.models import Role, User
+
+DUPLICATE_EMAIL_MESSAGE = "Ya existe una cuenta con este correo."
+
+
+class UserSerializer(serializers.ModelSerializer[User]):
+    roles: serializers.SlugRelatedField[Role] = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field="code"
+    )
+
+    class Meta:
+        model = User
+        fields: ClassVar[list[str]] = ["id", "email", "first_name", "last_name", "roles"]
+        read_only_fields = fields
+
+
+class RegisterSerializer(serializers.Serializer[User]):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
+
+    def validate_email(self, value: str) -> str:
+        if not is_institutional_email(value):
+            raise serializers.ValidationError(
+                f"Usa tu correo institucional @{INSTITUTIONAL_EMAIL_DOMAIN}."
+            )
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(DUPLICATE_EMAIL_MESSAGE)
+        return value
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        # Django's validators need the candidate user to detect passwords similar to its data.
+        candidate = User(
+            email=attrs["email"], first_name=attrs["first_name"], last_name=attrs["last_name"]
+        )
+        try:
+            validate_password(attrs["password"], user=candidate)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError({"password": list(error.messages)}) from error
+        return attrs
