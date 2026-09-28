@@ -24,12 +24,14 @@ describe("auth API", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", BASE_URL);
     vi.stubGlobal("fetch", fetchMock);
+    document.cookie = "csrftoken=test-token; path=/";
   });
 
   afterEach(() => {
     fetchMock.mockReset();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    document.cookie = "csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   });
 
   it("logs in with email and password and returns the user", async () => {

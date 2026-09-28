@@ -41,12 +41,14 @@ describe("apiRequest", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", BASE_URL);
     vi.stubGlobal("fetch", fetchMock);
+    document.cookie = "csrftoken=test-token; path=/";
   });
 
   afterEach(() => {
     fetchMock.mockReset();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    document.cookie = "csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   });
 
   it("returns the parsed JSON body of a successful response", async () => {
@@ -127,13 +129,83 @@ describe("apiRequest", () => {
       expect(new Headers(init?.headers).has("X-CSRFToken")).toBe(false);
     });
 
-    it("omits X-CSRFToken when there is no csrftoken cookie", async () => {
+    describe("without a csrftoken cookie", () => {
+      const CSRF_URL = `${BASE_URL}/auth/csrf/`;
+
+      beforeEach(() => {
+        document.cookie = "csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      });
+
+      /** The csrf endpoint sets the cookie, as Django does; anything else succeeds. */
+      function serveCsrfCookie(url: RequestInfo | URL): Promise<Response> {
+        if (url === CSRF_URL) {
+          document.cookie = "csrftoken=fresh-token; path=/";
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+        return Promise.resolve(jsonResponse({}));
+      }
+
+      it("fetches the csrf cookie before an unsafe request and then sends it", async () => {
+        fetchMock.mockImplementation(serveCsrfCookie);
+
+        await apiRequest("/auth/login/", { method: "POST", body: {} });
+
+        expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+          CSRF_URL,
+          `${BASE_URL}/auth/login/`,
+        ]);
+        const [, csrfInit] = fetchMock.mock.calls[0];
+        expect(csrfInit?.method ?? "GET").toBe("GET");
+        expect(csrfInit?.credentials).toBe("include");
+        const [, loginInit] = fetchMock.mock.calls[1];
+        expect(new Headers(loginInit?.headers).get("X-CSRFToken")).toBe("fresh-token");
+      });
+
+      it("shares one csrf fetch between concurrent unsafe requests", async () => {
+        let resolveCsrf: () => void = () => {};
+        fetchMock.mockImplementation((url) => {
+          if (url === CSRF_URL) {
+            return new Promise<Response>((resolve) => {
+              resolveCsrf = () => {
+                document.cookie = "csrftoken=fresh-token; path=/";
+                resolve(new Response(null, { status: 204 }));
+              };
+            });
+          }
+          return Promise.resolve(jsonResponse({}));
+        });
+
+        const requests = Promise.all([
+          apiRequest("/a/", { method: "POST", body: {} }),
+          apiRequest("/b/", { method: "POST", body: {} }),
+        ]);
+        await vi.waitFor(() =>
+          expect(fetchMock.mock.calls.filter(([u]) => u === CSRF_URL)).toHaveLength(1),
+        );
+        resolveCsrf();
+        await requests;
+
+        expect(fetchMock.mock.calls.filter(([u]) => u === CSRF_URL)).toHaveLength(1);
+        for (const [, init] of fetchMock.mock.calls.slice(1)) {
+          expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("fresh-token");
+        }
+      });
+
+      it("does not fetch the csrf cookie for safe methods", async () => {
+        fetchMock.mockImplementation(serveCsrfCookie);
+
+        await apiRequest("/items/");
+
+        expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([`${BASE_URL}/items/`]);
+      });
+    });
+
+    it("does not fetch the csrf cookie when it is already present", async () => {
       fetchMock.mockResolvedValue(jsonResponse({}));
 
-      await apiRequest("/items/", { method: "POST", body: {} });
+      await apiRequest("/auth/login/", { method: "POST", body: {} });
 
-      const [, init] = fetchMock.mock.calls[0];
-      expect(new Headers(init?.headers).has("X-CSRFToken")).toBe(false);
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([`${BASE_URL}/auth/login/`]);
     });
 
     it("always includes credentials so the auth cookies travel", async () => {

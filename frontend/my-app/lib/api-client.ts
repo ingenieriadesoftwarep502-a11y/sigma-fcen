@@ -87,7 +87,7 @@ async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
     requestHeaders.set("Content-Type", "application/json");
   }
   const method = (init.method ?? "GET").toUpperCase();
-  const csrfToken = SAFE_METHODS.has(method) ? null : readCsrfToken();
+  const csrfToken = SAFE_METHODS.has(method) ? null : await ensureCsrfToken();
   if (csrfToken) {
     requestHeaders.set("X-CSRFToken", csrfToken);
   }
@@ -140,6 +140,30 @@ async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
     );
   }
   return parsed as T;
+}
+
+let csrfInFlight: Promise<void> | null = null;
+
+/**
+ * Returns the CSRF token, first asking the API to set its cookie when missing.
+ * Concurrent callers share a single request; a failure is left to the unsafe
+ * request itself, which the server then rejects with a clear error.
+ */
+async function ensureCsrfToken(): Promise<string | null> {
+  const token = readCsrfToken();
+  if (token || typeof document === "undefined") {
+    return token;
+  }
+  csrfInFlight ??= send("/auth/csrf/", {})
+    .then(
+      () => undefined,
+      () => undefined,
+    )
+    .finally(() => {
+      csrfInFlight = null;
+    });
+  await csrfInFlight;
+  return readCsrfToken();
 }
 
 let refreshInFlight: Promise<boolean> | null = null;
