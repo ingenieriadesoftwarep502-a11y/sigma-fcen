@@ -183,8 +183,10 @@ class AuditLog(models.Model):
         User, on_delete=models.PROTECT, related_name="audit_entries", db_index=False
     )
     action = models.CharField(max_length=32, choices=Action.choices)
-    # Field name -> [before, after]; for creations, the initial values.
+    # Always field name -> [before, after]; a creation has None (or []) as "before".
     changes = models.JSONField(default=dict)
+    # Facts about the operation that are not field changes, e.g. a deactivation's impact.
+    context = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = AuditLogQuerySet.as_manager()

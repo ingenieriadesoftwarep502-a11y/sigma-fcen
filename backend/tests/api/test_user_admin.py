@@ -286,6 +286,14 @@ def test_ca_hu11_5_create_is_audited_without_the_password(
     assert entry.created_at is not None
     assert PASSWORD not in str(entry.changes)
     assert "password" not in entry.changes
+    # Same {field: [before, after]} shape as every other entry; a new account starts empty.
+    assert entry.changes == {
+        "email": [None, "docente@unal.edu.co"],
+        "first_name": [None, "Laura"],
+        "last_name": [None, "Gómez"],
+        "roles": [[], ["TEACHER"]],
+    }
+    assert entry.context == {}
 
 
 def test_ca_hu11_5_edit_is_audited_with_before_and_after(

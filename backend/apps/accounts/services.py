@@ -69,10 +69,10 @@ def create_user(
         target=user,
         action=AuditLog.Action.USER_CREATED,
         changes={
-            "email": user.email,
-            "first_name": first_name,
-            "last_name": last_name,
-            "roles": _role_codes(user),
+            "email": [None, user.email],
+            "first_name": [None, first_name],
+            "last_name": [None, last_name],
+            "roles": [[], _role_codes(user)],
         },
     )
     return user
@@ -143,6 +143,7 @@ def deactivate_user(*, actor: User, user: User) -> dict[str, int]:
             actor=actor,
             target=user,
             action=AuditLog.Action.USER_DEACTIVATED,
-            changes={"is_active": [True, False], **impact},
+            changes={"is_active": [True, False]},
+            context=impact,
         )
     return impact

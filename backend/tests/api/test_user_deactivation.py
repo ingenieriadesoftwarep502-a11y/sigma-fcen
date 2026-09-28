@@ -119,7 +119,9 @@ def test_ca_hu11_5_confirmed_deactivation_is_audited_with_its_impact(
         student,
         AuditLog.Action.USER_DEACTIVATED,
     )
-    assert entry.changes == {"is_active": [True, False], "future_reservations": 0}
+    assert entry.changes == {"is_active": [True, False]}
+    # The impact is context of the change, not a changed field.
+    assert entry.context == {"future_reservations": 0}
 
 
 def test_t01_12_deactivating_an_inactive_account_changes_nothing(
