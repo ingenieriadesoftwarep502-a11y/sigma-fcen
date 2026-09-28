@@ -26,6 +26,8 @@ from apps.accounts.models import User
 from apps.accounts.serializers import (
     DUPLICATE_EMAIL_MESSAGE,
     AdminUserSerializer,
+    DeactivationRequestSerializer,
+    DeactivationResultSerializer,
     LoginSerializer,
     RegisterSerializer,
     RoleAssignmentSerializer,
@@ -33,7 +35,14 @@ from apps.accounts.serializers import (
     UserSerializer,
     UserUpdateSerializer,
 )
-from apps.accounts.services import create_user, register_student, set_roles, update_user
+from apps.accounts.services import (
+    create_user,
+    deactivate_user,
+    deactivation_impact,
+    register_student,
+    set_roles,
+    update_user,
+)
 from shared.permissions import IsAdmin
 
 # Same message for unknown email, wrong password and inactive account: no account enumeration.
@@ -192,3 +201,25 @@ class UserRolesView(generics.GenericAPIView[User]):
             actor=cast(User, request.user), user=user, roles=serializer.validated_data["roles"]
         )
         return Response(AdminUserSerializer(user).data)
+
+
+class UserDeactivateView(generics.GenericAPIView[User]):
+    """Reports the impact first; deactivates only with confirm=true (CA-HU11-2, CA-HU11-3)."""
+
+    permission_classes = (IsAdmin,)
+    queryset = User.objects.all()
+    serializer_class = DeactivationRequestSerializer
+
+    @extend_schema(
+        request=DeactivationRequestSerializer, responses={200: DeactivationResultSerializer}
+    )
+    def post(self, request: Request, pk: str) -> Response:
+        user = self.get_object()
+        serializer = DeactivationRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data["confirm"]:
+            impact = deactivate_user(actor=cast(User, request.user), user=user)
+        else:
+            impact = deactivation_impact(user)
+        result = {"deactivated": not user.is_active, "impact": impact, "user": user}
+        return Response(DeactivationResultSerializer(result).data)
