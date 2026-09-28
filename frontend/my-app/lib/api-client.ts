@@ -90,3 +90,35 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
   return parsed as T;
 }
+
+/** Per-field messages of a DRF validation error (`{"field": ["message", ...]}`). */
+export function fieldErrors(error: unknown): Record<string, string[]> {
+  if (!(error instanceof ApiError) || typeof error.body !== "object" || error.body === null) {
+    return {};
+  }
+  const errors: Record<string, string[]> = {};
+  for (const [field, messages] of Object.entries(error.body)) {
+    if (Array.isArray(messages)) {
+      errors[field] = messages.map(String);
+    }
+  }
+  return errors;
+}
+
+const NETWORK_ERROR_MESSAGE = "No pudimos conectar con el servidor. Intenta de nuevo.";
+const GENERIC_ERROR_MESSAGE = "Algo salió mal. Intenta de nuevo.";
+
+/** A message fit for the interface: the API's `detail` when it sent one. */
+export function requestErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return GENERIC_ERROR_MESSAGE;
+  }
+  if (error.status === 0) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+  const body = error.body;
+  if (typeof body === "object" && body !== null && "detail" in body) {
+    return String((body as { detail: unknown }).detail);
+  }
+  return GENERIC_ERROR_MESSAGE;
+}
