@@ -1,0 +1,556 @@
+openapi: 3.0.3
+info:
+  title: SIGMA-FCEN API
+  version: 1.0.0
+  description: API REST del sistema de gestion de monitorias academicas de la FCEN.
+paths:
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_retrieve
+      description: |-
+        Hands out the CSRF token the frontend echoes in X-CSRFToken (ADR-007).
+
+        The token travels in the body because the frontend may run on another host, where it
+        cannot read the API's cookies; the csrftoken cookie itself stays HttpOnly.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+          description: ''
+  /api/v1/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: Issues the access and refresh tokens as HttpOnly cookies (ADR-007).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '401':
+          description: Invalid credentials
+  /api/v1/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: |-
+        Revokes the refresh token and clears the token cookies.
+
+        No authentication: an expired access cookie must not prevent revoking the refresh token.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: Issues a new access cookie from the refresh cookie, even if the
+        access token expired.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+        '401':
+          description: Missing or invalid session
+  /api/v1/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Public self-registration with an institutional email (HU-01).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/health/:
+    get:
+      operationId: health_retrieve
+      description: Reports service liveness and database connectivity. No authentication
+        required.
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+  /api/v1/users/:
+    get:
+      operationId: users_list
+      description: Administrators list every account and create new ones with roles
+        (RF-020, RF-021).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminUserList'
+          description: ''
+    post:
+      operationId: users_create
+      description: Administrators list every account and create new ones with roles
+        (RF-020, RF-021).
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+  /api/v1/users/{id}/:
+    get:
+      operationId: users_retrieve
+      description: Administrators read and edit one account; PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      description: Administrators read and edit one account; PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+  /api/v1/users/{id}/deactivate/:
+    post:
+      operationId: users_deactivate_create
+      description: Reports the impact first; deactivates only with confirm=true (CA-HU11-2,
+        CA-HU11-3).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeactivationResult'
+          description: ''
+  /api/v1/users/{id}/roles/:
+    post:
+      operationId: users_roles_create
+      description: Replaces the roles of one account (RF-021).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAssignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleAssignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleAssignment'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+  /api/v1/users/me/:
+    get:
+      operationId: users_me_retrieve
+      description: The authenticated user's own identity and roles (CA-HU01-5).
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+components:
+  schemas:
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - date_joined
+      - email
+      - first_name
+      - id
+      - is_active
+      - last_name
+      - roles
+    CsrfToken:
+      type: object
+      properties:
+        csrfToken:
+          type: string
+      required:
+      - csrfToken
+    DeactivationImpact:
+      type: object
+      properties:
+        future_reservations:
+          type: integer
+      required:
+      - future_reservations
+    DeactivationRequest:
+      type: object
+      properties:
+        confirm:
+          type: boolean
+          default: false
+    DeactivationResult:
+      type: object
+      properties:
+        deactivated:
+          type: boolean
+        impact:
+          $ref: '#/components/schemas/DeactivationImpact'
+        user:
+          $ref: '#/components/schemas/AdminUser'
+      required:
+      - deactivated
+      - impact
+      - user
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+        database:
+          type: string
+      required:
+      - database
+      - status
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - password
+    PaginatedAdminUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUser'
+    PatchedUserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+    Register:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - email
+      - first_name
+      - last_name
+      - password
+    RoleAssignment:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+      required:
+      - roles
+    RolesEnum:
+      enum:
+      - STUDENT
+      - MONITOR
+      - TEACHER
+      - ADMIN
+      type: string
+      description: |-
+        * `STUDENT` - Estudiante
+        * `MONITOR` - Monitor
+        * `TEACHER` - Docente
+        * `ADMIN` - Administrador
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+          readOnly: true
+      required:
+      - email
+      - first_name
+      - id
+      - last_name
+      - roles
+    UserCreate:
+      type: object
+      description: Same rules as self-registration, but the administrator chooses
+        the roles.
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+      required:
+      - email
+      - first_name
+      - last_name
+      - password
+      - roles
+  securitySchemes:
+    cookieJWT:
+      type: apiKey
+      in: cookie
+      name: access_token
