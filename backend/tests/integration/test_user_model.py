@@ -12,7 +12,7 @@ from django.db import IntegrityError, connection, migrations
 from django.db.migrations.loader import MigrationLoader
 from django.test.utils import CaptureQueriesContext
 
-from apps.accounts.models import Role
+from apps.accounts.models import AccountDeletionError, Role
 from shared.permissions import IsAdmin
 
 PASSWORD = "Str0ng-Passw0rd!"
@@ -145,3 +145,23 @@ def test_rn_002_create_superuser_is_atomic_with_the_admin_role() -> None:
         get_user_model().objects.create_superuser(email="admin@unal.edu.co", password=PASSWORD)
 
     assert not get_user_model().objects.exists()
+
+
+@pytest.mark.django_db
+def test_rf_025_a_user_is_never_deleted() -> None:
+    user = get_user_model().objects.create_user(email="ana.perez@unal.edu.co", password=PASSWORD)
+
+    with pytest.raises(AccountDeletionError):
+        user.delete()
+
+    assert get_user_model().objects.filter(pk=user.pk).exists()
+
+
+@pytest.mark.django_db
+def test_rf_025_users_are_never_bulk_deleted() -> None:
+    get_user_model().objects.create_user(email="ana.perez@unal.edu.co", password=PASSWORD)
+
+    with pytest.raises(AccountDeletionError):
+        get_user_model().objects.all().delete()
+
+    assert get_user_model().objects.count() == 1

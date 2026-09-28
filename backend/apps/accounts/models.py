@@ -1,7 +1,7 @@
 """User aggregate (DDD section 4.1, ADR-008)."""
 
 import uuid
-from typing import Any, ClassVar
+from typing import Any, ClassVar, NoReturn, TypeAlias
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models, transaction
@@ -10,8 +10,25 @@ from django.utils import timezone
 
 from apps.accounts.domain.rules import normalize_email
 
+ACCOUNT_DELETION_MESSAGE = "Las cuentas no se eliminan; solo se desactivan."
+
+
+class AccountDeletionError(Exception):
+    """RF-025: accounts are never physically deleted, only deactivated."""
+
+    def __init__(self) -> None:
+        super().__init__(ACCOUNT_DELETION_MESSAGE)
+
+
+class UserQuerySet(models.QuerySet["User"]):
+    def delete(self) -> NoReturn:
+        raise AccountDeletionError
+
 
 class UserManager(BaseUserManager["User"]):
+    def get_queryset(self) -> UserQuerySet:
+        return UserQuerySet(self.model, using=self._db)
+
     @classmethod
     def normalize_email(cls, email: str | None) -> str:
         # Django only lowercases the domain; RN-001.1 makes the whole address case-insensitive.
@@ -44,16 +61,28 @@ class UserManager(BaseUserManager["User"]):
         return self.get(email=self.normalize_email(username))
 
 
+class RoleCode(models.TextChoices):
+    STUDENT = "STUDENT", "Estudiante"
+    MONITOR = "MONITOR", "Monitor"
+    TEACHER = "TEACHER", "Docente"
+    ADMIN = "ADMIN", "Administrador"
+
+
 class Role(models.Model):
     """A set of capabilities. The four roles are seeded by migration 0003."""
 
-    class Code(models.TextChoices):
-        STUDENT = "STUDENT", "Estudiante"
-        MONITOR = "MONITOR", "Monitor"
-        TEACHER = "TEACHER", "Docente"
-        ADMIN = "ADMIN", "Administrador"
+    # Module-level so Meta can reference it; Role.Code stays the public name.
+    Code: TypeAlias = RoleCode
 
     code = models.CharField(max_length=16, unique=True, choices=Code.choices)
+
+    class Meta:
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            # Permissions compare against these codes: the catalog cannot drift from Role.Code.
+            models.CheckConstraint(
+                condition=models.Q(code__in=RoleCode.values), name="accounts_role_code_valid"
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.get_code_display()
@@ -93,9 +122,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     def has_role(self, code: str) -> bool:
         return self.roles.filter(code=code).exists()
 
+    def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
+        raise AccountDeletionError
+
 
 class UserRole(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_roles")
+    # PROTECT backs RF-025 at the ORM level; the unique (user, role) index covers lookups by user.
+    user = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="user_roles", db_index=False
+    )
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="user_roles")
 
     class Meta:

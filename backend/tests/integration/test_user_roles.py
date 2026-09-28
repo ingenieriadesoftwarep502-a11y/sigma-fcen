@@ -2,7 +2,7 @@
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError
+from django.db import IntegrityError, models
 
 from apps.accounts.models import Role, User, UserRole
 
@@ -49,3 +49,17 @@ def test_rn_002_rejects_duplicate_role_assignment(user: User) -> None:
 
     with pytest.raises(IntegrityError):
         UserRole.objects.create(user=user, role=student)
+
+
+@pytest.mark.django_db
+def test_rn_002_database_rejects_unknown_role_codes() -> None:
+    with pytest.raises(IntegrityError):
+        Role.objects.create(code="ROOT")
+
+
+def test_rf_025_role_assignments_protect_their_user() -> None:
+    field = UserRole._meta.get_field("user")
+
+    assert field.remote_field.on_delete is models.PROTECT
+    # The (user, role) unique constraint already indexes user as its leading column.
+    assert field.deconstruct()[3]["db_index"] is False
