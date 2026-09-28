@@ -143,6 +143,26 @@ class UserRole(models.Model):
         return f"{self.user} · {self.role}"
 
 
+AUDIT_LOG_IMMUTABLE_MESSAGE = "El registro de auditoría no se modifica ni se elimina."
+
+
+class AuditLogImmutableError(Exception):
+    """SAD D-6: audit entries are append-only."""
+
+    def __init__(self) -> None:
+        super().__init__(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
+
+class AuditLogQuerySet(models.QuerySet["AuditLog"]):
+    """Only inserts and reads; migration 0006 enforces the same rule in the database."""
+
+    def update(self, **kwargs: Any) -> NoReturn:
+        raise AuditLogImmutableError
+
+    def delete(self) -> NoReturn:
+        raise AuditLogImmutableError
+
+
 class AuditLog(models.Model):
     """Who did what to which account, and when (CA-HU11-5). Never stores credentials."""
 
@@ -160,8 +180,18 @@ class AuditLog(models.Model):
     changes = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    objects = AuditLogQuerySet.as_manager()
+
     class Meta:
         ordering: ClassVar[list[str]] = ["-created_at"]
 
     def __str__(self) -> str:
         return f"{self.created_at:%Y-%m-%d %H:%M} {self.actor} {self.action} {self.target}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding:
+            raise AuditLogImmutableError
+        super().save(*args, **kwargs)
+
+    def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
+        raise AuditLogImmutableError
