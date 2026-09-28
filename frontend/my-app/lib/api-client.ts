@@ -267,13 +267,14 @@ export function fieldErrors(error: unknown): Record<string, string[]> {
 }
 
 /**
- * Splits a validation error into the messages of the fields a form shows and the rest
- * (`non_field_errors` or anything unexpected), so no message is silently dropped.
+ * What a form shows for a failed request: each field's own messages next to it, and one
+ * general message for the rest (`non_field_errors`, unknown fields, or a non-validation
+ * failure), so no message is silently dropped.
  */
 export function formErrors<F extends string>(
   error: unknown,
   fields: readonly F[],
-): { byField: Partial<Record<F, string[]>>; other: string[] } {
+): { byField: Partial<Record<F, string[]>>; message: string | null } {
   const byField: Partial<Record<F, string[]>> = {};
   const other: string[] = [];
   for (const [field, messages] of Object.entries(fieldErrors(error))) {
@@ -283,7 +284,11 @@ export function formErrors<F extends string>(
       other.push(...messages);
     }
   }
-  return { byField, other };
+  if (other.length > 0) {
+    return { byField, message: other.join(" ") };
+  }
+  const hasFieldErrors = Object.keys(byField).length > 0;
+  return { byField, message: hasFieldErrors ? null : requestErrorMessage(error) };
 }
 
 /** A message fit for the interface; technical details of the transport never reach it. */

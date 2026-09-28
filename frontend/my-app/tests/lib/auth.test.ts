@@ -44,8 +44,11 @@ describe("auth API", () => {
     });
   }
 
-  function callsTo(path: string) {
-    return fetchMock.mock.calls.filter(([url]) => url === `${BASE_URL}${path}`);
+  /** The request options of the only call to `path`. */
+  function initOf(path: string): RequestInit | undefined {
+    const calls = fetchMock.mock.calls.filter(([url]) => url === `${BASE_URL}${path}`);
+    expect(calls).toHaveLength(1);
+    return calls[0]?.[1];
   }
 
   beforeEach(() => {
@@ -67,7 +70,7 @@ describe("auth API", () => {
     const user = await login("ana.perez@unal.edu.co", "Str0ng-Passw0rd!");
 
     expect(user).toEqual(USER);
-    const [[, init]] = callsTo("/auth/login/");
+    const init = initOf("/auth/login/");
     expect(init?.method).toBe("POST");
     expect(init?.credentials).toBe("include");
     expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("token-1");
@@ -84,7 +87,7 @@ describe("auth API", () => {
     respond(() => new Response(null, { status: 204 }));
     await logout();
 
-    const [[, init]] = callsTo("/auth/logout/");
+    const init = initOf("/auth/logout/");
     expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("token-2");
   });
 
@@ -100,7 +103,7 @@ describe("auth API", () => {
     const user = await register(data);
 
     expect(user).toEqual(USER);
-    const [[, init]] = callsTo("/auth/register/");
+    const init = initOf("/auth/register/");
     expect(init?.method).toBe("POST");
     expect(JSON.parse(String(init?.body))).toEqual(data);
   });
@@ -110,7 +113,7 @@ describe("auth API", () => {
 
     await expect(logout()).resolves.toBeUndefined();
 
-    const [[, init]] = callsTo("/auth/logout/");
+    const init = initOf("/auth/logout/");
     expect(init?.method).toBe("POST");
     expect(init?.credentials).toBe("include");
   });
@@ -119,7 +122,7 @@ describe("auth API", () => {
     respond(() => jsonResponse(USER));
 
     await expect(getCurrentUser()).resolves.toEqual(USER);
-    expect(callsTo("/users/me/")).toHaveLength(1);
+    expect(initOf("/users/me/")?.method ?? "GET").toBe("GET");
   });
 
   it("returns null when there is no session", async () => {

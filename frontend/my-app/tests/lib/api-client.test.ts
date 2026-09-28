@@ -40,6 +40,12 @@ describe("getApiBaseUrl", () => {
 describe("apiRequest", () => {
   const fetchMock = vi.fn<typeof fetch>();
 
+  function callAt(index: number): Parameters<typeof fetch> {
+    const call = fetchMock.mock.calls[index];
+    if (!call) throw new Error(`fetch was not called ${index + 1} times`);
+    return call;
+  }
+
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", BASE_URL);
     vi.stubGlobal("fetch", fetchMock);
@@ -58,7 +64,7 @@ describe("apiRequest", () => {
     const body = await apiRequest<{ status: string; database: string }>("/health/");
 
     expect(body).toEqual({ status: "ok", database: "ok" });
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = callAt(0);
     expect(url).toBe(`${BASE_URL}/health/`);
     expect(init?.credentials).toBe("include");
     expect(new Headers(init?.headers).get("Accept")).toBe("application/json");
@@ -78,7 +84,7 @@ describe("apiRequest", () => {
 
     await apiRequest("/items/", { method: "POST", body: { name: "x" } });
 
-    const [, init] = fetchMock.mock.calls[1];
+    const [, init] = callAt(1);
     expect(init?.method).toBe("POST");
     expect(init?.body).toBe(JSON.stringify({ name: "x" }));
     expect(new Headers(init?.headers).get("Content-Type")).toBe("application/json");
@@ -133,10 +139,10 @@ describe("apiRequest", () => {
           CSRF_URL,
           `${BASE_URL}/items/1/`,
         ]);
-        const [, csrfInit] = fetchMock.mock.calls[0];
+        const [, csrfInit] = callAt(0);
         expect(csrfInit?.method ?? "GET").toBe("GET");
         expect(csrfInit?.credentials).toBe("include");
-        const [, init] = fetchMock.mock.calls[1];
+        const [, init] = callAt(1);
         expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("fresh-token");
       },
     );
@@ -147,7 +153,7 @@ describe("apiRequest", () => {
 
       await apiRequest("/items/", { method: "POST", body: {} });
 
-      const [, init] = fetchMock.mock.calls[1];
+      const [, init] = callAt(1);
       expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("fresh-token");
       document.cookie = "csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
     });
@@ -214,7 +220,7 @@ describe("apiRequest", () => {
 
       await expect(apiRequest("/a/", { method: "POST", body: {} })).resolves.toEqual({ ok: true });
 
-      const [, retry] = fetchMock.mock.calls[3];
+      const [, retry] = callAt(3);
       expect(new Headers(retry?.headers).get("X-CSRFToken")).toBe("token-2");
     });
 
@@ -239,7 +245,7 @@ describe("apiRequest", () => {
       await apiRequest("/items/");
 
       expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([`${BASE_URL}/items/`]);
-      const [, init] = fetchMock.mock.calls[0];
+      const [, init] = callAt(0);
       expect(new Headers(init?.headers).has("X-CSRFToken")).toBe(false);
     });
 
@@ -248,7 +254,7 @@ describe("apiRequest", () => {
 
       await apiRequest("/items/", { credentials: "omit" });
 
-      const [, init] = fetchMock.mock.calls[0];
+      const [, init] = callAt(0);
       expect(init?.credentials).toBe("include");
     });
   });
@@ -283,7 +289,7 @@ describe("apiRequest", () => {
 
       expect(body).toEqual({ id: 1 });
       expect(nonCsrfUrls()).toEqual([`${BASE_URL}/items/1/`, REFRESH_URL, `${BASE_URL}/items/1/`]);
-      const [, refreshInit] = callsTo(REFRESH_URL)[0];
+      const refreshInit = callsTo(REFRESH_URL)[0]?.[1];
       expect(refreshInit?.method).toBe("POST");
       expect(refreshInit?.credentials).toBe("include");
       expect(new Headers(refreshInit?.headers).get("X-CSRFToken")).toBe("t");
@@ -367,7 +373,7 @@ describe("apiRequest", () => {
 
       const pending = apiRequest("/health/").catch((e: unknown) => e);
       await vi.advanceTimersByTimeAsync(14_999);
-      expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(false);
+      expect(callAt(0)[1]?.signal?.aborted).toBe(false);
       await vi.advanceTimersByTimeAsync(1);
       const error = await pending;
 
@@ -430,7 +436,22 @@ describe("formErrors", () => {
 
     expect(formErrors(error, ["email", "password"] as const)).toEqual({
       byField: { email: ["Ya existe una cuenta con este correo."] },
-      other: ["No se pudo crear la cuenta."],
+      message: "No se pudo crear la cuenta.",
+    });
+  });
+
+  it("has no general message when every error belongs to a field", () => {
+    const error = new ApiError(400, "Bad request", { email: ["Correo no válido."] });
+
+    expect(formErrors(error, ["email"] as const).message).toBeNull();
+  });
+
+  it("falls back to the request message for failures that are not validation", () => {
+    const error = new ApiError(0, "Network error");
+
+    expect(formErrors(error, ["email"] as const)).toEqual({
+      byField: {},
+      message: "No pudimos conectar con el servidor. Intenta de nuevo.",
     });
   });
 });
