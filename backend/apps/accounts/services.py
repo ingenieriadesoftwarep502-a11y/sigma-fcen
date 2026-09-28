@@ -5,7 +5,7 @@ from typing import Any
 
 from django.db import transaction
 
-from apps.accounts.domain.rules import AdminChange, ensure_admin_remains
+from apps.accounts.domain.rules import AdminChange, ensure_admin_remains, normalize_email
 from apps.accounts.models import AuditLog, Role, User, UserRole
 
 
@@ -81,6 +81,9 @@ def create_user(
 @transaction.atomic
 def update_user(*, actor: User, user: User, data: dict[str, Any]) -> User:
     """Edits identity fields or reactivates the account; deactivation has its own flow."""
+    if "email" in data:
+        # RN-001.1: a case-only difference is not a change.
+        data = {**data, "email": normalize_email(data["email"])}
     changes = {
         field: [getattr(user, field), value]
         for field, value in data.items()
