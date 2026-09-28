@@ -1,28 +1,24 @@
 /**
  * Identity endpoints (FASE-01). Tokens live in HttpOnly cookies set by the API
  * (ADR-007), so this module never sees or stores them.
+ *
+ * Types come from the generated OpenAPI contract (SAD 5.3); run `npm run gen:api`
+ * after the backend schema changes.
  */
 
-import { apiRequest } from "@/lib/api-client";
+import { ApiError, apiRequest, forgetCsrfToken } from "@/lib/api-client";
+import type { components } from "@/types/api";
 
-export type RoleCode = "STUDENT" | "MONITOR" | "TEACHER" | "ADMIN";
-
-export type User = {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  roles: RoleCode[];
-};
-
-export type RegisterData = {
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-};
+export type User = components["schemas"]["User"];
+export type RoleCode = components["schemas"]["RolesEnum"];
+export type RegisterData = components["schemas"]["Register"];
+type Credentials = components["schemas"]["Login"];
 
 export const INSTITUTIONAL_EMAIL_DOMAIN = "unal.edu.co";
+
+/** Where a signed-in person lands when nothing else was requested. */
+export const HOME_PATH = "/inicio";
+export const LOGIN_PATH = "/login";
 
 /** RN-001.2: mirrors the server rule so the form can warn before sending. */
 export function isInstitutionalEmail(email: string): boolean {
@@ -30,8 +26,30 @@ export function isInstitutionalEmail(email: string): boolean {
   return at > 0 && email.slice(at + 1).toLowerCase() === INSTITUTIONAL_EMAIL_DOMAIN;
 }
 
-export function login(email: string, password: string): Promise<User> {
-  return apiRequest<User>("/auth/login/", { method: "POST", body: { email, password } });
+export function hasAnyRole(user: User, roles: readonly RoleCode[]): boolean {
+  return user.roles.some((role) => roles.includes(role));
+}
+
+/**
+ * The `next` query value only when it is a path inside this app. Anything else, such as
+ * `https://evil.com` or `//evil.com`, would turn the login page into an open redirect.
+ */
+export function safeRedirectPath(next: unknown): string {
+  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//")) {
+    return HOME_PATH;
+  }
+  if (next.includes("\\")) {
+    return HOME_PATH;
+  }
+  return next;
+}
+
+export async function login(email: string, password: string): Promise<User> {
+  const credentials: Credentials = { email, password };
+  const user = await apiRequest<User>("/auth/login/", { method: "POST", body: credentials });
+  // The API rotated the CSRF secret when the session began.
+  forgetCsrfToken();
+  return user;
 }
 
 export function register(data: RegisterData): Promise<User> {
@@ -39,6 +57,22 @@ export function register(data: RegisterData): Promise<User> {
 }
 
 /** Revokes the refresh token and clears the session cookies on the API side. */
-export function logout(): Promise<void> {
-  return apiRequest<void>("/auth/logout/", { method: "POST" });
+export async function logout(): Promise<void> {
+  try {
+    await apiRequest<void>("/auth/logout/", { method: "POST" });
+  } finally {
+    forgetCsrfToken();
+  }
+}
+
+/** The signed-in user, or null when there is no valid session. Other failures propagate. */
+export async function getCurrentUser(signal?: AbortSignal): Promise<User | null> {
+  try {
+    return await apiRequest<User>("/users/me/", { signal });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      return null;
+    }
+    throw error;
+  }
 }
