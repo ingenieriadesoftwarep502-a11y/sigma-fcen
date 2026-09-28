@@ -53,7 +53,7 @@ Declarado explícitamente para que ningún agente lo implemente por iniciativa p
 | Decanatura / Dirección Académica | Consume información agregada | Lectura de reportes consolidados |
 | Dirección de Tecnología | Integra infraestructura | Fuera del producto; interlocutor de `ADR-015` |
 
-> **Dependencia crítica:** la pregunta "¿un usuario puede tener varios roles simultáneos?" está abierta en `ADR-008` y condiciona el modelo entero.
+> **Roles simultáneos:** un mismo usuario puede tener varios roles a la vez (p. ej. estudiante y monitor) — `[CONFIRMADO]` ADR-008.
 
 ---
 
@@ -82,22 +82,22 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 
 | ID | Requisito | Prioridad | Estado | Bloqueado por |
 |---|---|---|---|---|
-| RF-010 | El sistema debe permitir el registro de usuarios con datos institucionales | Alta | `[PROPUESTA]` | ADR-009 |
-| RF-011 | El sistema debe permitir iniciar y cerrar sesión de forma segura | Alta | `[PROPUESTA]` | ADR-007 |
-| RF-012 | El sistema debe restringir cada funcionalidad según el rol del usuario | Alta | `[PROPUESTA]` | ADR-008 |
-| RF-013 | El sistema debe permitir recuperar la contraseña | Media | `[PENDIENTE]` | ADR-009 (SMTP) |
-| RF-014 | El sistema debe invalidar el acceso de las cuentas desactivadas | Alta | `[PROPUESTA]` | ADR-007 |
+| RF-010 | El sistema debe permitir el registro de usuarios con datos institucionales | Alta | `[CONFIRMADO]` | — (ADR-009 cerrado) |
+| RF-011 | El sistema debe permitir iniciar y cerrar sesión de forma segura | Alta | `[CONFIRMADO]` | — (ADR-007 cerrado) |
+| RF-012 | El sistema debe restringir cada funcionalidad según el rol del usuario | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
+| RF-013 | El sistema debe permitir recuperar la contraseña | Media | `[PENDIENTE]` | Sin SMTP en v1 (ADR-009); se traslada a FASE-10 |
+| RF-014 | El sistema debe invalidar el acceso de las cuentas desactivadas | Alta | `[CONFIRMADO]` | — (ADR-007 cerrado) |
 
 ### 4.2 Usuarios y asignaturas (RF-02x)
 
 | ID | Requisito | Prioridad | Estado | Bloqueado por |
 |---|---|---|---|---|
-| RF-020 | El administrador debe poder crear, editar, activar y desactivar usuarios | Alta | `[PROPUESTA]` | ADR-008 |
-| RF-021 | El administrador debe poder asignar y retirar roles | Alta | `[PROPUESTA]` | ADR-008 |
+| RF-020 | El administrador debe poder crear, editar, activar y desactivar usuarios | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
+| RF-021 | El administrador debe poder asignar y retirar roles | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
 | RF-022 | El administrador debe poder administrar el catálogo de asignaturas | Alta | `[PROPUESTA]` | — |
-| RF-023 | El administrador debe poder asociar monitores a asignaturas | Alta | `[PROPUESTA]` | ADR-009 |
+| RF-023 | El administrador debe poder asociar monitores a asignaturas | Alta | `[PROPUESTA]` | — (ADR-009 cerrado) |
 | RF-024 | El administrador debe poder asociar docentes a cursos | Media | `[PROPUESTA]` | — |
-| RF-025 | Las cuentas nunca se eliminan físicamente; solo se desactivan | Alta | `[PROPUESTA]` | — |
+| RF-025 | Las cuentas nunca se eliminan físicamente; solo se desactivan | Alta | `[CONFIRMADO]` | — |
 
 ### 4.3 Disponibilidad (RF-03x)
 
@@ -152,7 +152,7 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 
 | ID | Requisito | Prioridad | Estado | Bloqueado por |
 |---|---|---|---|---|
-| RF-080 | El docente debe poder consultar los monitores asignados a sus cursos | Media | `[PROPUESTA]` | ADR-008 |
+| RF-080 | El docente debe poder consultar los monitores asignados a sus cursos | Media | `[PROPUESTA]` | — (ADR-008 cerrado) |
 | RF-081 | El docente debe poder consultar las sesiones realizadas en sus cursos | Media | `[PROPUESTA]` | — |
 | RF-082 | El docente debe poder consultar los estudiantes atendidos | Media | `[PROPUESTA]` | — |
 | RF-083 | El docente debe poder consultar las dificultades frecuentes reportadas | Media | `[PENDIENTE]` | falta definir cómo se clasifica una "dificultad" |
@@ -173,8 +173,8 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 |---|---|---|---|---|
 | RNF-SEC-001 | Seguridad | Ningún secreto en el repositorio; toda configuración sensible por variables de entorno | `git grep` sin coincidencias de secretos; `SECRET_KEY` leída del entorno | `[CONFIRMADO]` ADR-002 |
 | RNF-SEC-002 | Seguridad | Contraseñas almacenadas con el hasher por defecto de Django (PBKDF2) | Revisión de `PASSWORD_HASHERS` | `[PROPUESTA]` |
-| RNF-SEC-003 | Seguridad | Todo endpoint distinto de autenticación exige usuario autenticado | Prueba automatizada: cada endpoint responde 401 sin credenciales | `[PROPUESTA]` |
-| RNF-SEC-004 | Seguridad | Autorización verificada por rol en cada endpoint, no solo en la interfaz | Prueba por rol y endpoint que confirma 403 | `[PENDIENTE]` ADR-008 |
+| RNF-SEC-003 | Seguridad | Todo endpoint distinto de autenticación exige usuario autenticado | Prueba automatizada: cada endpoint responde 401 sin credenciales | `[CONFIRMADO]` |
+| RNF-SEC-004 | Seguridad | Autorización verificada por rol en cada endpoint, no solo en la interfaz | Prueba por rol y endpoint que confirma 403 | `[CONFIRMADO]` |
 | RNF-SEC-005 | Seguridad | CORS restringido a los orígenes de `CORS_ALLOWED_ORIGINS` | Revisión de configuración + prueba | `[CONFIRMADO]` ADR-002 |
 | RNF-CAL-001 | Calidad | Cobertura mínima del 80 % en la capa de dominio y servicios | Reporte de `pytest-cov` en CI | `[PENDIENTE]` — herramienta confirmada (ADR-004); el umbral del 80 % aún no está acordado formalmente |
 | RNF-CAL-002 | Calidad | Toda regla de negocio `RN-xxx` con prueba de camino feliz y de violación | Matriz de trazabilidad §8 completa | `[PROPUESTA]` |
@@ -196,21 +196,21 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 
 ## 6. Historias de usuario y criterios de aceptación
 
-Redacción de las historias conservada del documento base. Los criterios de aceptación son **propuestos** y requieren confirmación antes de habilitar código.
+Redacción de las historias conservada del documento base. Los criterios de aceptación son **propuestos** y requieren confirmación antes de habilitar código. Los de HU-01 y HU-11 están confirmados (Nicolás García Orozco, 2026-09-27).
 
 ### HU-01 · Registro de usuario · 5 pts · Prioridad 1
 
 > Como nuevo usuario (estudiante, monitor, docente o administrador), quiero registrarme en el sistema con mis datos institucionales, de tal manera que pueda acceder a las funcionalidades correspondientes a mi rol sin necesidad de procesos manuales.
 
-**Requisitos:** RF-010, RF-011 · **Fase:** FASE-01 · **Bloqueado por:** ADR-007, ADR-008, ADR-009
+**Requisitos:** RF-010, RF-011 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27)
 
 | ID | Criterio (Gherkin) | Estado |
 |---|---|---|
-| CA-HU01-1 | **Dado** un correo institucional válido y no registrado, **cuando** envío el formulario completo, **entonces** se crea la cuenta y recibo respuesta `201` | `[PROPUESTA]` |
-| CA-HU01-2 | **Dado** un correo ya registrado, **cuando** intento registrarme, **entonces** recibo `400` con un mensaje claro y no se crea una segunda cuenta | `[PROPUESTA]` |
-| CA-HU01-3 | **Dado** un correo de dominio no institucional, **cuando** intento registrarme, **entonces** el sistema lo rechaza | `[PENDIENTE]` ADR-009 |
-| CA-HU01-4 | **Dado** una contraseña que no cumple la política mínima, **cuando** intento registrarme, **entonces** recibo el detalle de la regla incumplida | `[PROPUESTA]` |
-| CA-HU01-5 | **Dado** un registro exitoso, **cuando** consulto mi perfil, **entonces** veo el rol que me corresponde | `[PENDIENTE]` ADR-009 |
+| CA-HU01-1 | **Dado** un correo institucional válido y no registrado, **cuando** envío el formulario completo, **entonces** se crea la cuenta y recibo respuesta `201` | `[CONFIRMADO]` |
+| CA-HU01-2 | **Dado** un correo ya registrado, **cuando** intento registrarme, **entonces** recibo `400` con un mensaje claro y no se crea una segunda cuenta | `[CONFIRMADO]` |
+| CA-HU01-3 | **Dado** un correo que no pertenece al dominio `@unal.edu.co`, **cuando** intento registrarme, **entonces** el sistema lo rechaza con `400` | `[CONFIRMADO]` ADR-009 |
+| CA-HU01-4 | **Dado** una contraseña que no cumple la política mínima, **cuando** intento registrarme, **entonces** recibo el detalle de la regla incumplida | `[CONFIRMADO]` |
+| CA-HU01-5 | **Dado** un registro exitoso, **cuando** consulto mi perfil, **entonces** veo el rol Estudiante y ningún otro | `[CONFIRMADO]` ADR-009 |
 
 ---
 
@@ -244,7 +244,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 | CA-HU03-3 | **Dado** dos estudiantes reservando la misma franja de forma simultánea, **cuando** ambos envían la petición, **entonces** exactamente uno obtiene `201` y el otro `409` | `[PROPUESTA]` |
 | CA-HU03-4 | **Dado** una franja pasada, **cuando** intento reservar, **entonces** recibo `400` | `[PROPUESTA]` |
 | CA-HU03-5 | **Dado** una reserva activa mía en el mismo horario, **cuando** intento reservar otra, **entonces** el sistema lo impide | `[PENDIENTE]` ADR-010 |
-| CA-HU03-6 | **Dado** un usuario con rol distinto de estudiante, **cuando** intenta reservar, **entonces** recibe `403` | `[PENDIENTE]` ADR-008 |
+| CA-HU03-6 | **Dado** un usuario con rol distinto de estudiante, **cuando** intenta reservar, **entonces** recibe `403` | `[PROPUESTA]` — revisar en FASE-04 el caso de un usuario con varios roles (ADR-008) |
 
 > **CA-HU03-3 es el criterio técnicamente más exigente del proyecto.** Exige bloqueo a nivel de base de datos o restricción de unicidad; no se resuelve con una validación en el serializer.
 
@@ -277,7 +277,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 | CA-HU05-2 | **Dado** una franja que se solapa con otra mía, **cuando** la registro, **entonces** recibo `400` y no se crea | `[PROPUESTA]` |
 | CA-HU05-3 | **Dado** una franja sin reservas, **cuando** la elimino, **entonces** desaparece de la disponibilidad | `[PROPUESTA]` |
 | CA-HU05-4 | **Dado** una franja con reserva confirmada, **cuando** intento eliminarla, **entonces** el sistema lo impide | `[PROPUESTA]` |
-| CA-HU05-5 | **Dado** una asignatura que no tengo asignada, **cuando** intento publicar disponibilidad para ella, **entonces** recibo `403` | `[PENDIENTE]` ADR-009 |
+| CA-HU05-5 | **Dado** una asignatura que no tengo asignada, **cuando** intento publicar disponibilidad para ella, **entonces** recibo `403` | `[PROPUESTA]` (ADR-009 cerrado: el rol Monitor lo asigna el administrador) |
 
 ---
 
@@ -366,15 +366,15 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como administrador, quiero crear, editar, activar y desactivar cuentas de usuarios y asignarles roles, de tal manera que el acceso al sistema esté controlado y corresponda siempre a la situación real de cada persona en la Facultad.
 
-**Requisitos:** RF-020, RF-021, RF-025 · **Fase:** FASE-01 · **Bloqueado por:** ADR-008
+**Requisitos:** RF-020, RF-021, RF-025 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-008 cerrado el 2026-09-27)
 
 | ID | Criterio | Estado |
 |---|---|---|
-| CA-HU11-1 | **Dado** un administrador, **cuando** crea un usuario con rol, **entonces** la cuenta queda activa y puede iniciar sesión | `[PENDIENTE]` ADR-008 |
-| CA-HU11-2 | **Dado** un usuario activo, **cuando** lo desactivo, **entonces** sus credenciales dejan de ser válidas de inmediato | `[PROPUESTA]` |
-| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[PROPUESTA]` |
-| CA-HU11-4 | **Dado** un usuario no administrador, **cuando** intenta gestionar usuarios, **entonces** recibe `403` | `[PROPUESTA]` |
-| CA-HU11-5 | **Dado** cualquier operación de gestión de usuarios, **cuando** se ejecuta, **entonces** queda registrada en auditoría | `[PROPUESTA]` |
+| CA-HU11-1 | **Dado** un administrador, **cuando** crea un usuario con rol, **entonces** la cuenta queda activa y puede iniciar sesión | `[CONFIRMADO]` ADR-008, ADR-009 |
+| CA-HU11-2 | **Dado** un usuario activo, **cuando** lo desactivo, **entonces** sus credenciales dejan de ser válidas de inmediato | `[CONFIRMADO]` |
+| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[CONFIRMADO]` |
+| CA-HU11-4 | **Dado** un usuario no administrador, **cuando** intenta gestionar usuarios, **entonces** recibe `403` | `[CONFIRMADO]` |
+| CA-HU11-5 | **Dado** cualquier operación de gestión de usuarios, **cuando** se ejecuta, **entonces** queda registrada en auditoría | `[CONFIRMADO]` |
 
 ---
 
@@ -426,9 +426,9 @@ Cada requisito se conecta con su historia, su fase y su regla de negocio. Un req
 
 | Requisito | Historia | Fase | Regla de negocio | Estado |
 |---|---|---|---|---|
-| RF-010, RF-011 | HU-01 | FASE-01 | RN-001 | Bloqueado |
-| RF-012 | HU-01, HU-11 | FASE-01 | RN-002 | Bloqueado |
-| RF-020, RF-021, RF-025 | HU-11 | FASE-01 | RN-002 | Bloqueado |
+| RF-010, RF-011 | HU-01 | FASE-01 | RN-001 | Confirmado |
+| RF-012 | HU-01, HU-11 | FASE-01 | RN-002 | Confirmado |
+| RF-020, RF-021, RF-025 | HU-11 | FASE-01 | RN-002 | Confirmado |
 | RF-022, RF-023, RF-024 | HU-11 | FASE-02 | — | Bloqueado |
 | RF-030 a RF-033 | HU-05 | FASE-03 | RN-003 | Bloqueado |
 | RF-034 | HU-02 | FASE-03 | — | Bloqueado |

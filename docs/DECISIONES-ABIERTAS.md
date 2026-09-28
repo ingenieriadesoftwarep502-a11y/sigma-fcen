@@ -24,57 +24,7 @@ Cerrada el 2026-09-25. Los seis ADR (ADR-001 a ADR-006) están confirmados y reg
 
 ### Tanda 2 — Bloquean FASE-01 (identidad y acceso)
 
----
-
-#### ADR-007 · Mecanismo de autenticación
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-01, HU-01, y todo endpoint protegido
-- **Contexto:** el documento base menciona "integración con autenticación institucional" sin especificar mecanismo. Next.js y Django viven en orígenes distintos.
-
-| Opción | Ventaja | Costo |
-|---|---|---|
-| **A. JWT en cookies `HttpOnly` + `SameSite`** (recomendada) | Inmune a robo por XSS, funciona con SSR de Next.js, `COOKIE_SAMESITE` ya está en `.env` | Requiere manejo de CSRF y de refresh |
-| B. JWT en `localStorage` (`djangorestframework-simplejwt`) | Implementación más simple | Vulnerable a XSS; inaceptable con datos académicos |
-| C. Sesiones de Django | Nativo, probado | Acoplamiento fuerte entre frontend y backend |
-
-- **Pregunta:** ¿Confirmas JWT en cookies `HttpOnly` con `simplejwt`, dejando el SSO institucional como integración futura?
-
----
-
-#### ADR-008 · Modelo de usuario y representación de roles
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-01, FASE-02, modelo de datos completo
-- **Contexto:** hay cuatro roles (Estudiante, Monitor, Docente, Administrador). Una persona puede ser simultáneamente estudiante y monitor — caso real y frecuente en monitorías. El modelo debe decidirse **antes** de la primera migración, porque cambiar `AUTH_USER_MODEL` después es extremadamente costoso.
-
-| Opción | Ventaja | Costo |
-|---|---|---|
-| **A. `User` custom + tabla `UserRole` (N:M)** (recomendada) | Soporta roles múltiples y simultáneos; refleja la realidad | Comprobaciones de permiso algo más elaboradas |
-| B. `User` custom con campo `role` único | Simple de consultar | No representa al estudiante que además es monitor |
-| C. Grupos nativos de Django | Cero modelo propio | Semántica de negocio diluida en infraestructura |
-
-- **Pregunta clave adicional:** ¿un mismo usuario puede tener varios roles al mismo tiempo? De esta respuesta depende todo el modelo de dominio.
-- **Pregunta:** ¿`User` custom con relación N:M a `Role`, definido en la primera migración?
-
----
-
-#### ADR-009 · Política de registro y verificación institucional
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** HU-01
-- **Contexto:** HU-01 dice "registrarme con mis datos institucionales" sin definir qué valida el sistema ni quién asigna el rol.
-
-Preguntas encadenadas que deben resolverse juntas:
-
-| # | Pregunta | Impacto |
-|---|---|---|
-| 1 | ¿Se restringe el registro a un dominio de correo institucional? ¿Cuál? | Validación en el serializer |
-| 2 | ¿El usuario elige su rol al registrarse, o el administrador lo asigna? | Flujo completo de alta |
-| 3 | ¿La cuenta requiere verificación por correo antes de activarse? | Se necesita servicio SMTP en FASE-00 |
-| 4 | ¿Quién crea a los monitores: se auto-registran o los da de alta el administrador? | Regla de negocio de HU-05 |
-
-- **Pregunta:** ¿Cuál es el flujo de alta aprobado, respondiendo las cuatro preguntas de la tabla?
+Cerrada el 2026-09-27. ADR-007, ADR-008 y ADR-009 están confirmados y registrados en [§2](#2-decisiones-cerradas).
 
 ---
 
@@ -189,6 +139,9 @@ Se registran aquí al confirmarse. Formato obligatorio:
 | ADR-004 | Estrategia de pruebas: `pytest` + `pytest-django` + `factory-boy` + `pytest-cov` en backend; `vitest` + `@testing-library/react` + `jsdom` en frontend. Playwright queda fuera por ahora. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, SAD §8 |
 | ADR-005 | Entorno de base de datos local: **Opción B** — PostgreSQL instalado localmente por cada integrante, sin `docker-compose`. Django lee `DATABASE_URL`; SQLite queda fuera del proyecto. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, SAD §3 y §9, TRD §5, README |
 | ADR-006 | Integración continua: GitHub Actions en cada PR hacia `develop` (backend con servicio `postgres:16`, frontend en `frontend/my-app`). Protección de `develop`: CI en verde + 1 aprobación (regla documentada en `CONTRIBUTING.md`; su aplicación en GitHub la realiza un administrador del repositorio). | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-09-25 | FASE-00, TRD §5, CONTRIBUTING, `.github/workflows/ci.yml` |
+| ADR-007 | Mecanismo de autenticación: **Opción A** — JWT (`djangorestframework-simplejwt`) en cookies `HttpOnly` + `SameSite`, con protección CSRF y renovación mediante token de refresco. El SSO institucional queda como integración futura (ADR-015). | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, SAD §7, TRD §4.1 |
+| ADR-008 | Modelo de usuario y roles: **Opción A** — `User` personalizado con `email` como identificador de acceso y relación N:M con `Role` mediante `UserRole` (`unique(user, role)`). Un usuario puede tener varios roles simultáneos. `AUTH_USER_MODEL` se define en la primera migración. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1, §5 y §8, SAD §7, TRD §2, §4, §5 y §6 |
+| ADR-009 | Política de registro: (1) registro restringido al dominio `@unal.edu.co`; (2) el auto-registro asigna únicamente el rol Estudiante; (3) sin verificación por correo — la cuenta queda activa al registrarse y no se requiere SMTP en v1; (4) los roles Monitor, Docente y Administrador los asigna un administrador. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1 y §5, TRD §4.1 y §6 |
 
 ---
 
@@ -283,10 +236,66 @@ Se conserva el contexto original de cada ADR para trazabilidad.
 
 - **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-09-25
 - **Decisión:** GitHub Actions en cada PR hacia `develop` (backend con servicio `postgres:16`, frontend en `frontend/my-app`). Protección de `develop`: CI en verde + 1 aprobación (regla documentada en `CONTRIBUTING.md`; su aplicación en GitHub la realiza un administrador del repositorio).
+- **Aplicación:** protección de `develop` activa desde el 2026-09-27. Para habilitarla, el repositorio se hizo público (en cuentas gratuitas GitHub no protege ramas de repositorios privados); antes se revisó el historial y no contiene secretos vigentes.
 - **Bloqueaba:** FASE-00, gate G4 automatizado
 - **Contexto:** el gate G4 exige suite verde antes del merge. Sin CI, la verificación depende de la memoria de cada persona.
 - **Propuesta:** GitHub Actions con un workflow que corra, en cada PR hacia `develop`: `ruff` + `mypy` + `pytest` (backend) y `eslint` + `tsc --noEmit` + `vitest` (frontend). Rama `develop` protegida: sin CI en verde y sin una aprobación, no hay merge.
 - **Pregunta:** ¿Activamos protección de rama en `develop` exigiendo CI verde + 1 aprobación?
+
+---
+
+#### ADR-007 · Mecanismo de autenticación
+
+- **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-09-27
+- **Decisión:** **Opción A** — JWT (`simplejwt`) en cookies `HttpOnly` + `SameSite`, con CSRF y refresh. SSO institucional como integración futura.
+- **Bloqueaba:** FASE-01, HU-01, y todo endpoint protegido
+- **Contexto:** el documento base menciona "integración con autenticación institucional" sin especificar mecanismo. Next.js y Django viven en orígenes distintos.
+
+| Opción | Ventaja | Costo |
+|---|---|---|
+| **A. JWT en cookies `HttpOnly` + `SameSite`** (recomendada) | Inmune a robo por XSS, funciona con SSR de Next.js, `COOKIE_SAMESITE` ya está en `.env` | Requiere manejo de CSRF y de refresh |
+| B. JWT en `localStorage` (`djangorestframework-simplejwt`) | Implementación más simple | Vulnerable a XSS; inaceptable con datos académicos |
+| C. Sesiones de Django | Nativo, probado | Acoplamiento fuerte entre frontend y backend |
+
+- **Pregunta:** ¿Confirmas JWT en cookies `HttpOnly` con `simplejwt`, dejando el SSO institucional como integración futura?
+
+---
+
+#### ADR-008 · Modelo de usuario y representación de roles
+
+- **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-09-27
+- **Decisión:** **Opción A** — `User` custom + `UserRole` (N:M). Un mismo usuario puede tener varios roles a la vez (p. ej. estudiante y monitor).
+- **Bloqueaba:** FASE-01, FASE-02, modelo de datos completo
+- **Contexto:** hay cuatro roles (Estudiante, Monitor, Docente, Administrador). Una persona puede ser simultáneamente estudiante y monitor — caso real y frecuente en monitorías. El modelo debe decidirse **antes** de la primera migración, porque cambiar `AUTH_USER_MODEL` después es extremadamente costoso.
+
+| Opción | Ventaja | Costo |
+|---|---|---|
+| **A. `User` custom + tabla `UserRole` (N:M)** (recomendada) | Soporta roles múltiples y simultáneos; refleja la realidad | Comprobaciones de permiso algo más elaboradas |
+| B. `User` custom con campo `role` único | Simple de consultar | No representa al estudiante que además es monitor |
+| C. Grupos nativos de Django | Cero modelo propio | Semántica de negocio diluida en infraestructura |
+
+- **Pregunta clave adicional:** ¿un mismo usuario puede tener varios roles al mismo tiempo? De esta respuesta depende todo el modelo de dominio.
+- **Pregunta:** ¿`User` custom con relación N:M a `Role`, definido en la primera migración?
+
+---
+
+#### ADR-009 · Política de registro y verificación institucional
+
+- **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-09-27
+- **Decisión:** (1) solo `@unal.edu.co`; (2) el auto-registro asigna el rol Estudiante; (3) sin verificación por correo, sin SMTP en v1; (4) Monitor, Docente y Administrador los asigna el administrador.
+- **Bloqueaba:** HU-01
+- **Contexto:** HU-01 dice "registrarme con mis datos institucionales" sin definir qué valida el sistema ni quién asigna el rol.
+
+Preguntas encadenadas que deben resolverse juntas:
+
+| # | Pregunta | Impacto |
+|---|---|---|
+| 1 | ¿Se restringe el registro a un dominio de correo institucional? ¿Cuál? | Validación en el serializer |
+| 2 | ¿El usuario elige su rol al registrarse, o el administrador lo asigna? | Flujo completo de alta |
+| 3 | ¿La cuenta requiere verificación por correo antes de activarse? | Se necesita servicio SMTP en FASE-00 |
+| 4 | ¿Quién crea a los monitores: se auto-registran o los da de alta el administrador? | Regla de negocio de HU-05 |
+
+- **Pregunta:** ¿Cuál es el flujo de alta aprobado, respondiendo las cuatro preguntas de la tabla?
 
 ---
 
@@ -312,15 +321,15 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | Fase | ADR que debe cerrarse antes de iniciar |
 |---|---|
 | FASE-00 | Ninguno (ADR-001 a ADR-006 confirmados el 2026-09-25) |
-| FASE-01 | ADR-007, ADR-008, ADR-009 |
-| FASE-02 | ADR-008 |
+| FASE-01 | Ninguno (ADR-007 a ADR-009 confirmados el 2026-09-27) |
+| FASE-02 | Ninguno (ADR-008 confirmado el 2026-09-27) |
 | FASE-03 | ADR-010 |
 | FASE-04 | ADR-010, ADR-011 |
 | FASE-05 | ADR-010 |
 | FASE-06 | ADR-013 (escala de calificación) |
 | FASE-07 | ADR-012 |
-| FASE-08 | ADR-008 |
+| FASE-08 | Ninguno por ADR (ADR-008 confirmado); sigue abierta la definición de RF-083 |
 | FASE-09 | ADR-013 |
 | FASE-10 | ADR-014, ADR-015 |
 
-> **9 decisiones abiertas. 6 cerradas. Solo FASE-00 puede iniciar implementación hoy.**
+> **6 decisiones abiertas. 9 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**

@@ -5,7 +5,7 @@
 | Sprint | 0 (semanas 1–2) |
 | Historias | Ninguna — habilitador técnico |
 | Puntos de backlog | 0 |
-| Estado | **En revisión** — implementación local completa (2026-09-25); pendientes: PR, CI en verde, protección de `develop` y verificación por un segundo integrante |
+| Estado | **Cerrada** — implementación completa (2026-09-25); CI en verde, `develop` protegida e instalación verificada por un segundo integrante (2026-09-27) |
 | ADR de entrada | ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006 — todos `[CONFIRMADO]` el 2026-09-25 |
 
 ---
@@ -192,7 +192,7 @@ Orden estricto. Cada tarea entra en su propio PR.
 - [x] Workflow de GitHub Actions disparado en PR hacia `develop` (`.github/workflows/ci.yml`).
 - [x] Trabajo de backend: servicio `postgres:16`, instalación, `ruff`, `mypy`, pruebas con cobertura.
 - [x] Trabajo de frontend (`frontend/my-app`): instalación, `lint`, `type-check`, pruebas, `build`.
-- [ ] Proteger `develop`: CI en verde obligatorio y al menos una aprobación. *(Regla documentada en `CONTRIBUTING.md`; debe aplicarla un administrador en GitHub.)*
+- [x] Proteger `develop`: CI en verde obligatorio (rama actualizada), al menos una aprobación, sin *force push* ni borrado. *(Aplicada el 2026-09-27. Requirió hacer público el repositorio: en cuentas gratuitas GitHub no permite proteger ramas de repositorios privados.)*
 
 **Verificación:** un PR de prueba dispara el workflow y este termina en verde.
 
@@ -234,16 +234,16 @@ git grep -n "django-insecure" || echo "sin secretos hardcodeados"
 ## 7. Definition of Done
 
 - [x] Los seis ADR de la tanda 1 están `[CONFIRMADO]` y registrados en §2 de `DECISIONES-ABIERTAS.md`.
-- [ ] Instalación reproducible desde cero, verificada por un segundo integrante.
+- [x] Instalación reproducible desde cero, verificada por un segundo integrante. *(Nicolás García Orozco, 2026-09-27: clon limpio de `develop` en Windows 11 con Python 3.11.9, Node 24.21 y PostgreSQL 18.6 — `migrate` ok, `pytest --cov` 32 pruebas en verde (88 %), `ruff`, `mypy`, `npm run lint`, `type-check`, 14 pruebas de `vitest` y `build` en verde; `/api/v1/health/` responde `{"status":"ok","database":"ok"}`.)*
 - [x] Ningún secreto en el repositorio; `SECRET_KEY` rotada.
 - [x] `DEBUG` controlado por entorno.
 - [x] PostgreSQL operativo en desarrollo; SQLite fuera del proyecto.
 - [x] DRF configurado con permiso por defecto `IsAuthenticated`.
 - [x] Suite de pruebas operativa y verde en ambos proyectos, con al menos una prueba real cada una.
 - [x] Linter y verificación de tipos sin errores.
-- [ ] CI en verde en un PR de prueba.
-- [ ] `develop` protegida.
-- [ ] README y CONTRIBUTING publicados. *(Redactados; se publican al integrar el PR en `develop`.)*
+- [x] CI en verde en un PR de prueba. *(PR #1, 2026-09-27: backend y frontend en verde; cerrado sin integrar.)*
+- [x] `develop` protegida. *(2026-09-27.)*
+- [x] README y CONTRIBUTING publicados en `develop`.
 - [x] Estructura de carpetas alineada con `SAD.md` §4.2 y §5.2 (con los nombres conservados por ADR-003).
 - [x] **Cero modelos de dominio creados** — `showmigrations` solo lista `admin`, `auth`, `contenttypes` y `sessions`.
 

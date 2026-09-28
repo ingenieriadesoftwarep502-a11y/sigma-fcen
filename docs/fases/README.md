@@ -23,9 +23,9 @@
 
 | Fase | Nombre | Historias | Puntos | ADR bloqueantes | Estado |
 |---|---|---|---:|---|---|
-| [00](FASE-00-fundaciones.md) | Fundaciones técnicas | — | 0 | 001, 002, 003, 004, 005, 006 (confirmados) | En revisión |
-| [01](FASE-01-identidad-acceso.md) | Identidad y acceso | HU-01, HU-11 | 13 | 007, 008, 009 | Bloqueada |
-| [02](FASE-02-catalogo-academico.md) | Catálogo académico | HU-11 (parcial) | 5 | 008 | Bloqueada |
+| [00](FASE-00-fundaciones.md) | Fundaciones técnicas | — | 0 | 001, 002, 003, 004, 005, 006 (confirmados) | Cerrada |
+| [01](FASE-01-identidad-acceso.md) | Identidad y acceso | HU-01, HU-11 | 13 | 007, 008, 009 (confirmados) | Lista para iniciar |
+| [02](FASE-02-catalogo-academico.md) | Catálogo académico | HU-11 (parcial) | 5 | 008 (confirmado) | Pendiente de FASE-01 |
 | [03](FASE-03-disponibilidad.md) | Disponibilidad y búsqueda | HU-05, HU-02 | 10 | 010 | Bloqueada |
 | [04](FASE-04-reservas.md) | Reservas y cancelación | HU-03, HU-04 | 11 | 010, 011 | Bloqueada |
 | [05](FASE-05-sesiones.md) | Sesiones e historial | HU-06, HU-12 | 11 | 010 | Bloqueada |
@@ -172,8 +172,8 @@ Se actualiza al cerrar cada fase.
 
 | Fase | Gate de entrada | Implementación | DoD | Fecha de cierre |
 |---|---|---|---|---|
-| FASE-00 | Bloqueado | No iniciada | — | — |
-| FASE-01 | Bloqueado | No iniciada | — | — |
+| FASE-00 | Abierto (ADR 001–006) | Completa | Completa | 2026-09-27 |
+| FASE-01 | Abierto (ADR 007–009, contratos y CA confirmados) | No iniciada | — | — |
 | FASE-02 | Bloqueado | No iniciada | — | — |
 | FASE-03 | Bloqueado | No iniciada | — | — |
 | FASE-04 | Bloqueado | No iniciada | — | — |
