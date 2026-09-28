@@ -9,6 +9,7 @@ from apps.accounts.views import (
     MeView,
     RefreshView,
     RegisterView,
+    UserDeactivateView,
     UserDetailView,
     UserListCreateView,
     UserRolesView,
@@ -27,4 +28,5 @@ users_patterns = [
     path("me/", MeView.as_view(), name="me"),
     path("<uuid:pk>/", UserDetailView.as_view(), name="user-detail"),
     path("<uuid:pk>/roles/", UserRolesView.as_view(), name="user-roles"),
+    path("<uuid:pk>/deactivate/", UserDeactivateView.as_view(), name="user-deactivate"),
 ]

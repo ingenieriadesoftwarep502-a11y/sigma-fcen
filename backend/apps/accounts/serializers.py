@@ -104,3 +104,17 @@ class UserUpdateSerializer(serializers.Serializer[User]):
 
 class RoleAssignmentSerializer(serializers.Serializer[User]):
     roles = _role_list()
+
+
+class DeactivationRequestSerializer(serializers.Serializer[User]):
+    confirm = serializers.BooleanField(default=False)
+
+
+class DeactivationImpactSerializer(serializers.Serializer[dict[str, Any]]):
+    future_reservations = serializers.IntegerField()
+
+
+class DeactivationResultSerializer(serializers.Serializer[dict[str, Any]]):
+    deactivated = serializers.BooleanField()
+    impact = DeactivationImpactSerializer()
+    user = AdminUserSerializer()

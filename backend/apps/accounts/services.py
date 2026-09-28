@@ -95,3 +95,29 @@ def set_roles(*, actor: User, user: User, roles: list[str]) -> User:
             changes={"roles": [before, after]},
         )
     return user
+
+
+def count_future_reservations(user: User) -> int:
+    """Reservations arrive in FASE-04; until then no account has any (technical debt, T-01.12)."""
+    return 0
+
+
+def deactivation_impact(user: User) -> dict[str, int]:
+    """What deactivating the account would affect, shown before confirming (CA-HU11-3)."""
+    return {"future_reservations": count_future_reservations(user)}
+
+
+@transaction.atomic
+def deactivate_user(*, actor: User, user: User) -> dict[str, int]:
+    """Blocks the account at once: its tokens stop working on the next request (CA-HU11-2)."""
+    impact = deactivation_impact(user)
+    if user.is_active:
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        AuditLog.objects.create(
+            actor=actor,
+            target=user,
+            action=AuditLog.Action.USER_DEACTIVATED,
+            changes={"is_active": [True, False], **impact},
+        )
+    return impact
