@@ -225,3 +225,38 @@ def test_adr_007_rotated_refresh_token_cannot_be_reused(
     response = api_client.post(REFRESH_URL)
 
     assert response.status_code == 401
+
+
+def test_adr_007_logout_revokes_the_refresh_token(api_client: APIClient, student: User) -> None:
+    refresh = _login(api_client).cookies["refresh_token"].value
+    api_client.post(LOGOUT_URL)
+    api_client.cookies["refresh_token"] = refresh
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 401
+
+
+def test_adr_007_logout_with_invalid_refresh_cookie_still_clears_cookies(
+    api_client: APIClient, student: User
+) -> None:
+    _login(api_client)
+    api_client.cookies["refresh_token"] = "not-a-jwt"
+
+    response = api_client.post(LOGOUT_URL)
+
+    assert response.status_code == 204
+    assert response.cookies["access_token"].value == ""
+    assert response.cookies["refresh_token"].value == ""
+
+
+def test_adr_007_logout_without_refresh_cookie_still_clears_cookies(
+    api_client: APIClient, student: User
+) -> None:
+    _login(api_client)
+    del api_client.cookies["refresh_token"]
+
+    response = api_client.post(LOGOUT_URL)
+
+    assert response.status_code == 204
+    assert response.cookies["access_token"].value == ""

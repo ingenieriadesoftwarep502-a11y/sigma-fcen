@@ -1,5 +1,6 @@
 """HTTP endpoints of the identity and access context."""
 
+from contextlib import suppress
 from typing import cast
 
 from django.contrib.auth import authenticate
@@ -13,7 +14,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.serializers import (
+    TokenBlacklistSerializer,
+    TokenRefreshSerializer,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.authentication import (
@@ -119,8 +123,15 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
+    """Revokes the refresh token and clears the token cookies."""
+
     @extend_schema(request=None, responses={204: None})
     def post(self, request: Request) -> Response:
+        raw_refresh = request.COOKIES.get(REFRESH_COOKIE)
+        if raw_refresh:
+            # An invalid, expired or already revoked token leaves nothing to revoke.
+            with suppress(TokenError):
+                TokenBlacklistSerializer(data={"refresh": raw_refresh}).is_valid()
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_token_cookies(response)
         return response
