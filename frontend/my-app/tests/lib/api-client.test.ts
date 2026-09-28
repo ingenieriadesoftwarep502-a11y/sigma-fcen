@@ -292,7 +292,7 @@ describe("apiRequest", () => {
       expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
-    it.each(["/auth/login/", "/auth/register/", "/auth/refresh/"])(
+    it.each(["/auth/login/", "/auth/register/", "/auth/refresh/", "/auth/logout/"])(
       "does not try to refresh after a 401 from %s",
       async (path) => {
         fetchMock.mockResolvedValue(

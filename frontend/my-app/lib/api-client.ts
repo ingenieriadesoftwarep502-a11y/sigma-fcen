@@ -76,8 +76,16 @@ const NETWORK_ERROR_MESSAGE = "No pudimos conectar con el servidor. Intenta de n
 const TIMEOUT_ERROR_MESSAGE = "El servidor tardó demasiado en responder. Intenta de nuevo.";
 const GENERIC_ERROR_MESSAGE = "Algo salió mal. Intenta de nuevo.";
 
-/** Endpoints whose 401 means bad credentials or a dead session, never an expired access token. */
-const NO_REFRESH_PATHS = new Set(["/auth/login/", "/auth/register/", "/auth/refresh/"]);
+/**
+ * Endpoints whose 401 means bad credentials or a dead session, never an expired
+ * access token. Logout is included so a failed logout cannot revive the session.
+ */
+const NO_REFRESH_PATHS = new Set([
+  "/auth/login/",
+  "/auth/register/",
+  "/auth/refresh/",
+  "/auth/logout/",
+]);
 
 async function send<T>(path: string, options: ApiRequestOptions): Promise<T> {
   const { body, headers, timeoutMs = DEFAULT_TIMEOUT_MS, signal, ...init } = options;
