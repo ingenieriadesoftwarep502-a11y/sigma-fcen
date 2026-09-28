@@ -38,9 +38,9 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
       {formError && (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p role="alert" className="login-alert">
           {formError}
         </p>
       )}
@@ -52,6 +52,7 @@ export default function LoginForm() {
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         errors={errors.email}
+        variant="glass"
       />
       <TextField
         id="password"
@@ -61,17 +62,18 @@ export default function LoginForm() {
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         errors={errors.password}
+        variant="glass"
       />
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-zinc-900 px-4 py-2 font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
+        className="login-submit"
       >
         {submitting ? "Ingresando…" : "Iniciar sesión"}
       </button>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-center text-sm text-white/70">
         ¿No tienes cuenta?{" "}
-        <Link href="/register" className="font-medium underline">
+        <Link href="/register" className="login-link">
           Crear una cuenta
         </Link>
       </p>
