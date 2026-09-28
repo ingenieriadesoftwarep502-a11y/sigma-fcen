@@ -93,9 +93,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # UUID instead of a sequential integer: does not reveal volume nor allow enumeration.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
+    # Verbose names appear in validation messages, e.g. "demasiado similar a la de correo".
+    email = models.EmailField("correo", unique=True)
+    first_name = models.CharField("nombre", max_length=150, blank=True)
+    last_name = models.CharField("apellido", max_length=150, blank=True)
     # Accounts are never deleted, only deactivated (RF-025).
     is_active = models.BooleanField(default=True)
     # Django admin site access; business roles live in UserRole (ADR-008).

@@ -138,13 +138,13 @@ paths:
       - name: page
         required: false
         in: query
-        description: A page number within the paginated result set.
+        description: Un número de página dentro del conjunto de resultados paginado.
         schema:
           type: integer
       - name: page_size
         required: false
         in: query
-        description: Number of results to return per page.
+        description: Número de resultados a devolver por página.
         schema:
           type: integer
       tags:
@@ -335,12 +335,15 @@ components:
           type: string
           format: email
           readOnly: true
+          title: Correo
         first_name:
           type: string
           readOnly: true
+          title: Nombre
         last_name:
           type: string
           readOnly: true
+          title: Apellido
         roles:
           type: array
           items:
@@ -505,12 +508,15 @@ components:
           type: string
           format: email
           readOnly: true
+          title: Correo
         first_name:
           type: string
           readOnly: true
+          title: Nombre
         last_name:
           type: string
           readOnly: true
+          title: Apellido
         roles:
           type: array
           items:

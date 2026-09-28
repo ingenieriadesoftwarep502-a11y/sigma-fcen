@@ -82,10 +82,10 @@ def test_ca_hu01_3_non_institutional_email_is_rejected(api_client: APIClient) ->
 @pytest.mark.parametrize(
     ("password", "rule"),
     [
-        ("Ab1!", "too short"),
-        ("12345678901", "entirely numeric"),
-        ("password123", "too common"),
-        ("ana.perez.unal", "too similar"),
+        ("Ab1!", "demasiado corta"),
+        ("12345678901", "completamente numérica"),
+        ("password123", "demasiado común"),
+        ("ana.perez.unal", "demasiado similar a la de correo"),
     ],
 )
 def test_ca_hu01_4_weak_password_returns_400_with_broken_rule(
