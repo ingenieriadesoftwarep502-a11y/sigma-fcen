@@ -109,6 +109,8 @@ def update_user(*, actor: User, user: User, data: dict[str, Any]) -> User:
 @transaction.atomic
 def set_roles(*, actor: User, user: User, roles: list[str]) -> User:
     """Replaces the user's roles: assigns the new ones and removes the rest (RF-021)."""
+    # Serializes concurrent assignments to this user, so "before" is what this change replaces.
+    User.objects.select_for_update().filter(pk=user.pk).values_list("pk", flat=True).get()
     before = _role_codes(user)
     if Role.Code.ADMIN in before and Role.Code.ADMIN not in roles:
         _ensure_admin_remains(actor=actor, user=user, change=AdminChange.REVOKE_ADMIN)
