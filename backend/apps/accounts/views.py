@@ -28,10 +28,12 @@ from apps.accounts.serializers import (
     AdminUserSerializer,
     LoginSerializer,
     RegisterSerializer,
+    RoleAssignmentSerializer,
     UserCreateSerializer,
     UserSerializer,
+    UserUpdateSerializer,
 )
-from apps.accounts.services import create_user, register_student
+from apps.accounts.services import create_user, register_student, set_roles, update_user
 from shared.permissions import IsAdmin
 
 # Same message for unknown email, wrong password and inactive account: no account enumeration.
@@ -156,8 +158,37 @@ class UserListCreateView(generics.ListAPIView[User]):
 
 
 class UserDetailView(generics.RetrieveAPIView[User]):
-    """Administrators read one account."""
+    """Administrators read and edit one account; PUT is not offered."""
 
     permission_classes = (IsAdmin,)
     queryset = User.objects.all()
     serializer_class = AdminUserSerializer
+
+    @extend_schema(request=UserUpdateSerializer, responses={200: AdminUserSerializer})
+    def patch(self, request: Request, pk: str) -> Response:
+        user = self.get_object()
+        serializer = UserUpdateSerializer(data=request.data, context={"user": user})
+        serializer.is_valid(raise_exception=True)
+        try:
+            update_user(actor=cast(User, request.user), user=user, data=serializer.validated_data)
+        except IntegrityError as error:
+            raise _duplicate_email(error) from error
+        return Response(AdminUserSerializer(user).data)
+
+
+class UserRolesView(generics.GenericAPIView[User]):
+    """Replaces the roles of one account (RF-021)."""
+
+    permission_classes = (IsAdmin,)
+    queryset = User.objects.all()
+    serializer_class = RoleAssignmentSerializer
+
+    @extend_schema(request=RoleAssignmentSerializer, responses={200: AdminUserSerializer})
+    def post(self, request: Request, pk: str) -> Response:
+        user = self.get_object()
+        serializer = RoleAssignmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        set_roles(
+            actor=cast(User, request.user), user=user, roles=serializer.validated_data["roles"]
+        )
+        return Response(AdminUserSerializer(user).data)

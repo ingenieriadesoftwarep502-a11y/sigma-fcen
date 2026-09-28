@@ -66,6 +66,8 @@ def _endpoints(student: User) -> list[tuple[str, str]]:
         ("get", USERS_URL),
         ("post", USERS_URL),
         ("get", detail),
+        ("patch", detail),
+        ("post", f"{detail}roles/"),
     ]
 
 
@@ -183,6 +185,90 @@ def test_rf_020_unknown_user_returns_404(admin_client: APIClient) -> None:
     assert response.status_code == 404
 
 
+# --- Edit ----------------------------------------------------------------------------------
+
+
+def test_rf_020_admin_edits_names(admin_client: APIClient, student: User) -> None:
+    response = admin_client.patch(
+        f"{USERS_URL}{student.pk}/", {"first_name": "Ana María"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["first_name"] == "Ana María"
+    student.refresh_from_db()
+    assert student.first_name == "Ana María"
+    assert student.last_name == "Pérez"
+
+
+def test_rf_020_admin_reactivates_a_deactivated_account(
+    admin_client: APIClient, student: User
+) -> None:
+    User.objects.filter(pk=student.pk).update(is_active=False)
+
+    response = admin_client.patch(f"{USERS_URL}{student.pk}/", {"is_active": True}, format="json")
+
+    assert response.status_code == 200
+    assert response.json()["is_active"] is True
+    login = APIClient().post(
+        "/api/v1/auth/login/", {"email": student.email, "password": PASSWORD}, format="json"
+    )
+    assert login.status_code == 200
+
+
+def test_t01_11_patch_cannot_deactivate_so_the_impact_check_is_not_skipped(
+    admin_client: APIClient, student: User
+) -> None:
+    response = admin_client.patch(f"{USERS_URL}{student.pk}/", {"is_active": False}, format="json")
+
+    assert response.status_code == 400
+    assert "is_active" in response.json()
+    student.refresh_from_db()
+    assert student.is_active
+
+
+def test_t01_11_patch_validates_email_domain(admin_client: APIClient, student: User) -> None:
+    response = admin_client.patch(
+        f"{USERS_URL}{student.pk}/", {"email": "ana@gmail.com"}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert "email" in response.json()
+
+
+def test_t01_11_full_replacement_with_put_is_not_allowed(
+    admin_client: APIClient, student: User
+) -> None:
+    response = admin_client.put(f"{USERS_URL}{student.pk}/", {}, format="json")
+
+    assert response.status_code == 405
+
+
+# --- Roles ---------------------------------------------------------------------------------
+
+
+def test_rf_021_admin_assigns_and_removes_roles(admin_client: APIClient, student: User) -> None:
+    url = f"{USERS_URL}{student.pk}/roles/"
+
+    added = admin_client.post(url, {"roles": ["STUDENT", "MONITOR"]}, format="json")
+    removed = admin_client.post(url, {"roles": ["MONITOR"]}, format="json")
+
+    assert added.status_code == 200
+    assert sorted(added.json()["roles"]) == ["MONITOR", "STUDENT"]
+    assert removed.status_code == 200
+    assert removed.json()["roles"] == ["MONITOR"]
+    assert list(student.roles.values_list("code", flat=True)) == ["MONITOR"]
+
+
+@pytest.mark.parametrize("roles", [["DEAN"], []])
+def test_rf_021_invalid_role_list_returns_400(
+    admin_client: APIClient, student: User, roles: list[str]
+) -> None:
+    response = admin_client.post(f"{USERS_URL}{student.pk}/roles/", {"roles": roles}, format="json")
+
+    assert response.status_code == 400
+    assert list(student.roles.values_list("code", flat=True)) == ["STUDENT"]
+
+
 # --- Audit (CA-HU11-5) ---------------------------------------------------------------------
 
 
@@ -200,15 +286,90 @@ def test_ca_hu11_5_create_is_audited_without_the_password(
     assert "password" not in entry.changes
 
 
-def test_ca_hu11_5_rejected_operations_leave_no_audit_entry(admin_client: APIClient) -> None:
+def test_ca_hu11_5_edit_is_audited_with_before_and_after(
+    admin_client: APIClient, admin: User, student: User
+) -> None:
+    admin_client.patch(f"{USERS_URL}{student.pk}/", {"first_name": "Ana María"}, format="json")
+
+    entry = AuditLog.objects.get()
+    assert (entry.actor, entry.target, entry.action) == (
+        admin,
+        student,
+        AuditLog.Action.USER_UPDATED,
+    )
+    assert entry.changes == {"first_name": ["Ana", "Ana María"]}
+
+
+def test_ca_hu11_5_reactivation_is_audited_as_activation(
+    admin_client: APIClient, student: User
+) -> None:
+    User.objects.filter(pk=student.pk).update(is_active=False)
+
+    admin_client.patch(f"{USERS_URL}{student.pk}/", {"is_active": True}, format="json")
+
+    assert AuditLog.objects.get().action == AuditLog.Action.USER_ACTIVATED
+
+
+def test_ca_hu11_5_role_change_is_audited(
+    admin_client: APIClient, admin: User, student: User
+) -> None:
+    admin_client.post(
+        f"{USERS_URL}{student.pk}/roles/", {"roles": ["STUDENT", "MONITOR"]}, format="json"
+    )
+
+    entry = AuditLog.objects.get()
+    assert (entry.actor, entry.target, entry.action) == (
+        admin,
+        student,
+        AuditLog.Action.ROLES_CHANGED,
+    )
+    assert entry.changes == {"roles": [["STUDENT"], ["MONITOR", "STUDENT"]]}
+
+
+def test_ca_hu11_5_rejected_operations_leave_no_audit_entry(
+    admin_client: APIClient, student: User
+) -> None:
     admin_client.post(USERS_URL, _new_user_payload(email="x@gmail.com"), format="json")
+    admin_client.post(f"{USERS_URL}{student.pk}/roles/", {"roles": []}, format="json")
 
     assert not AuditLog.objects.exists()
 
 
-def test_rn_001_1_concurrent_duplicate_email_returns_400(admin_client: APIClient) -> None:
-    with mock.patch("apps.accounts.views.create_user", side_effect=IntegrityError("duplicate")):
-        response = admin_client.post(USERS_URL, _new_user_payload(), format="json")
+# --- Email changes and concurrent duplicates -----------------------------------------------
+
+
+def test_rn_001_1_patch_rejects_the_email_of_another_account(
+    admin_client: APIClient, admin: User, student: User
+) -> None:
+    response = admin_client.patch(
+        f"{USERS_URL}{student.pk}/", {"email": "ADMIN@unal.edu.co"}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert response.json()["email"] == ["Ya existe una cuenta con este correo."]
+
+
+def test_rf_020_patch_accepts_the_same_email_with_other_case(
+    admin_client: APIClient, student: User
+) -> None:
+    response = admin_client.patch(
+        f"{USERS_URL}{student.pk}/", {"email": "Ana.Perez@unal.edu.co"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["email"] == "Ana.Perez@unal.edu.co"
+
+
+@pytest.mark.parametrize(
+    ("service", "method", "detail"),
+    [("create_user", "post", False), ("update_user", "patch", True)],
+)
+def test_rn_001_1_concurrent_duplicate_email_returns_400(
+    admin_client: APIClient, student: User, service: str, method: str, detail: bool
+) -> None:
+    url = f"{USERS_URL}{student.pk}/" if detail else USERS_URL
+    with mock.patch(f"apps.accounts.views.{service}", side_effect=IntegrityError("duplicate")):
+        response = getattr(admin_client, method)(url, _new_user_payload(), format="json")
 
     assert response.status_code == 400
     assert response.json()["email"] == ["Ya existe una cuenta con este correo."]

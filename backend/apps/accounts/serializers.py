@@ -12,13 +12,16 @@ from apps.accounts.models import Role, User
 DUPLICATE_EMAIL_MESSAGE = "Ya existe una cuenta con este correo."
 
 
-def validate_new_email(value: str) -> str:
+def validate_new_email(value: str, *, current: User | None = None) -> str:
     """RN-001.1 (unique regardless of case) and RN-001.2 (@unal.edu.co only)."""
     if not is_institutional_email(value):
         raise serializers.ValidationError(
             f"Usa tu correo institucional @{INSTITUTIONAL_EMAIL_DOMAIN}."
         )
-    if User.objects.filter(email__iexact=value).exists():
+    others = User.objects.filter(email__iexact=value)
+    if current is not None:
+        others = others.exclude(pk=current.pk)
+    if others.exists():
         raise serializers.ValidationError(DUPLICATE_EMAIL_MESSAGE)
     return value
 
@@ -75,4 +78,24 @@ def _role_list() -> serializers.ListField:
 class UserCreateSerializer(RegisterSerializer):
     """Same rules as self-registration, but the administrator chooses the roles."""
 
+    roles = _role_list()
+
+
+class UserUpdateSerializer(serializers.Serializer[User]):
+    email = serializers.EmailField(required=False)
+    first_name = serializers.CharField(max_length=150, required=False)
+    last_name = serializers.CharField(max_length=150, required=False)
+    is_active = serializers.BooleanField(required=False)
+
+    def validate_email(self, value: str) -> str:
+        return validate_new_email(value, current=self.context["user"])
+
+    def validate_is_active(self, value: bool) -> bool:
+        if not value:
+            # Deactivation must go through its own endpoint, which reports the impact (CA-HU11-3).
+            raise serializers.ValidationError("Para desactivar la cuenta usa /deactivate/.")
+        return value
+
+
+class RoleAssignmentSerializer(serializers.Serializer[User]):
     roles = _role_list()
