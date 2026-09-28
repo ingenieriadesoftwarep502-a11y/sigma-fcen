@@ -3,6 +3,7 @@
 CA-HU11-1, CA-HU11-4, CA-HU11-5, RF-020, RF-021, RNF-SEC-003, RNF-SEC-004.
 """
 
+import re
 from typing import Any
 from unittest import mock
 
@@ -10,8 +11,9 @@ import pytest
 from django.db import IntegrityError
 from rest_framework.test import APIClient
 
+from apps.accounts.domain.rules import AdminLockoutError
 from apps.accounts.models import AuditLog, Role, User, UserRole
-from apps.accounts.services import register_student
+from apps.accounts.services import register_student, set_roles, update_user
 
 pytestmark = pytest.mark.django_db
 
@@ -374,3 +376,90 @@ def test_rn_001_1_concurrent_duplicate_email_returns_400(
 
     assert response.status_code == 400
     assert response.json()["email"] == ["Ya existe una cuenta con este correo."]
+
+
+# --- The system never runs out of administrators -------------------------------------------
+
+LAST_ADMIN_MESSAGE = "El sistema debe conservar al menos un administrador activo."
+SELF_REVOKE_MESSAGE = "No puedes quitarte el rol de administrador."
+
+
+def test_admin_cannot_remove_their_own_admin_role(admin_client: APIClient, admin: User) -> None:
+    _user("otra.admin@unal.edu.co", Role.Code.ADMIN)
+
+    response = admin_client.post(
+        f"{USERS_URL}{admin.pk}/roles/", {"roles": ["TEACHER"]}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": SELF_REVOKE_MESSAGE}
+    assert admin.has_role(Role.Code.ADMIN)
+    assert not AuditLog.objects.exists()
+
+
+def test_sole_admin_cannot_remove_the_admin_role_through_the_roles_endpoint(
+    admin_client: APIClient, admin: User
+) -> None:
+    response = admin_client.post(
+        f"{USERS_URL}{admin.pk}/roles/", {"roles": ["STUDENT"]}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert list(admin.roles.values_list("code", flat=True)) == ["ADMIN"]
+    assert not AuditLog.objects.exists()
+
+
+def test_admin_keeps_admin_role_while_changing_their_other_roles(
+    admin_client: APIClient, admin: User
+) -> None:
+    response = admin_client.post(
+        f"{USERS_URL}{admin.pk}/roles/", {"roles": ["ADMIN", "TEACHER"]}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert sorted(response.json()["roles"]) == ["ADMIN", "TEACHER"]
+
+
+def test_last_active_admin_cannot_lose_the_admin_role(admin: User, student: User) -> None:
+    # An inactive administrator cannot sign in, so it does not keep the system manageable.
+    User.objects.filter(pk=_user("inactiva@unal.edu.co", Role.Code.ADMIN).pk).update(
+        is_active=False
+    )
+
+    with pytest.raises(AdminLockoutError, match=re.escape(LAST_ADMIN_MESSAGE)):
+        set_roles(actor=student, user=admin, roles=[Role.Code.TEACHER])
+
+    assert admin.has_role(Role.Code.ADMIN)
+    assert not AuditLog.objects.exists()
+
+
+def test_admin_removes_the_admin_role_of_another_admin(
+    admin_client: APIClient, admin: User
+) -> None:
+    other = _user("otra.admin@unal.edu.co", Role.Code.ADMIN)
+
+    response = admin_client.post(
+        f"{USERS_URL}{other.pk}/roles/", {"roles": ["TEACHER"]}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["roles"] == ["TEACHER"]
+    assert AuditLog.objects.get().action == AuditLog.Action.ROLES_CHANGED
+
+
+def test_patch_cannot_deactivate_the_last_admin(admin_client: APIClient, admin: User) -> None:
+    response = admin_client.patch(f"{USERS_URL}{admin.pk}/", {"is_active": False}, format="json")
+
+    assert response.status_code == 400
+    admin.refresh_from_db()
+    assert admin.is_active
+    assert not AuditLog.objects.exists()
+
+
+def test_update_user_service_cannot_deactivate_the_last_admin(admin: User, student: User) -> None:
+    with pytest.raises(AdminLockoutError, match=re.escape(LAST_ADMIN_MESSAGE)):
+        update_user(actor=student, user=admin, data={"is_active": False})
+
+    admin.refresh_from_db()
+    assert admin.is_active
+    assert not AuditLog.objects.exists()

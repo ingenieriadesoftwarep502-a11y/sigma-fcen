@@ -4,13 +4,15 @@ Reservations arrive in FASE-04; until then the impact count comes from a placeho
 returns 0 (registered as technical debt).
 """
 
+import re
 from unittest import mock
 
 import pytest
 from rest_framework.test import APIClient
 
+from apps.accounts.domain.rules import AdminLockoutError
 from apps.accounts.models import AuditLog, Role, User, UserRole
-from apps.accounts.services import register_student
+from apps.accounts.services import deactivate_user, register_student
 
 pytestmark = pytest.mark.django_db
 
@@ -137,3 +139,63 @@ def test_t01_12_confirm_must_be_a_boolean(admin_client: APIClient, student: User
 
     assert response.status_code == 400
     assert "confirm" in response.json()
+
+
+# --- The system never runs out of administrators -------------------------------------------
+
+LAST_ADMIN_MESSAGE = "El sistema debe conservar al menos un administrador activo."
+SELF_DEACTIVATION_MESSAGE = "No puedes desactivar tu propia cuenta."
+
+
+def _admin(email: str) -> User:
+    user = User.objects.create_user(email=email, password=PASSWORD)
+    UserRole.objects.create(user=user, role=Role.objects.get(code=Role.Code.ADMIN))
+    return user
+
+
+def test_admin_cannot_deactivate_their_own_account(admin_client: APIClient, admin: User) -> None:
+    _admin("otra.admin@unal.edu.co")
+
+    response = admin_client.post(_url(admin), {"confirm": True}, format="json")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": SELF_DEACTIVATION_MESSAGE}
+    admin.refresh_from_db()
+    assert admin.is_active
+    assert not AuditLog.objects.exists()
+
+
+def test_sole_admin_cannot_deactivate_their_own_account(
+    admin_client: APIClient, admin: User
+) -> None:
+    response = admin_client.post(_url(admin), {"confirm": True}, format="json")
+
+    assert response.status_code == 400
+    admin.refresh_from_db()
+    assert admin.is_active
+    assert not AuditLog.objects.exists()
+
+
+def test_last_active_admin_cannot_be_deactivated(admin: User, student: User) -> None:
+    User.objects.filter(pk=_admin("inactiva@unal.edu.co").pk).update(is_active=False)
+
+    with pytest.raises(AdminLockoutError, match=re.escape(LAST_ADMIN_MESSAGE)):
+        deactivate_user(actor=student, user=admin)
+
+    admin.refresh_from_db()
+    assert admin.is_active
+    assert not AuditLog.objects.exists()
+
+
+def test_admin_deactivates_another_admin_while_one_remains_active(
+    admin_client: APIClient, admin: User
+) -> None:
+    other = _admin("otra.admin@unal.edu.co")
+
+    response = admin_client.post(_url(other), {"confirm": True}, format="json")
+
+    assert response.status_code == 200
+    assert response.json()["deactivated"] is True
+    other.refresh_from_db()
+    assert not other.is_active
+    assert AuditLog.objects.get().action == AuditLog.Action.USER_DEACTIVATED

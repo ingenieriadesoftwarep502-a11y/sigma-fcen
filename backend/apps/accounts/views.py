@@ -30,6 +30,7 @@ from apps.accounts.authentication import (
     enforce_csrf,
     set_token_cookies,
 )
+from apps.accounts.domain.rules import AdminLockoutError
 from apps.accounts.models import User
 from apps.accounts.serializers import (
     DUPLICATE_EMAIL_MESSAGE,
@@ -212,6 +213,11 @@ def _duplicate_email(error: IntegrityError) -> serializers.ValidationError:
     return serializers.ValidationError({"email": [DUPLICATE_EMAIL_MESSAGE]})
 
 
+def _admin_lockout(error: AdminLockoutError) -> Response:
+    # Nothing was written: the service checks the rule before any change or audit entry.
+    return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class UserListCreateView(generics.ListAPIView[User]):
     """Administrators list every account and create new ones with roles (RF-020, RF-021)."""
 
@@ -246,6 +252,8 @@ class UserDetailView(generics.RetrieveAPIView[User]):
             update_user(actor=cast(User, request.user), user=user, data=serializer.validated_data)
         except IntegrityError as error:
             raise _duplicate_email(error) from error
+        except AdminLockoutError as error:
+            return _admin_lockout(error)
         return Response(AdminUserSerializer(user).data)
 
 
@@ -261,9 +269,12 @@ class UserRolesView(generics.GenericAPIView[User]):
         user = self.get_object()
         serializer = RoleAssignmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        set_roles(
-            actor=cast(User, request.user), user=user, roles=serializer.validated_data["roles"]
-        )
+        try:
+            set_roles(
+                actor=cast(User, request.user), user=user, roles=serializer.validated_data["roles"]
+            )
+        except AdminLockoutError as error:
+            return _admin_lockout(error)
         return Response(AdminUserSerializer(user).data)
 
 
@@ -282,7 +293,10 @@ class UserDeactivateView(generics.GenericAPIView[User]):
         serializer = DeactivationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data["confirm"]:
-            impact = deactivate_user(actor=cast(User, request.user), user=user)
+            try:
+                impact = deactivate_user(actor=cast(User, request.user), user=user)
+            except AdminLockoutError as error:
+                return _admin_lockout(error)
         else:
             impact = deactivation_impact(user)
         result = {"deactivated": not user.is_active, "impact": impact, "user": user}
