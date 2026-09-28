@@ -260,3 +260,30 @@ def test_adr_007_logout_without_refresh_cookie_still_clears_cookies(
 
     assert response.status_code == 204
     assert response.cookies["access_token"].value == ""
+
+
+def test_t01_7_invalid_refresh_clears_the_token_cookies(
+    api_client: APIClient, student: User
+) -> None:
+    _login(api_client)
+    api_client.cookies["refresh_token"] = "not-a-jwt"
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 401
+    assert response.cookies["access_token"].value == ""
+    assert response.cookies["refresh_token"].value == ""
+    assert response.cookies["refresh_token"]["path"] == "/api/v1/auth/"
+
+
+def test_ca_hu11_2_refresh_of_deactivated_user_clears_the_token_cookies(
+    api_client: APIClient, student: User
+) -> None:
+    _login(api_client)
+    User.objects.filter(pk=student.pk).update(is_active=False)
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 401
+    assert response.cookies["access_token"].value == ""
+    assert response.cookies["refresh_token"].value == ""

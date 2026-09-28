@@ -111,7 +111,10 @@ class RefreshView(APIView):
             # Also rejects refresh tokens of deactivated users (CA-HU11-2).
             serializer.is_valid(raise_exception=True)
         except (TokenError, AuthenticationFailed):
-            return _unauthorized(INVALID_SESSION_MESSAGE)
+            # A dead session must not leave stale token cookies in the browser.
+            response = _unauthorized(INVALID_SESSION_MESSAGE)
+            clear_token_cookies(response)
+            return response
         response = Response(status=status.HTTP_200_OK)
         # With ROTATE_REFRESH_TOKENS the serializer also returns a new refresh token.
         set_token_cookies(
