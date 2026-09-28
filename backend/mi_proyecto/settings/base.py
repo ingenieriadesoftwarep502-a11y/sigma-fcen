@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    # Local
+    "apps.accounts",
 ]
 
 MIDDLEWARE = [
@@ -78,6 +80,9 @@ DATABASES = {"default": env.db("DATABASE_URL")}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Authentication -----------------------------------------------------------------------
+
+# Set in the project's first migration (ADR-008); changing it later means rebuilding the database.
+AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

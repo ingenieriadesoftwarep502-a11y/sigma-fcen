@@ -23,7 +23,9 @@ def test_endpoint_without_explicit_permissions_rejects_anonymous(api_client: API
 def test_endpoint_without_explicit_permissions_allows_authenticated(
     api_client: APIClient,
 ) -> None:
-    user = get_user_model().objects.create_user(username="probe", password="probe-pass-123")
+    user = get_user_model().objects.create_user(
+        email="probe@unal.edu.co", password="probe-pass-123"
+    )
     api_client.force_authenticate(user=user)
 
     response = api_client.get(PROTECTED_URL)
