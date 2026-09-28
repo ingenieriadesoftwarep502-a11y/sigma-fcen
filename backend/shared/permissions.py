@@ -10,9 +10,11 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
+from apps.accounts.models import Role
+
 
 class HasRole(BasePermission):
-    role: ClassVar[str]
+    role: ClassVar[Role.Code]
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         user = request.user
@@ -20,16 +22,16 @@ class HasRole(BasePermission):
 
 
 class IsStudent(HasRole):
-    role = "STUDENT"
+    role = Role.Code.STUDENT
 
 
 class IsMonitor(HasRole):
-    role = "MONITOR"
+    role = Role.Code.MONITOR
 
 
 class IsTeacher(HasRole):
-    role = "TEACHER"
+    role = Role.Code.TEACHER
 
 
 class IsAdmin(HasRole):
-    role = "ADMIN"
+    role = Role.Code.ADMIN

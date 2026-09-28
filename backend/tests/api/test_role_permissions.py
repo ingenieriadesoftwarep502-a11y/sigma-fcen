@@ -4,6 +4,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role, User, UserRole
+from shared.permissions import HasRole, IsAdmin, IsMonitor, IsStudent, IsTeacher
 
 pytestmark = [pytest.mark.django_db, pytest.mark.urls("tests.api.role_urls")]
 
@@ -58,3 +59,20 @@ def test_rn_002_1_django_superuser_flag_does_not_grant_business_roles() -> None:
     client.force_authenticate(user=superuser)
 
     assert client.get(URL_BY_ROLE[Role.Code.ADMIN]).status_code == 403
+
+
+@pytest.mark.parametrize(
+    ("permission", "code"),
+    [
+        (IsStudent, Role.Code.STUDENT),
+        (IsMonitor, Role.Code.MONITOR),
+        (IsTeacher, Role.Code.TEACHER),
+        (IsAdmin, Role.Code.ADMIN),
+    ],
+)
+def test_rn_002_1_permissions_use_the_role_catalog_codes(
+    permission: type[HasRole], code: Role.Code
+) -> None:
+    # Bound to the catalog enum, not a free string that could drift from it.
+    assert isinstance(permission.role, Role.Code)
+    assert permission.role is code
