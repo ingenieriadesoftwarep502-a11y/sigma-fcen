@@ -109,7 +109,12 @@ class RefreshView(APIView):
         except (TokenError, AuthenticationFailed):
             return _unauthorized(INVALID_SESSION_MESSAGE)
         response = Response(status=status.HTTP_200_OK)
-        set_token_cookies(response, access=serializer.validated_data["access"])
+        # With ROTATE_REFRESH_TOKENS the serializer also returns a new refresh token.
+        set_token_cookies(
+            response,
+            access=serializer.validated_data["access"],
+            refresh=serializer.validated_data.get("refresh"),
+        )
         return response
 
 

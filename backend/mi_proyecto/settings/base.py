@@ -5,6 +5,7 @@ present; variables already set in the process environment take precedence over i
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -38,6 +39,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    # Revoked refresh tokens: rotation and logout (ADR-007).
+    "rest_framework_simplejwt.token_blacklist",
     # Local
     "apps.accounts",
 ]
@@ -125,6 +128,17 @@ REST_FRAMEWORK = {
         "user": env.str("THROTTLE_RATE_USER", default="600/minute"),
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# --- JWT (ADR-007) ------------------------------------------------------------------------
+
+SIMPLE_JWT = {
+    # Short-lived access token; the refresh cookie renews it silently.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    # Every refresh issues a new refresh token and revokes the previous one.
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 SPECTACULAR_SETTINGS = {

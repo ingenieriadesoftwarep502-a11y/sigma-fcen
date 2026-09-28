@@ -190,3 +190,38 @@ def test_adr_007_refresh_requires_csrf_token(student: User) -> None:
 
     assert without_token.status_code == 403
     assert with_token.status_code == 200
+
+
+def test_adr_007_token_cookies_use_the_configured_lifetimes(
+    api_client: APIClient, student: User
+) -> None:
+    response = _login(api_client)
+
+    # 15-minute access token and 1-day refresh token, not simplejwt's 5-minute default.
+    assert response.cookies["access_token"]["max-age"] == 15 * 60
+    assert response.cookies["refresh_token"]["max-age"] == 24 * 60 * 60
+
+
+def test_adr_007_refresh_rotates_the_refresh_cookie(api_client: APIClient, student: User) -> None:
+    first_refresh = _login(api_client).cookies["refresh_token"].value
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 200
+    new_refresh = response.cookies["refresh_token"]
+    assert new_refresh.value
+    assert new_refresh.value != first_refresh
+    assert new_refresh["httponly"]
+    assert new_refresh["path"] == "/api/v1/auth/"
+
+
+def test_adr_007_rotated_refresh_token_cannot_be_reused(
+    api_client: APIClient, student: User
+) -> None:
+    first_refresh = _login(api_client).cookies["refresh_token"].value
+    api_client.post(REFRESH_URL)
+    api_client.cookies["refresh_token"] = first_refresh
+
+    response = api_client.post(REFRESH_URL)
+
+    assert response.status_code == 401
