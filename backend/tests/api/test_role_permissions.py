@@ -54,7 +54,10 @@ def test_rn_002_1_user_without_roles_is_rejected_everywhere(url: str) -> None:
 
 
 def test_rn_002_1_django_superuser_flag_does_not_grant_business_roles() -> None:
-    superuser = User.objects.create_superuser(email="root@unal.edu.co", password="Str0ng-Passw0rd!")
+    # Flags set directly, bypassing create_superuser, which also grants the ADMIN role.
+    superuser = User.objects.create_user(
+        email="root@unal.edu.co", password="Str0ng-Passw0rd!", is_staff=True, is_superuser=True
+    )
     client = APIClient()
     client.force_authenticate(user=superuser)
 

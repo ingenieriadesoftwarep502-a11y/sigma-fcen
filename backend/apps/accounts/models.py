@@ -4,7 +4,7 @@ import uuid
 from typing import Any, ClassVar
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.db import models
+from django.db import models, transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -26,9 +26,17 @@ class UserManager(BaseUserManager["User"]):
         return user
 
     def create_superuser(self, email: str, password: str | None = None, **extra: Any) -> "User":
+        """A superuser is also a business administrator, or IsAdmin would deny it (ADR-008)."""
         extra.setdefault("is_staff", True)
         extra.setdefault("is_superuser", True)
-        return self.create_user(email, password, **extra)
+        for flag in ("is_staff", "is_superuser"):
+            if extra[flag] is not True:
+                raise ValueError(f"Superuser must have {flag}=True.")
+        with transaction.atomic(using=self._db):
+            user = self.create_user(email, password, **extra)
+            admin_role = Role.objects.using(self._db).get(code=Role.Code.ADMIN)
+            UserRole.objects.using(self._db).create(user=user, role=admin_role)
+        return user
 
     def get_by_natural_key(self, username: str | None) -> "User":
         # Stored emails are lowercase (RN-001.1): an exact match keeps login case-insensitive

@@ -1,6 +1,8 @@
 """Custom user model identified by institutional email (T-01.1, T-01.3, RN-001.1, ADR-008)."""
 
 import uuid
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from django.conf import settings
@@ -9,6 +11,9 @@ from django.core.management import call_command
 from django.db import IntegrityError, connection, migrations
 from django.db.migrations.loader import MigrationLoader
 from django.test.utils import CaptureQueriesContext
+
+from apps.accounts.models import Role
+from shared.permissions import IsAdmin
 
 PASSWORD = "Str0ng-Passw0rd!"
 
@@ -101,3 +106,42 @@ def test_rn_001_1_natural_key_lookup_is_case_insensitive_and_uses_exact_match() 
     # An exact match on the stored lowercase value can use the unique index.
     assert "UPPER(" not in queries[0]["sql"]
     assert "LOWER(" not in queries[0]["sql"]
+
+
+def _passes_is_admin(user: Any) -> bool:
+    return IsAdmin().has_permission(SimpleNamespace(user=user), None)  # type: ignore[arg-type]
+
+
+@pytest.mark.django_db
+def test_rn_002_create_superuser_also_holds_the_admin_business_role() -> None:
+    admin = get_user_model().objects.create_superuser(email="admin@unal.edu.co", password=PASSWORD)
+
+    assert _passes_is_admin(admin)
+
+
+@pytest.mark.django_db
+def test_rn_002_createsuperuser_command_yields_a_business_admin() -> None:
+    call_command("createsuperuser", "--noinput", email="Admin@UNAL.edu.co", verbosity=0)
+
+    admin = get_user_model().objects.get(email="admin@unal.edu.co")
+    assert admin.is_superuser
+    assert _passes_is_admin(admin)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("flag", ["is_staff", "is_superuser"])
+def test_t01_1_create_superuser_rejects_false_flags(flag: str) -> None:
+    with pytest.raises(ValueError, match=flag):
+        get_user_model().objects.create_superuser(
+            email="admin@unal.edu.co", password=PASSWORD, **{flag: False}
+        )
+
+
+@pytest.mark.django_db
+def test_rn_002_create_superuser_is_atomic_with_the_admin_role() -> None:
+    Role.objects.filter(code=Role.Code.ADMIN).delete()
+
+    with pytest.raises(Role.DoesNotExist):
+        get_user_model().objects.create_superuser(email="admin@unal.edu.co", password=PASSWORD)
+
+    assert not get_user_model().objects.exists()
