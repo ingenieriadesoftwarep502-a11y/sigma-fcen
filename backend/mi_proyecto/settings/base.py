@@ -5,6 +5,7 @@ present; variables already set in the process environment take precedence over i
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -38,6 +39,10 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    # Revoked refresh tokens: rotation and logout (ADR-007).
+    "rest_framework_simplejwt.token_blacklist",
+    # Local
+    "apps.accounts",
 ]
 
 MIDDLEWARE = [
@@ -79,6 +84,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Authentication -----------------------------------------------------------------------
 
+# Set in the project's first migration (ADR-008); changing it later means rebuilding the database.
+AUTH_USER_MODEL = "accounts.User"
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -101,9 +109,9 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 # --- Django REST Framework ----------------------------------------------------------------
 
 REST_FRAMEWORK = {
-    # Only session auth until ADR-007 (authentication mechanism) is confirmed.
+    # JWT in HttpOnly cookies with CSRF protection (ADR-007).
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "apps.accounts.authentication.CookieJWTAuthentication",
     ],
     # Every endpoint is private unless it explicitly opts out.
     "DEFAULT_PERMISSION_CLASSES": [
@@ -118,8 +126,21 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": env.str("THROTTLE_RATE_ANON", default="60/minute"),
         "user": env.str("THROTTLE_RATE_USER", default="600/minute"),
+        # Login, registration, refresh and logout (ScopedRateThrottle, SAD section 7).
+        "auth": env.str("THROTTLE_RATE_AUTH", default="10/minute"),
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# --- JWT (ADR-007) ------------------------------------------------------------------------
+
+SIMPLE_JWT = {
+    # Short-lived access token; the refresh cookie renews it silently.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    # Every refresh issues a new refresh token and revokes the previous one.
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -127,6 +148,20 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API REST del sistema de gestion de monitorias academicas de la FCEN.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+}
+
+# --- Logging --------------------------------------------------------------------------------
+
+# Records go to stderr; never log passwords, tokens or cookies.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "apps": {"handlers": ["console"], "level": "INFO", "propagate": True},
+    },
 }
 
 # --- Internationalization -----------------------------------------------------------------
