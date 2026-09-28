@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib
+import logging
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -82,3 +83,8 @@ def test_production_requires_explicit_allowed_hosts(isolated_env: pytest.MonkeyP
 
     with pytest.raises(ImproperlyConfigured, match="ALLOWED_HOSTS"):
         _import_fresh("mi_proyecto.settings.production", isolated_env)
+
+
+def test_rnf_obs_001_application_loggers_emit_info_records() -> None:
+    # Django applies settings.LOGGING at startup; without it the root level stays at WARNING.
+    assert logging.getLogger("apps.accounts").isEnabledFor(logging.INFO)

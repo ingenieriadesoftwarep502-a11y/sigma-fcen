@@ -1,5 +1,6 @@
 """HTTP endpoints of the identity and access context."""
 
+import logging
 from contextlib import suppress
 from typing import cast
 
@@ -34,6 +35,8 @@ from apps.accounts.serializers import (
     UserSerializer,
 )
 from apps.accounts.services import register_student
+
+logger = logging.getLogger(__name__)
 
 # Same message for unknown email, wrong password and inactive account: no account enumeration.
 INVALID_CREDENTIALS_MESSAGE = "Correo o contraseña incorrectos."
@@ -82,6 +85,8 @@ class LoginView(APIView):
             password=serializer.validated_data["password"],
         )
         if user is None:
+            # Neither the password nor the submitted email is logged.
+            logger.warning("Failed login attempt.")
             return _unauthorized(INVALID_CREDENTIALS_MESSAGE)
         refresh = RefreshToken.for_user(user)
         response = Response(UserSerializer(user).data)
@@ -110,7 +115,9 @@ class RefreshView(APIView):
         try:
             # Also rejects refresh tokens of deactivated users (CA-HU11-2).
             serializer.is_valid(raise_exception=True)
-        except (TokenError, AuthenticationFailed):
+        except (TokenError, AuthenticationFailed) as error:
+            # Only the error type: the token itself is never logged.
+            logger.info("Invalid refresh token rejected (%s).", type(error).__name__)
             # A dead session must not leave stale token cookies in the browser.
             response = _unauthorized(INVALID_SESSION_MESSAGE)
             clear_token_cookies(response)

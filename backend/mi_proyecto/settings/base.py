@@ -148,6 +148,20 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+# --- Logging --------------------------------------------------------------------------------
+
+# Records go to stderr; never log passwords, tokens or cookies.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "apps": {"handlers": ["console"], "level": "INFO", "propagate": True},
+    },
+}
+
 # --- Internationalization -----------------------------------------------------------------
 
 LANGUAGE_CODE = "en-us"

@@ -3,6 +3,7 @@
 T-01.7 to T-01.9, CA-HU01-5, CA-HU11-2, RN-002.4, RNF-SEC-003, ADR-007.
 """
 
+import logging
 from typing import Any
 
 import pytest
@@ -287,3 +288,40 @@ def test_ca_hu11_2_refresh_of_deactivated_user_clears_the_token_cookies(
     assert response.status_code == 401
     assert response.cookies["access_token"].value == ""
     assert response.cookies["refresh_token"].value == ""
+
+
+def test_rnf_obs_001_failed_login_is_logged_without_secrets(
+    api_client: APIClient, student: User, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO, logger="apps.accounts"):
+        _login(api_client, password="wrong-password")
+
+    records = [r for r in caplog.records if r.name.startswith("apps.accounts")]
+    assert [r.levelno for r in records] == [logging.WARNING]
+    assert "wrong-password" not in caplog.text
+    assert PASSWORD not in caplog.text
+
+
+def test_rnf_obs_001_invalid_refresh_is_logged_without_the_token(
+    api_client: APIClient, student: User, caplog: pytest.LogCaptureFixture
+) -> None:
+    _login(api_client)
+    api_client.cookies["refresh_token"] = "not-a-jwt"
+
+    with caplog.at_level(logging.INFO, logger="apps.accounts"):
+        api_client.post(REFRESH_URL)
+
+    records = [r for r in caplog.records if r.name.startswith("apps.accounts")]
+    assert len(records) == 1
+    assert "not-a-jwt" not in caplog.text
+
+
+def test_rnf_obs_001_successful_login_does_not_log_tokens(
+    api_client: APIClient, student: User, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.DEBUG):
+        response = _login(api_client)
+
+    assert response.cookies["access_token"].value not in caplog.text
+    assert response.cookies["refresh_token"].value not in caplog.text
+    assert PASSWORD not in caplog.text
