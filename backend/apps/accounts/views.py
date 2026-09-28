@@ -15,6 +15,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import (
@@ -44,6 +45,10 @@ logger = logging.getLogger(__name__)
 INVALID_CREDENTIALS_MESSAGE = "Correo o contraseña incorrectos."
 INVALID_SESSION_MESSAGE = "La sesión no es válida o expiró."
 
+# Credential endpoints get a stricter, shared per-client budget against brute force (SAD 7).
+AUTH_THROTTLE_CLASSES = (AnonRateThrottle, ScopedRateThrottle)
+AUTH_THROTTLE_SCOPE = "auth"
+
 
 def _unauthorized(detail: str) -> Response:
     return Response({"detail": detail}, status=status.HTTP_401_UNAUTHORIZED)
@@ -66,6 +71,8 @@ class RegisterView(APIView):
 
     permission_classes = (AllowAny,)
     authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
 
     @extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
     def post(self, request: Request) -> Response:
@@ -86,6 +93,8 @@ class LoginView(APIView):
 
     permission_classes = (AllowAny,)
     authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
 
     @extend_schema(
         request=LoginSerializer,
@@ -119,6 +128,8 @@ class RefreshView(APIView):
 
     permission_classes = (AllowAny,)
     authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
 
     @extend_schema(
         request=None,
@@ -158,6 +169,8 @@ class LogoutView(APIView):
 
     permission_classes = (AllowAny,)
     authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
 
     @extend_schema(request=None, responses={204: None})
     def post(self, request: Request) -> Response:

@@ -126,6 +126,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": env.str("THROTTLE_RATE_ANON", default="60/minute"),
         "user": env.str("THROTTLE_RATE_USER", default="600/minute"),
+        # Login, registration, refresh and logout (ScopedRateThrottle, SAD section 7).
+        "auth": env.str("THROTTLE_RATE_AUTH", default="10/minute"),
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

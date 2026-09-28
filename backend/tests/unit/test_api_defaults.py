@@ -23,7 +23,7 @@ def test_anonymous_and_user_throttling_are_enabled() -> None:
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ]
-    assert set(rest["DEFAULT_THROTTLE_RATES"]) == {"anon", "user"}
+    assert set(rest["DEFAULT_THROTTLE_RATES"]) == {"anon", "user", "auth"}
 
 
 def test_default_pagination_caps_page_size_at_100() -> None:
