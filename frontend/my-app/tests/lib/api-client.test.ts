@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, apiRequest, getApiBaseUrl } from "@/lib/api-client";
+import { ApiError, apiRequest, fieldErrors, getApiBaseUrl } from "@/lib/api-client";
 
 const BASE_URL = "http://api.test/api/v1";
 
@@ -94,5 +94,29 @@ describe("apiRequest", () => {
   it("rejects paths that do not start with a slash", async () => {
     await expect(apiRequest("health/")).rejects.toThrow(/must start with "\/"/);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("fieldErrors", () => {
+  it("returns the per-field messages of a DRF validation error", () => {
+    const error = new ApiError(400, "Bad request", {
+      email: ["Ya existe una cuenta con este correo."],
+      password: ["This password is too short.", "This password is too common."],
+    });
+
+    expect(fieldErrors(error)).toEqual({
+      email: ["Ya existe una cuenta con este correo."],
+      password: ["This password is too short.", "This password is too common."],
+    });
+  });
+
+  it("ignores non-list values such as detail", () => {
+    const error = new ApiError(401, "Unauthorized", { detail: "Correo o contraseña incorrectos." });
+
+    expect(fieldErrors(error)).toEqual({});
+  });
+
+  it("returns no field errors for anything that is not an ApiError", () => {
+    expect(fieldErrors(new Error("boom"))).toEqual({});
   });
 });
