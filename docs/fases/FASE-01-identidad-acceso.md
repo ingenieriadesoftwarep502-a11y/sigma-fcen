@@ -5,7 +5,7 @@
 | Sprints | 1 y 2 (semanas 3–6) |
 | Historias | HU-01 Registro (5 pts) · HU-11 Gestión de usuarios y roles (8 pts) |
 | Puntos | 13 |
-| Estado | **En curso** — T-01.1 a T-01.15 implementadas (2026-09-28); pendiente T-01.16 (administración de usuarios en el frontend) y el cierre de la DoD |
+| Estado | **En curso** — T-01.1 a T-01.16 implementadas (2026-09-28); pendiente el cierre de la DoD (documentación, aprobación del PR y deuda de T-01.12 en Jira) |
 | ADR bloqueantes | Ninguno (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27) |
 | Requisitos | RF-010 a RF-014, RF-020, RF-021, RF-025 |
 
@@ -129,7 +129,7 @@ npm test && npm run type-check
 - [x] Tipos del frontend generados desde el esquema. *(`frontend/my-app/types/api.d.ts`; 2026-09-28)*
 - [ ] Documentación actualizada: TRD (estados), DDD (modelo final), SAD (permisos).
 - [ ] PRs revisadas y aprobadas; CI en verde. *(CI en verde en el PR #15; falta la revisión y aprobación)*
-- [ ] T-01.16 — administración de usuarios en el frontend.
+- [x] T-01.16 — administración de usuarios en el frontend. *(`/admin/usuarios`, commit `1730d46`; 2026-09-28)*
 - [ ] Deuda técnica de T-01.12 (impacto sobre reservas futuras hasta FASE-04) registrada en Jira.
 - [x] Comprobación manual: estudiante en `/api/v1/users/` recibe `403` y sin sesión `401`. *(2026-09-28)*
 
