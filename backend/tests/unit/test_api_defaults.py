@@ -36,3 +36,8 @@ def test_default_pagination_caps_page_size_at_100() -> None:
     assert settings.REST_FRAMEWORK["DEFAULT_PAGINATION_CLASS"] == (
         "shared.pagination.DefaultPagination"
     )
+
+
+def test_default_page_size_is_defined_only_by_the_pagination_class() -> None:
+    assert DefaultPagination.page_size == 20
+    assert "PAGE_SIZE" not in settings.REST_FRAMEWORK

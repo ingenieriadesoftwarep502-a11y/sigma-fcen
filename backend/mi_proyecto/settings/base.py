@@ -1,24 +1,21 @@
 """Settings shared by every environment.
 
-Values come from environment variables (ADR-002). A repo-root ``.env`` file is loaded when
-present; variables already set in the process environment take precedence over it.
+Values come from environment variables (ADR-002). The repo-root ``.env`` is loaded through
+``mi_proyecto.bootstrap``; variables already set in the process environment take precedence.
 """
 
-import os
 from datetime import timedelta
 from pathlib import Path
 
 import environ
 
+from mi_proyecto.bootstrap import load_env_file
+
 # backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# DJANGO_ENV_FILE lets tooling point at an alternative env file (tests use an empty one).
-ENV_FILE = Path(os.environ.get("DJANGO_ENV_FILE", BASE_DIR.parent / ".env"))
-
+load_env_file()
 env = environ.Env()
-if ENV_FILE.is_file():
-    environ.Env.read_env(str(ENV_FILE))
 
 # --- Security -----------------------------------------------------------------------------
 
@@ -79,6 +76,8 @@ WSGI_APPLICATION = "mi_proyecto.wsgi.application"
 # --- Database (ADR-005: PostgreSQL only, configured through DATABASE_URL) -----------------
 
 DATABASES = {"default": env.db("DATABASE_URL")}
+# Fail fast (e.g. the health check) when the database is unreachable; the URL may override it.
+DATABASES["default"]["OPTIONS"] = {"connect_timeout": 5, **DATABASES["default"].get("OPTIONS", {})}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -120,7 +119,6 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PAGINATION_CLASS": "shared.pagination.DefaultPagination",
-    "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",

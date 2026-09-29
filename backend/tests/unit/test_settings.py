@@ -68,6 +68,14 @@ def test_settings_load_from_environment_without_env_file(
     assert base.DATABASES["default"]["NAME"] == "sigma_fcen"
 
 
+def test_database_connect_timeout_defaults_to_5_seconds(isolated_env: pytest.MonkeyPatch) -> None:
+    isolated_env.setenv("DATABASE_URL", f"{REQUIRED_ENV['DATABASE_URL']}?sslmode=require")
+
+    base = _import_fresh("mi_proyecto.settings.base", isolated_env)
+
+    assert base.DATABASES["default"]["OPTIONS"] == {"connect_timeout": 5, "sslmode": "require"}
+
+
 @pytest.mark.parametrize("missing_key", ["SECRET_KEY", "DATABASE_URL"])
 def test_missing_required_variable_fails_with_clear_message(
     isolated_env: pytest.MonkeyPatch, missing_key: str
