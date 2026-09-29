@@ -1,0 +1,143 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.filters {
+  display: flex;
+  flex: 1 1 32rem;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.search {
+  position: relative;
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  color: var(--text-subtle);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.searchInput,
+.select {
+  height: 2.5rem;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-1);
+  color: var(--text);
+  font-size: 0.9375rem;
+  color-scheme: dark;
+  transition:
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast);
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0 2.5rem 0 2.5rem;
+}
+
+.searchInput::placeholder {
+  color: var(--text-subtle);
+}
+
+.searchInput::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.select {
+  flex: 0 1 11rem;
+  min-width: 9.5rem;
+  padding: 0 2.25rem 0 0.75rem;
+  appearance: none;
+  /* A chevron drawn from two gradient wedges, so it follows the --text-muted token. */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    right 1rem center,
+    right 0.6875rem center;
+  background-repeat: no-repeat;
+  background-size: 0.3125rem 0.3125rem;
+  cursor: pointer;
+}
+
+.searchInput:hover,
+.select:hover {
+  border-color: var(--text-subtle);
+}
+
+.searchInput:focus-visible,
+.select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.clear {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    background var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.clear:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.count {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 599.98px) {
+  .search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .select {
+    flex: 1 1 8rem;
+    min-width: 0;
+  }
+
+  .summary {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

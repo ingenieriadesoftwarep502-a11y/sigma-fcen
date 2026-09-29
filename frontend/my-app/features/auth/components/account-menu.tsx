@@ -1,26 +1,28 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
-import Button from "@/components/ui/button";
+import Avatar from "@/components/ui/avatar";
+import Icon from "@/components/ui/icon";
 import { requestErrorMessage } from "@/lib/api-client";
-import { hasAnyRole, USERS_ADMIN_PATH } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/auth";
+import { displayName, initialsOf, primaryRole } from "@/lib/people";
 
 import { useSession } from "../session/session-provider";
 import styles from "./account-menu.module.css";
 
-/** The signed-in person's name, the admin entry point when it applies, and the way out. */
+/** The signed-in person at the foot of the sidebar, and the way out. */
 export default function AccountMenu() {
   const { session, signOut } = useSession();
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (session.status !== "authenticated") return null;
-  const { first_name, last_name, email } = session.user;
-  const isAdmin = hasAnyRole(session.user, ["ADMIN"]);
+  const { user } = session;
+  const role = primaryRole(user.roles);
 
   async function handleSignOut() {
+    if (leaving) return;
     setLeaving(true);
     setError(null);
     try {
@@ -33,24 +35,29 @@ export default function AccountMenu() {
   }
 
   return (
-    <div className={styles.menu}>
-      {isAdmin && (
-        <Link href={USERS_ADMIN_PATH} className={styles.link}>
-          Usuarios
-        </Link>
-      )}
+    <div className={styles.account}>
       <div className={styles.identity}>
-        <span className={styles.name}>{`${first_name} ${last_name}`.trim() || email}</span>
-        <span className={styles.email}>{email}</span>
+        <Avatar initials={initialsOf(user)} />
+        <div className={styles.text}>
+          <span className={styles.name}>{displayName(user)}</span>
+          {role && <span className={styles.role}>{ROLE_LABELS[role]}</span>}
+        </div>
       </div>
-      <Button variant="ghost" onClick={handleSignOut} disabled={leaving}>
-        {leaving ? "Cerrando…" : "Cerrar sesión"}
-      </Button>
       {error && (
         <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
+      <button
+        type="button"
+        className={styles.signOut}
+        onClick={handleSignOut}
+        // Not `disabled`: a focused button that becomes disabled drops keyboard focus.
+        aria-disabled={leaving || undefined}
+      >
+        <Icon name="logout" />
+        {leaving ? "Cerrando…" : "Cerrar sesión"}
+      </button>
     </div>
   );
 }

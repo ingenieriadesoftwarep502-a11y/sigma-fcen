@@ -1,0 +1,41 @@
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) 0.375rem;
+}
+
+/*
+ * The role hue tints the fill and the border; the text is that hue mixed toward white,
+ * which keeps it above 7:1 on the dark surfaces while staying recognizably the role's.
+ */
+.tag {
+  --role: var(--text-subtle);
+
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--role) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--role) 16%, transparent);
+  color: color-mix(in oklab, var(--role) 38%, white);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tag[data-role="STUDENT"] {
+  --role: var(--role-student);
+}
+
+.tag[data-role="MONITOR"] {
+  --role: var(--role-monitor);
+}
+
+.tag[data-role="TEACHER"] {
+  --role: var(--role-teacher);
+}
+
+.tag[data-role="ADMIN"] {
+  --role: var(--role-admin);
+}

@@ -1,7 +1,7 @@
 .admin {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-5);
 }
 
 .header {
@@ -9,36 +9,25 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 1rem 2rem;
+  gap: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-2);
 }
 
 .title {
   font-family: var(--font-instrument-serif), serif;
-  font-size: clamp(2.25rem, 5vw, 3rem);
+  font-size: 3rem;
   font-weight: 400;
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .lead {
-  margin-top: 0.5rem;
-  color: rgb(255 255 255 / 0.65);
+  margin-top: var(--space-2);
+  color: var(--text-muted);
 }
 
-/* The table keeps the room it needs; the panel takes a fixed column beside it. */
-.workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 2rem;
-}
-
-.workspace[data-panel="open"] {
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
-}
-
-@media (max-width: 900px) {
-  .workspace[data-panel="open"] {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 599.98px) {
+  .title {
+    font-size: 2.5rem;
   }
 }

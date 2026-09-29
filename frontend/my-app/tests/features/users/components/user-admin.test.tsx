@@ -3,16 +3,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import UserAdmin from "@/features/users/components/user-admin";
 import { ApiError } from "@/lib/api-client";
+import { saveFile } from "@/lib/download";
 import {
   type AdminUser,
   createUser,
   deactivateUser,
+  exportUsers,
   listUsers,
+  NO_FILTERS,
   setUserRoles,
   type UserPage,
   updateUser,
 } from "@/lib/users";
 
+const replace = vi.fn();
+let searchParams = new URLSearchParams();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace }),
+  usePathname: () => "/admin/usuarios",
+  useSearchParams: () => searchParams,
+}));
 vi.mock("@/lib/users", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/users")>()),
   listUsers: vi.fn(),
@@ -20,13 +31,17 @@ vi.mock("@/lib/users", async (importOriginal) => ({
   updateUser: vi.fn(),
   setUserRoles: vi.fn(),
   deactivateUser: vi.fn(),
+  exportUsers: vi.fn(),
 }));
+vi.mock("@/lib/download", () => ({ saveFile: vi.fn() }));
 
 const listUsersMock = vi.mocked(listUsers);
 const createUserMock = vi.mocked(createUser);
 const updateUserMock = vi.mocked(updateUser);
 const setUserRolesMock = vi.mocked(setUserRoles);
 const deactivateUserMock = vi.mocked(deactivateUser);
+const exportUsersMock = vi.mocked(exportUsers);
+const saveFileMock = vi.mocked(saveFile);
 
 const LUIS: AdminUser = {
   id: "3f0c2b1e-0000-4000-8000-000000000002",
@@ -62,8 +77,14 @@ function panel(name: string) {
   return screen.getByRole("dialog", { name });
 }
 
+/** The row's edit trigger: its accessible name holds the person's name and email. */
+function rowButton(email: string) {
+  return screen.getByRole("button", { name: new RegExp(email.replace(/[.]/g, "\.")) });
+}
+
 async function openEditor(email: string) {
-  fireEvent.click(await screen.findByRole("button", { name: email }));
+  await screen.findByRole("table");
+  fireEvent.click(rowButton(email));
   return panel("Editar usuario");
 }
 
@@ -74,10 +95,12 @@ function fill(scope: HTMLElement, label: string | RegExp, value: string) {
 describe("UserAdmin (T-01.16)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    searchParams = new URLSearchParams();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    document.body.style.overflow = "";
   });
 
   describe("user list", () => {
@@ -86,10 +109,10 @@ describe("UserAdmin (T-01.16)", () => {
 
       const rows = within(screen.getByRole("table")).getAllByRole("row");
       expect(within(rows[0]!).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
-        "Correo",
-        "Nombre",
+        "Usuario",
         "Roles",
         "Estado",
+        "Registro",
       ]);
       expect(rows[1]).toHaveTextContent("luis.gomez@unal.edu.co");
       expect(rows[1]).toHaveTextContent("Luis Gómez");
@@ -98,14 +121,19 @@ describe("UserAdmin (T-01.16)", () => {
       expect(rows[2]).toHaveTextContent("Estudiante");
       expect(rows[2]).toHaveTextContent("Monitor");
       expect(rows[2]).toHaveTextContent("Inactiva");
-      expect(listUsersMock).toHaveBeenCalledWith(1, expect.any(AbortSignal));
+      expect(rows[1]).toHaveTextContent(/1 feb\.? 2026/);
+      expect(screen.getByText("2 usuarios")).toBeInTheDocument();
+      expect(listUsersMock).toHaveBeenCalledWith(1, NO_FILTERS, expect.any(AbortSignal));
     });
 
     it("pages through the list as the API allows", async () => {
       await renderWith(pageOf([LUIS], { count: 45, next: "http://api.test/api/v1/users/?page=2" }));
 
       expect(screen.getByText("Página 1 de 3")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Anterior" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
 
       listUsersMock.mockResolvedValue(
         pageOf([MARTA], {
@@ -114,12 +142,34 @@ describe("UserAdmin (T-01.16)", () => {
           previous: "http://api.test/api/v1/users/",
         }),
       );
-      fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+      const next = screen.getByRole("button", { name: "Siguiente" });
+      next.focus();
+      fireEvent.click(next);
 
+      // Unavailable while the page loads, but the keyboard stays where it was.
+      expect(next).toHaveAttribute("aria-disabled", "true");
+      expect(next).toHaveFocus();
       expect(await screen.findByText("Página 2 de 3")).toBeInTheDocument();
-      expect(listUsersMock).toHaveBeenLastCalledWith(2, expect.any(AbortSignal));
-      expect(screen.getByRole("button", { name: "marta.ruiz@unal.edu.co" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Anterior" })).toBeEnabled();
+      expect(next).toHaveFocus();
+      expect(listUsersMock).toHaveBeenLastCalledWith(2, NO_FILTERS, expect.any(AbortSignal));
+      expect(rowButton(MARTA.email)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Anterior" })).not.toHaveAttribute("aria-disabled");
+    });
+
+    it("lets the keyboard scroll the table sideways and shows full values on hover", async () => {
+      await renderWith(pageOf([LUIS]));
+
+      const scroller = screen.getByRole("region", { name: "Lista de usuarios" });
+      expect(scroller).toHaveAttribute("tabindex", "0");
+      expect(within(scroller).getByRole("table")).toBeInTheDocument();
+      expect(within(rowButton(LUIS.email)).getByText(LUIS.email)).toHaveAttribute(
+        "title",
+        LUIS.email,
+      );
+      expect(within(rowButton(LUIS.email)).getByText("Luis Gómez")).toHaveAttribute(
+        "title",
+        "Luis Gómez",
+      );
     });
 
     it("says so when there are no users yet", async () => {
@@ -147,7 +197,8 @@ describe("UserAdmin (T-01.16)", () => {
       );
       fireEvent.click(screen.getByRole("button", { name: "Intentar de nuevo" }));
 
-      expect(await screen.findByRole("button", { name: LUIS.email })).toBeInTheDocument();
+      await screen.findByRole("table");
+      expect(rowButton(LUIS.email)).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
@@ -186,7 +237,7 @@ describe("UserAdmin (T-01.16)", () => {
         roles: ["STUDENT", "TEACHER"],
       });
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(await screen.findByRole("button", { name: LUIS.email })).toBeInTheDocument();
+      await waitFor(() => expect(rowButton(LUIS.email)).toBeInTheDocument());
       expect(listUsersMock).toHaveBeenCalledTimes(2);
     });
 
@@ -229,15 +280,24 @@ describe("UserAdmin (T-01.16)", () => {
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 
-    it("disables the button while the account is being created", async () => {
+    it("keeps the button focused but unavailable while the account is being created", async () => {
       await renderWith(pageOf([]));
       const form = await openCreator();
       createUserMock.mockReturnValue(new Promise(() => {}));
 
       fillNewUser(form);
-      fireEvent.click(within(form).getByRole("button", { name: "Crear usuario" }));
+      const submit = within(form).getByRole("button", { name: "Crear usuario" });
+      submit.focus();
+      fireEvent.click(submit);
 
-      expect(await within(form).findByRole("button", { name: "Creando…" })).toBeDisabled();
+      expect(await within(form).findByRole("button", { name: "Creando…" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+      expect(submit).toHaveFocus();
+      fireEvent.click(submit);
+      fireEvent.submit(form.querySelector("form")!);
+      expect(createUserMock).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -417,7 +477,7 @@ describe("UserAdmin (T-01.16)", () => {
       fireEvent.click(within(form).getByRole("button", { name: "Cerrar panel" }));
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: LUIS.email })).toHaveFocus();
+      expect(rowButton(LUIS.email)).toHaveFocus();
     });
 
     it("stays locked while a save is pending", async () => {
@@ -426,14 +486,22 @@ describe("UserAdmin (T-01.16)", () => {
       updateUserMock.mockReturnValue(new Promise(() => {}));
 
       fill(form, "Nombre", "Luis Carlos");
-      fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+      const save = within(form).getByRole("button", { name: "Guardar cambios" });
+      save.focus();
+      fireEvent.click(save);
       await within(form).findByRole("button", { name: "Guardando…" });
+
+      expect(save).toHaveAttribute("aria-disabled", "true");
+      expect(save).toHaveFocus();
+      fireEvent.click(save);
+      fireEvent.submit(form.querySelector("form")!);
+      expect(updateUserMock).toHaveBeenCalledTimes(1);
 
       expect(within(form).getByRole("button", { name: "Cerrar panel" })).toBeDisabled();
       expect(within(form).getByRole("button", { name: "Desactivar cuenta" })).toBeDisabled();
       expect(screen.getByRole("button", { name: "Nuevo usuario" })).toBeDisabled();
       fireEvent.keyDown(form, { key: "Escape" });
-      fireEvent.click(screen.getByRole("button", { name: MARTA.email }));
+      fireEvent.click(rowButton(MARTA.email));
       expect(panel("Editar usuario")).toHaveTextContent(LUIS.email);
       expect(within(form).getByLabelText("Nombre")).toHaveValue("Luis Carlos");
     });
@@ -462,6 +530,219 @@ describe("UserAdmin (T-01.16)", () => {
       const form = await openEditor(LUIS.email);
 
       expect(within(form).getByRole("heading", { name: "Editar usuario" })).toHaveFocus();
+    });
+  });
+
+  describe("the editing drawer", () => {
+    it("is a modal dialog over the list", async () => {
+      await renderWith(pageOf([LUIS]));
+
+      const form = await openEditor(LUIS.email);
+
+      expect(form).toHaveAttribute("aria-modal", "true");
+      expect(document.body.style.overflow).toBe("hidden");
+    });
+
+    it("closes from the scrim and releases the page scroll", async () => {
+      await renderWith(pageOf([LUIS]));
+      await openEditor(LUIS.email);
+
+      fireEvent.click(screen.getByTestId("drawer-scrim"));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(document.body.style.overflow).toBe("");
+      expect(rowButton(LUIS.email)).toHaveFocus();
+    });
+
+    it("keeps keyboard focus inside while it is open", async () => {
+      await renderWith(pageOf([LUIS]));
+      const form = await openEditor(LUIS.email);
+      const close = within(form).getByRole("button", { name: "Cerrar panel" });
+      const last = within(form).getByRole("button", { name: "Desactivar cuenta" });
+
+      last.focus();
+      fireEvent.keyDown(last, { key: "Tab" });
+      expect(close).toHaveFocus();
+
+      fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+      expect(last).toHaveFocus();
+    });
+
+    it("ignores the scrim while a save is pending", async () => {
+      await renderWith(pageOf([LUIS]));
+      const form = await openEditor(LUIS.email);
+      updateUserMock.mockReturnValue(new Promise(() => {}));
+
+      fill(form, "Nombre", "Luis Carlos");
+      fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+      await within(form).findByRole("button", { name: "Guardando…" });
+      fireEvent.click(screen.getByTestId("drawer-scrim"));
+
+      expect(panel("Editar usuario")).toBeInTheDocument();
+    });
+
+    it("opens the create form when the page is reached from a shortcut", async () => {
+      searchParams = new URLSearchParams("nuevo=1");
+      await renderWith(pageOf([LUIS]));
+
+      expect(panel("Nuevo usuario")).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith("/admin/usuarios", { scroll: false });
+    });
+  });
+
+  describe("filters", () => {
+    it("searches by name or email once the person stops typing", async () => {
+      await renderWith(pageOf([LUIS, MARTA]));
+      listUsersMock.mockResolvedValue(pageOf([LUIS]));
+
+      fireEvent.change(screen.getByRole("searchbox", { name: "Buscar usuarios" }), {
+        target: { value: "luis" },
+      });
+      expect(listUsersMock).toHaveBeenCalledTimes(1);
+
+      await waitFor(() =>
+        expect(listUsersMock).toHaveBeenLastCalledWith(
+          1,
+          { ...NO_FILTERS, search: "luis" },
+          expect.any(AbortSignal),
+        ),
+      );
+      expect(await screen.findByText("1 usuario")).toBeInTheDocument();
+      expect(replace).toHaveBeenLastCalledWith("/admin/usuarios?q=luis", { scroll: false });
+    });
+
+    it("clears the search from its clear button", async () => {
+      searchParams = new URLSearchParams("q=luis");
+      await renderWith(pageOf([LUIS]));
+      expect(listUsersMock).toHaveBeenCalledWith(
+        1,
+        { ...NO_FILTERS, search: "luis" },
+        expect.any(AbortSignal),
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Limpiar búsqueda" }));
+
+      expect(screen.getByRole("searchbox", { name: "Buscar usuarios" })).toHaveValue("");
+      await waitFor(() =>
+        expect(listUsersMock).toHaveBeenLastCalledWith(1, NO_FILTERS, expect.any(AbortSignal)),
+      );
+    });
+
+    it("filters by role and by status, going back to the first page", async () => {
+      await renderWith(pageOf([LUIS], { count: 45, next: "http://api.test/api/v1/users/?page=2" }));
+      listUsersMock.mockResolvedValue(
+        pageOf([LUIS], { count: 45, previous: "http://api.test/api/v1/users/" }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+      await screen.findByText("Página 2 de 3");
+
+      fireEvent.change(screen.getByRole("combobox", { name: "Rol" }), {
+        target: { value: "TEACHER" },
+      });
+      fireEvent.change(screen.getByRole("combobox", { name: "Estado" }), {
+        target: { value: "inactivas" },
+      });
+
+      await waitFor(() =>
+        expect(listUsersMock).toHaveBeenLastCalledWith(
+          1,
+          { search: "", role: "TEACHER", isActive: false },
+          expect.any(AbortSignal),
+        ),
+      );
+      expect(replace).toHaveBeenLastCalledWith("/admin/usuarios?rol=TEACHER&estado=inactivas", {
+        scroll: false,
+      });
+    });
+
+    it("starts from the filters in the URL", async () => {
+      searchParams = new URLSearchParams("rol=ADMIN&estado=activas");
+      await renderWith(pageOf([LUIS]));
+
+      expect(screen.getByRole("combobox", { name: "Rol" })).toHaveValue("ADMIN");
+      expect(screen.getByRole("combobox", { name: "Estado" })).toHaveValue("activas");
+      expect(listUsersMock).toHaveBeenCalledWith(
+        1,
+        { search: "", role: "ADMIN", isActive: true },
+        expect.any(AbortSignal),
+      );
+    });
+
+    it("ignores a slower answer to a filter that is no longer in use", async () => {
+      await renderWith(pageOf([LUIS, MARTA]));
+      const signals: AbortSignal[] = [];
+      listUsersMock.mockImplementation((_page, _filters, signal) => {
+        signals.push(signal!);
+        return new Promise(() => {});
+      });
+
+      fireEvent.change(screen.getByRole("combobox", { name: "Rol" }), {
+        target: { value: "TEACHER" },
+      });
+      await waitFor(() => expect(signals).toHaveLength(1));
+      fireEvent.change(screen.getByRole("combobox", { name: "Rol" }), {
+        target: { value: "ADMIN" },
+      });
+      await waitFor(() => expect(signals).toHaveLength(2));
+
+      expect(signals[0]!.aborted).toBe(true);
+      expect(signals[1]!.aborted).toBe(false);
+    });
+
+    it("offers to clear the filters when nothing matches", async () => {
+      searchParams = new URLSearchParams("estado=inactivas");
+      await renderWith(pageOf([]));
+
+      expect(screen.getByText("Ningún usuario coincide con los filtros.")).toBeInTheDocument();
+      listUsersMock.mockResolvedValue(pageOf([LUIS]));
+      fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+
+      await waitFor(() =>
+        expect(listUsersMock).toHaveBeenLastCalledWith(1, NO_FILTERS, expect.any(AbortSignal)),
+      );
+      expect(screen.getByRole("combobox", { name: "Estado" })).toHaveValue("");
+    });
+  });
+
+  describe("exporting", () => {
+    it("downloads the users that match the current filters", async () => {
+      searchParams = new URLSearchParams("rol=MONITOR&q=marta");
+      await renderWith(pageOf([MARTA]));
+      const blob = new Blob(["xlsx"]);
+      let finish: (file: { blob: Blob; filename: string }) => void = () => {};
+      exportUsersMock.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+
+      const exportButton = screen.getByRole("button", { name: "Descargar Excel" });
+      exportButton.focus();
+      fireEvent.click(exportButton);
+
+      expect(await screen.findByRole("button", { name: "Descargando…" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+      expect(exportButton).toHaveFocus();
+      fireEvent.click(exportButton);
+      expect(exportUsersMock).toHaveBeenCalledTimes(1);
+      expect(exportUsersMock).toHaveBeenCalledWith({
+        search: "marta",
+        role: "MONITOR",
+        isActive: null,
+      });
+      finish({ blob, filename: "usuarios.xlsx" });
+      await waitFor(() => expect(saveFileMock).toHaveBeenCalledWith(blob, "usuarios.xlsx"));
+      expect(screen.getByRole("button", { name: "Descargar Excel" })).not.toHaveAttribute(
+        "aria-disabled",
+      );
+    });
+
+    it("explains a failed export", async () => {
+      await renderWith(pageOf([LUIS]));
+      exportUsersMock.mockRejectedValue(new ApiError(0, "Network error"));
+
+      fireEvent.click(screen.getByRole("button", { name: "Descargar Excel" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos conectar");
+      expect(saveFileMock).not.toHaveBeenCalled();
     });
   });
 });

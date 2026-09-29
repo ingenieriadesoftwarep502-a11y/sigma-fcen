@@ -32,6 +32,16 @@ export type ApiRequestOptions = Omit<RequestInit, "body"> & {
 
 type Exchange = Omit<ApiRequestOptions, "timeoutMs" | "signal">;
 
+/** How a successful response is read, and which media type the request asks for. */
+type Reading<T> = {
+  /** `null` leaves the browser's default Accept header, e.g. for file downloads. */
+  accept: string | null;
+  read: (response: Response) => Promise<T>;
+};
+
+/** A file sent by the API, with the name it suggests in Content-Disposition, if readable. */
+export type DownloadedFile = { blob: Blob; filename: string | null };
+
 export const DEFAULT_TIMEOUT_MS = 15_000;
 
 const CSRF_PATH = "/auth/csrf/";
@@ -79,15 +89,49 @@ async function parseBody(response: Response): Promise<unknown> {
   }
 }
 
+const asJson: Reading<unknown> = {
+  accept: "application/json",
+  read: (response) => (response.status === 204 ? Promise.resolve(undefined) : parseBody(response)),
+};
+
+/** The file name of a Content-Disposition header; RFC 5987 `filename*` wins over `filename`. */
+export function filenameFromDisposition(header: string | null): string | null {
+  if (!header) {
+    return null;
+  }
+  const encoded = /filename\*\s*=\s*(?:UTF-8|utf-8)''([^;]+)/.exec(header);
+  if (encoded?.[1]) {
+    try {
+      return decodeURIComponent(encoded[1].trim());
+    } catch {
+      // Malformed escapes: fall back to the plain parameter below.
+    }
+  }
+  const plain = /filename\s*=\s*(?:"([^"]*)"|([^;]+))/.exec(header);
+  const name = (plain?.[1] ?? plain?.[2])?.trim();
+  return name || null;
+}
+
+const asFile: Reading<DownloadedFile> = {
+  accept: null,
+  read: async (response) => ({
+    blob: await response.blob(),
+    filename: filenameFromDisposition(response.headers.get("Content-Disposition")),
+  }),
+};
+
 /** One HTTP round trip. Network failures and aborts escape as they are. */
 async function exchange<T>(
   path: string,
   { body, headers, ...init }: Exchange,
   signal: AbortSignal,
   csrfToken: string | null = null,
+  reading: Reading<T> = asJson as Reading<T>,
 ): Promise<T> {
   const requestHeaders = new Headers(headers);
-  requestHeaders.set("Accept", "application/json");
+  if (reading.accept) {
+    requestHeaders.set("Accept", reading.accept);
+  }
   if (body !== undefined) {
     requestHeaders.set("Content-Type", "application/json");
   }
@@ -103,18 +147,15 @@ async function exchange<T>(
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  const parsed = await parseBody(response);
   if (!response.ok) {
+    const parsed = await parseBody(response);
     throw new ApiError(
       response.status,
       detailOf(parsed) ?? `Request failed with status ${response.status}.`,
       parsed,
     );
   }
-  return parsed as T;
+  return reading.read(response);
 }
 
 /** Waits for a shared promise, but lets this caller give up when its own signal aborts. */
@@ -163,10 +204,15 @@ function csrfTokenFor(signal: AbortSignal): Promise<string | null> {
   return untilAborted(csrfInFlight, signal);
 }
 
-async function perform<T>(path: string, request: Exchange, signal: AbortSignal): Promise<T> {
+async function perform<T>(
+  path: string,
+  request: Exchange,
+  signal: AbortSignal,
+  reading: Reading<T> = asJson as Reading<T>,
+): Promise<T> {
   const method = (request.method ?? "GET").toUpperCase();
   const token = SAFE_METHODS.has(method) ? null : await csrfTokenFor(signal);
-  return exchange<T>(path, request, signal, token);
+  return exchange<T>(path, request, signal, token, reading);
 }
 
 let refreshInFlight: Promise<boolean> | null = null;
@@ -189,12 +235,17 @@ function isCsrfRejection(error: ApiError): boolean {
 }
 
 /** One attempt, plus at most one retry per recoverable failure: stale CSRF and expired access. */
-async function withRecovery<T>(path: string, request: Exchange, signal: AbortSignal): Promise<T> {
+async function withRecovery<T>(
+  path: string,
+  request: Exchange,
+  signal: AbortSignal,
+  reading: Reading<T>,
+): Promise<T> {
   let renewedCsrf = false;
   let renewedSession = false;
   for (;;) {
     try {
-      return await perform<T>(path, request, signal);
+      return await perform<T>(path, request, signal, reading);
     } catch (error) {
       if (!(error instanceof ApiError)) {
         throw error;
@@ -216,7 +267,20 @@ async function withRecovery<T>(path: string, request: Exchange, signal: AbortSig
   }
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+export function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  return run(path, options, asJson as Reading<T>);
+}
+
+/**
+ * Downloads a file through the same session handling as `apiRequest` (cookies, CSRF,
+ * one session renewal). It keeps the browser's default Accept header, because asking
+ * for JSON or for the file's own type can make the API refuse with 406.
+ */
+export function apiDownload(path: string, options: ApiRequestOptions = {}): Promise<DownloadedFile> {
+  return run(path, options, asFile);
+}
+
+async function run<T>(path: string, options: ApiRequestOptions, reading: Reading<T>): Promise<T> {
   if (!path.startsWith("/")) {
     throw new Error(`API path must start with "/": received "${path}".`);
   }
@@ -235,7 +299,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   callerSignal?.addEventListener("abort", forwardAbort);
 
   try {
-    return await withRecovery<T>(path, request, deadline.signal);
+    return await withRecovery<T>(path, request, deadline.signal, reading);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

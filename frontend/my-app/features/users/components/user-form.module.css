@@ -1,7 +1,7 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: var(--space-6);
 }
 
 .form {
@@ -31,7 +31,7 @@
   margin-bottom: 0.625rem;
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
-  color: rgb(255 255 255 / 0.8);
+  color: var(--text-muted);
 }
 
 .options {
@@ -45,20 +45,22 @@
   align-items: center;
   gap: 0.625rem;
   padding: 0.625rem 0.75rem;
-  border: 1px solid rgb(255 255 255 / 0.14);
-  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   font-size: 0.9375rem;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color var(--duration-fast),
+    background var(--duration-fast);
 }
 
 .option:hover {
-  border-color: rgb(255 255 255 / 0.3);
+  border-color: var(--border-strong);
 }
 
 .option:has(:checked) {
-  border-color: rgb(185 220 90 / 0.6);
-  background: rgb(185 220 90 / 0.1);
+  border-color: var(--accent-line);
+  background: var(--surface-selected);
 }
 
 .option:has(:focus-visible) {
@@ -73,12 +75,12 @@
 }
 
 .roles[aria-invalid="true"] .option {
-  border-color: rgb(253 164 175 / 0.6);
+  border-color: var(--danger-line);
 }
 
 .errors {
   font-size: 0.875rem;
-  color: #fecdd3;
+  color: var(--danger);
 }
 
 .access {
@@ -87,19 +89,19 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding-top: 1.5rem;
-  border-top: 1px solid rgb(255 255 255 / 0.1);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .sectionTitle {
   font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.02em;
-  color: rgb(255 255 255 / 0.8);
+  color: var(--text-muted);
 }
 
 .note {
   font-size: 0.9375rem;
-  color: rgb(255 255 255 / 0.75);
+  color: var(--text-muted);
 }
 
 .confirm {
@@ -107,9 +109,9 @@
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid rgb(253 164 175 / 0.35);
-  border-radius: 0.875rem;
-  background: rgb(244 63 94 / 0.08);
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-lg);
+  background: var(--danger-soft);
   font-size: 0.9375rem;
   line-height: 1.5;
 }

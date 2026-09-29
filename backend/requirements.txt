@@ -8,11 +8,13 @@ djangorestframework-simplejwt==5.5.1
 django-cors-headers==4.9.0
 django-environ==0.14.0
 drf-spectacular==0.30.0
+openpyxl==3.1.5
 psycopg[binary]==3.3.6
 
 # --- Transitive dependencies (pinned for reproducibility) ---
 asgiref==3.12.1
 attrs==26.1.0
+et-xmlfile==2.0.0
 inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1

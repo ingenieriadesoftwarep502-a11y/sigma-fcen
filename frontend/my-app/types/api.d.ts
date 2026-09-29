@@ -122,10 +122,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Administrators list every account and create new ones with roles (RF-020, RF-021). */
+        /** @description Administrators list, search and filter accounts and create new ones (RF-020, RF-021). */
         get: operations["users_list"];
         put?: never;
-        /** @description Administrators list every account and create new ones with roles (RF-020, RF-021). */
+        /** @description Administrators list, search and filter accounts and create new ones (RF-020, RF-021). */
         post: operations["users_create"];
         delete?: never;
         options?: never;
@@ -185,6 +185,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every account matching the list filters as an .xlsx download, without pagination. */
+        get: operations["users_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/me/": {
         parameters: {
             query?: never;
@@ -202,10 +219,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/summary/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Headline numbers and the latest audit entries for the admin dashboard. */
+        get: operations["users_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description * `USER_CREATED` - Usuario creado
+         *     * `USER_UPDATED` - Usuario editado
+         *     * `USER_ACTIVATED` - Usuario activado
+         *     * `USER_DEACTIVATED` - Usuario desactivado
+         *     * `ROLES_CHANGED` - Roles modificados
+         * @enum {string}
+         */
+        ActionEnum: "USER_CREATED" | "USER_UPDATED" | "USER_ACTIVATED" | "USER_DEACTIVATED" | "ROLES_CHANGED";
         AdminUser: {
             /** Format: uuid */
             readonly id: string;
@@ -222,6 +265,14 @@ export interface components {
             readonly is_active: boolean;
             /** Format: date-time */
             readonly date_joined: string;
+        };
+        AuditEntry: {
+            id: number;
+            action: components["schemas"]["ActionEnum"];
+            /** Format: date-time */
+            created_at: string;
+            actor: components["schemas"]["UserReference"] | null;
+            target: components["schemas"]["UserReference"] | null;
         };
         CsrfToken: {
             csrfToken: string;
@@ -279,6 +330,12 @@ export interface components {
         RoleAssignment: {
             roles: components["schemas"]["RolesEnum"][];
         };
+        RoleCounts: {
+            STUDENT: number;
+            MONITOR: number;
+            TEACHER: number;
+            ADMIN: number;
+        };
         /**
          * @description * `STUDENT` - Estudiante
          *     * `MONITOR` - Monitor
@@ -309,6 +366,21 @@ export interface components {
             first_name: string;
             last_name: string;
             roles: components["schemas"]["RolesEnum"][];
+        };
+        UserReference: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            readonly full_name: string;
+        };
+        UserSummary: {
+            total: number;
+            active: number;
+            inactive: number;
+            joined_last_30_days: number;
+            by_role: components["schemas"]["RoleCounts"];
+            recent_activity: components["schemas"]["AuditEntry"][];
         };
     };
     responses: never;
@@ -468,10 +540,20 @@ export interface operations {
     users_list: {
         parameters: {
             query?: {
+                is_active?: boolean;
                 /** @description Un número de página dentro del conjunto de resultados paginado. */
                 page?: number;
                 /** @description Número de resultados a devolver por página. */
                 page_size?: number;
+                /**
+                 * @description * `STUDENT` - Estudiante
+                 *     * `MONITOR` - Monitor
+                 *     * `TEACHER` - Docente
+                 *     * `ADMIN` - Administrador
+                 */
+                role?: "STUDENT" | "MONITOR" | "TEACHER" | "ADMIN";
+                /** @description Busca en correo, nombres, apellidos y nombre completo. */
+                search?: string;
             };
             header?: never;
             path?: never;
@@ -616,6 +698,37 @@ export interface operations {
             };
         };
     };
+    users_export_retrieve: {
+        parameters: {
+            query?: {
+                is_active?: boolean;
+                /**
+                 * @description * `STUDENT` - Estudiante
+                 *     * `MONITOR` - Monitor
+                 *     * `TEACHER` - Docente
+                 *     * `ADMIN` - Administrador
+                 */
+                role?: "STUDENT" | "MONITOR" | "TEACHER" | "ADMIN";
+                /** @description Busca en correo, nombres, apellidos y nombre completo. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excel workbook */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+        };
+    };
     users_me_retrieve: {
         parameters: {
             query?: never;
@@ -631,6 +744,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    users_summary_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSummary"];
                 };
             };
         };

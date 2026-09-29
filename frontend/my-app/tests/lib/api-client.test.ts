@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApiError,
+  apiDownload,
   apiRequest,
   fieldErrors,
   forgetCsrfToken,
@@ -34,6 +35,89 @@ describe("getApiBaseUrl", () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "");
 
     expect(() => getApiBaseUrl()).toThrow(/NEXT_PUBLIC_API_URL/);
+  });
+});
+
+describe("apiDownload", () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  function fileResponse(disposition: string | null, status = 200): Response {
+    const headers = new Headers({ "Content-Type": "application/octet-stream" });
+    if (disposition) headers.set("Content-Disposition", disposition);
+    return new Response("PK-bytes", { status, headers });
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", BASE_URL);
+    vi.stubGlobal("fetch", fetchMock);
+    forgetCsrfToken();
+  });
+
+  afterEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the body as a blob with the filename the server suggests", async () => {
+    fetchMock.mockResolvedValue(fileResponse('attachment; filename="usuarios-2026-09-29.xlsx"'));
+
+    const file = await apiDownload("/users/export/?role=ADMIN");
+
+    expect(file.filename).toBe("usuarios-2026-09-29.xlsx");
+    expect(await file.blob.text()).toBe("PK-bytes");
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(`${BASE_URL}/users/export/?role=ADMIN`);
+    expect(init?.credentials).toBe("include");
+  });
+
+  it("does not ask for JSON, so the API can answer with the file itself", async () => {
+    fetchMock.mockResolvedValue(fileResponse(null));
+
+    await apiDownload("/users/export/");
+
+    const headers = new Headers(fetchMock.mock.calls[0]![1]?.headers);
+    expect(headers.get("Accept")).toBeNull();
+  });
+
+  it("reports no filename when the header is missing or unreadable", async () => {
+    fetchMock.mockResolvedValue(fileResponse(null));
+
+    expect((await apiDownload("/users/export/")).filename).toBeNull();
+  });
+
+  it("decodes an RFC 5987 filename", async () => {
+    fetchMock.mockResolvedValue(fileResponse("attachment; filename*=UTF-8''usuarios%20a%C3%B1o.xlsx"));
+
+    expect((await apiDownload("/users/export/")).filename).toBe("usuarios año.xlsx");
+  });
+
+  it("renews an expired session once and retries, like any other request", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ detail: "Token expired." }, 401))
+      .mockResolvedValueOnce(jsonResponse({ csrfToken: "t" }))
+      .mockResolvedValueOnce(jsonResponse({ detail: "ok" }))
+      .mockResolvedValueOnce(fileResponse('attachment; filename="u.xlsx"'));
+
+    const file = await apiDownload("/users/export/");
+
+    expect(file.filename).toBe("u.xlsx");
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      `${BASE_URL}/users/export/`,
+      `${BASE_URL}/auth/csrf/`,
+      `${BASE_URL}/auth/refresh/`,
+      `${BASE_URL}/users/export/`,
+    ]);
+  });
+
+  it("throws an ApiError with the API's detail when the download is refused", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ detail: "No tienes permiso." }, 403));
+
+    await expect(apiDownload("/users/export/")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 403,
+      message: "No tienes permiso.",
+    });
   });
 });
 
@@ -364,7 +448,11 @@ describe("apiRequest", () => {
       vi.useFakeTimers();
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+      // Let the shared CSRF/refresh deadlines expire on the fake clock: a request left
+      // hanging here would otherwise stay in flight and block (or later reject in) the
+      // next test that needs a token.
+      await vi.runAllTimersAsync();
       vi.useRealTimers();
     });
 

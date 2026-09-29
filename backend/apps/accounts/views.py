@@ -5,10 +5,18 @@ from typing import cast
 
 from django.contrib.auth import authenticate
 from django.db import IntegrityError
+from django.db.models import QuerySet
+from django.http import HttpResponse
 from django.middleware.csrf import get_token, rotate_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
 from rest_framework import generics, serializers, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
@@ -28,7 +36,9 @@ from apps.accounts.authentication import (
     set_token_cookies,
 )
 from apps.accounts.domain.rules import AdminLockoutError
+from apps.accounts.exports import XLSX_CONTENT_TYPE, build_users_workbook, export_filename
 from apps.accounts.models import User
+from apps.accounts.selectors import admin_user_listing, filter_users, user_summary
 from apps.accounts.serializers import (
     DUPLICATE_EMAIL_MESSAGE,
     AdminUserSerializer,
@@ -38,7 +48,9 @@ from apps.accounts.serializers import (
     RegisterSerializer,
     RoleAssignmentSerializer,
     UserCreateSerializer,
+    UserFilterSerializer,
     UserSerializer,
+    UserSummarySerializer,
     UserUpdateSerializer,
 )
 from apps.accounts.services import (
@@ -226,12 +238,22 @@ def _admin_lockout(error: AdminLockoutError) -> Response:
     return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def _filtered_users(request: Request) -> QuerySet[User]:
+    """Applies ?search=, ?role= and ?is_active=; invalid values become a 400 response."""
+    params = UserFilterSerializer(data=request.query_params)
+    params.is_valid(raise_exception=True)
+    return filter_users(admin_user_listing(), **params.validated_data)
+
+
+@extend_schema_view(get=extend_schema(parameters=[UserFilterSerializer]))
 class UserListCreateView(generics.ListAPIView[User]):
-    """Administrators list every account and create new ones with roles (RF-020, RF-021)."""
+    """Administrators list, search and filter accounts and create new ones (RF-020, RF-021)."""
 
     permission_classes = (IsAdmin,)
-    queryset = User.objects.prefetch_related("roles").order_by("email")
     serializer_class = AdminUserSerializer
+
+    def get_queryset(self) -> QuerySet[User]:
+        return _filtered_users(self.request)
 
     @extend_schema(request=UserCreateSerializer, responses={201: AdminUserSerializer})
     def post(self, request: Request) -> Response:
@@ -242,6 +264,37 @@ class UserListCreateView(generics.ListAPIView[User]):
         except IntegrityError as error:
             raise _duplicate_email(error) from error
         return Response(AdminUserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class UserSummaryView(APIView):
+    """Headline numbers and the latest audit entries for the admin dashboard."""
+
+    permission_classes = (IsAdmin,)
+
+    @extend_schema(responses={200: UserSummarySerializer})
+    def get(self, request: Request) -> Response:
+        return Response(UserSummarySerializer(user_summary()).data)
+
+
+class UserExportView(APIView):
+    """Every account matching the list filters as an .xlsx download, without pagination."""
+
+    permission_classes = (IsAdmin,)
+
+    @extend_schema(
+        parameters=[UserFilterSerializer],
+        responses={
+            (200, XLSX_CONTENT_TYPE): OpenApiResponse(
+                response=OpenApiTypes.BINARY, description="Excel workbook"
+            ),
+        },
+    )
+    def get(self, request: Request) -> HttpResponse:
+        # A server-side cursor keeps memory flat; chunk_size lets the roles prefetch still run.
+        users = _filtered_users(request).iterator(chunk_size=500)
+        response = HttpResponse(build_users_workbook(users), content_type=XLSX_CONTENT_TYPE)
+        response["Content-Disposition"] = f'attachment; filename="{export_filename()}"'
+        return response
 
 
 class UserDetailView(generics.RetrieveAPIView[User]):

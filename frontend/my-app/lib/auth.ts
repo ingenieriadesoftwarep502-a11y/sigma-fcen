@@ -21,6 +21,8 @@ export const HOME_PATH = "/inicio";
 export const LOGIN_PATH = "/login";
 /** User administration, for the ADMIN role only (T-01.16). */
 export const USERS_ADMIN_PATH = "/admin/usuarios";
+/** User administration with the create form already open. */
+export const NEW_USER_PATH = `${USERS_ADMIN_PATH}?nuevo=1`;
 
 /** Every role, in the order the interface lists them, with its Spanish label. */
 export const ROLE_CODES: readonly RoleCode[] = ["STUDENT", "MONITOR", "TEACHER", "ADMIN"];

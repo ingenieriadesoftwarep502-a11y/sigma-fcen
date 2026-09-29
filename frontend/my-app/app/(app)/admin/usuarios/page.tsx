@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import RequireSession from "@/features/auth/session/require-session";
 import UserAdmin from "@/features/users/components/user-admin";
@@ -9,7 +10,10 @@ export const metadata: Metadata = { title: "Usuarios · SIGMA-FCEN" };
 export default function UsersAdminPage() {
   return (
     <RequireSession roles={["ADMIN"]}>
-      <UserAdmin />
+      {/* The filters are read from the URL, which is only known in the browser. */}
+      <Suspense fallback={null}>
+        <UserAdmin />
+      </Suspense>
     </RequireSession>
   );
 }

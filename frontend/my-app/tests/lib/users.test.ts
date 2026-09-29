@@ -5,7 +5,10 @@ import {
   type AdminUser,
   createUser,
   deactivateUser,
+  exportUsers,
+  getUserSummary,
   listUsers,
+  NO_FILTERS,
   setUserRoles,
   updateUser,
 } from "@/lib/users";
@@ -65,8 +68,54 @@ describe("users API (T-01.16)", () => {
     const page = { count: 1, next: null, previous: null, results: [USER] };
     respond(page);
 
-    expect(await listUsers(2)).toEqual(page);
+    expect(await listUsers(2, NO_FILTERS)).toEqual(page);
     expect(requestTo("/users/?page=2")).toEqual({ method: "GET", body: undefined });
+  });
+
+  it("sends only the filters in use", async () => {
+    respond({ count: 0, next: null, previous: null, results: [] });
+
+    await listUsers(1, { search: "  gómez ", role: "TEACHER", isActive: false });
+
+    expect(requestTo("/users/?page=1&search=g%C3%B3mez&role=TEACHER&is_active=false")).toEqual({
+      method: "GET",
+      body: undefined,
+    });
+  });
+
+  it("reads the dashboard summary", async () => {
+    const summary = {
+      total: 3,
+      active: 2,
+      inactive: 1,
+      joined_last_30_days: 1,
+      by_role: { STUDENT: 2, MONITOR: 0, TEACHER: 1, ADMIN: 1 },
+      recent_activity: [],
+    };
+    respond(summary);
+
+    expect(await getUserSummary()).toEqual(summary);
+    expect(requestTo("/users/summary/")).toEqual({ method: "GET", body: undefined });
+  });
+
+  it("exports the users matching the filters as a spreadsheet file", async () => {
+    fetchMock.mockResolvedValue(
+      new Response("xlsx", {
+        headers: { "Content-Disposition": 'attachment; filename="usuarios-hoy.xlsx"' },
+      }),
+    );
+
+    const file = await exportUsers({ search: "", role: "ADMIN", isActive: true });
+
+    expect(file.filename).toBe("usuarios-hoy.xlsx");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/users/export/?role=ADMIN&is_active=true`);
+  });
+
+  it("names the export usuarios.xlsx when the server does not say", async () => {
+    fetchMock.mockResolvedValue(new Response("xlsx"));
+
+    expect((await exportUsers(NO_FILTERS)).filename).toBe("usuarios.xlsx");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/users/export/`);
   });
 
   it("creates a user with the chosen roles", async () => {

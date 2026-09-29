@@ -132,9 +132,13 @@ paths:
   /api/v1/users/:
     get:
       operationId: users_list
-      description: Administrators list every account and create new ones with roles
-        (RF-020, RF-021).
+      description: Administrators list, search and filter accounts and create new
+        ones (RF-020, RF-021).
       parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -147,6 +151,27 @@ paths:
         description: Número de resultados a devolver por página.
         schema:
           type: integer
+      - in: query
+        name: role
+        schema:
+          enum:
+          - STUDENT
+          - MONITOR
+          - TEACHER
+          - ADMIN
+          type: string
+          minLength: 1
+        description: |-
+          * `STUDENT` - Estudiante
+          * `MONITOR` - Monitor
+          * `TEACHER` - Docente
+          * `ADMIN` - Administrador
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 254
+        description: Busca en correo, nombres, apellidos y nombre completo.
       tags:
       - users
       security:
@@ -160,8 +185,8 @@ paths:
           description: ''
     post:
       operationId: users_create
-      description: Administrators list every account and create new ones with roles
-        (RF-020, RF-021).
+      description: Administrators list, search and filter accounts and create new
+        ones (RF-020, RF-021).
       tags:
       - users
       requestBody:
@@ -307,6 +332,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminUser'
           description: ''
+  /api/v1/users/export/:
+    get:
+      operationId: users_export_retrieve
+      description: Every account matching the list filters as an .xlsx download, without
+        pagination.
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: role
+        schema:
+          enum:
+          - STUDENT
+          - MONITOR
+          - TEACHER
+          - ADMIN
+          type: string
+          minLength: 1
+        description: |-
+          * `STUDENT` - Estudiante
+          * `MONITOR` - Monitor
+          * `TEACHER` - Docente
+          * `ADMIN` - Administrador
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 254
+        description: Busca en correo, nombres, apellidos y nombre completo.
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          description: Excel workbook
   /api/v1/users/me/:
     get:
       operationId: users_me_retrieve
@@ -322,8 +390,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+  /api/v1/users/summary/:
+    get:
+      operationId: users_summary_retrieve
+      description: Headline numbers and the latest audit entries for the admin dashboard.
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummary'
+          description: ''
 components:
   schemas:
+    ActionEnum:
+      enum:
+      - USER_CREATED
+      - USER_UPDATED
+      - USER_ACTIVATED
+      - USER_DEACTIVATED
+      - ROLES_CHANGED
+      type: string
+      description: |-
+        * `USER_CREATED` - Usuario creado
+        * `USER_UPDATED` - Usuario editado
+        * `USER_ACTIVATED` - Usuario activado
+        * `USER_DEACTIVATED` - Usuario desactivado
+        * `ROLES_CHANGED` - Roles modificados
     AdminUser:
       type: object
       properties:
@@ -364,6 +461,30 @@ components:
       - is_active
       - last_name
       - roles
+    AuditEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        created_at:
+          type: string
+          format: date-time
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/UserReference'
+          nullable: true
+        target:
+          allOf:
+          - $ref: '#/components/schemas/UserReference'
+          nullable: true
+      required:
+      - action
+      - actor
+      - created_at
+      - id
+      - target
     CsrfToken:
       type: object
       properties:
@@ -485,6 +606,22 @@ components:
             $ref: '#/components/schemas/RolesEnum'
       required:
       - roles
+    RoleCounts:
+      type: object
+      properties:
+        STUDENT:
+          type: integer
+        MONITOR:
+          type: integer
+        TEACHER:
+          type: integer
+        ADMIN:
+          type: integer
+      required:
+      - ADMIN
+      - MONITOR
+      - STUDENT
+      - TEACHER
     RolesEnum:
       enum:
       - STUDENT
@@ -555,6 +692,46 @@ components:
       - last_name
       - password
       - roles
+    UserReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+          readOnly: true
+      required:
+      - email
+      - full_name
+      - id
+    UserSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        inactive:
+          type: integer
+        joined_last_30_days:
+          type: integer
+        by_role:
+          $ref: '#/components/schemas/RoleCounts'
+        recent_activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+      required:
+      - active
+      - by_role
+      - inactive
+      - joined_last_30_days
+      - recent_activity
+      - total
   securitySchemes:
     cookieJWT:
       type: apiKey

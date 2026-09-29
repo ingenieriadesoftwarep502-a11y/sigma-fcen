@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import HomeOverview from "@/features/auth/components/home-overview";
+import HomeScreen from "@/features/dashboard/components/home-screen";
 
 export const metadata: Metadata = { title: "Inicio · SIGMA-FCEN" };
 
 export default function HomePage() {
-  return <HomeOverview />;
+  return <HomeScreen />;
 }

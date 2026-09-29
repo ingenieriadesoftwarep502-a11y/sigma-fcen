@@ -33,6 +33,7 @@ export default function UserCreateForm({ onCreated, onBusyChange }: UserCreateFo
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
     const missing: Errors = {};
     if (!firstName.trim()) missing.first_name = ["Ingresa el nombre."];
     if (!lastName.trim()) missing.last_name = ["Ingresa el apellido."];
@@ -111,7 +112,7 @@ export default function UserCreateForm({ onCreated, onBusyChange }: UserCreateFo
         variant="glass"
       />
       <RoleCheckboxes id="new-user-roles" value={roles} onChange={setRoles} errors={errors.roles} />
-      <Button type="submit" disabled={submitting} className={styles.submit}>
+      <Button type="submit" softDisabled={submitting} className={styles.submit}>
         {submitting ? "Creando…" : "Crear usuario"}
       </Button>
     </form>

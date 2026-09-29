@@ -49,6 +49,7 @@ export default function UserEditForm({ user, onSaved, locked, onBusyChange }: Us
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting || locked) return;
     const names = { first_name: firstName.trim(), last_name: lastName.trim() };
     const missing: Errors = {};
     if (!names.first_name) missing.first_name = ["Ingresa el nombre."];
@@ -113,7 +114,7 @@ export default function UserEditForm({ user, onSaved, locked, onBusyChange }: Us
           />
         </div>
         <RoleCheckboxes id="edit-user-roles" value={roles} onChange={setRoles} errors={errors.roles} />
-        <Button type="submit" disabled={submitting || locked} className={styles.submit}>
+        <Button type="submit" softDisabled={submitting || locked} className={styles.submit}>
           {submitting ? "Guardando…" : "Guardar cambios"}
         </Button>
       </form>

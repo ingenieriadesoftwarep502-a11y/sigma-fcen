@@ -1,11 +1,11 @@
 "use client";
 
-import { ROLE_LABELS } from "@/lib/auth";
+import RoleTags from "@/components/ui/role-tag";
 
 import { useSession } from "../session/session-provider";
 import styles from "./home-overview.module.css";
 
-/** First screen after signing in: who you are and with which roles, straight from the API. */
+/** First screen for everyone but administrators: who you are and with which roles. */
 export default function HomeOverview() {
   const { session } = useSession();
   if (session.status !== "authenticated") return null;
@@ -13,24 +13,21 @@ export default function HomeOverview() {
 
   return (
     <section className={styles.overview} aria-labelledby="home-title">
-      <h1 id="home-title" className={styles.title}>
-        Hola{first_name ? `, ${first_name}` : ""}.
-      </h1>
+      <header>
+        <h1 id="home-title" className={styles.title}>
+          Hola{first_name ? `, ${first_name}` : ""}.
+        </h1>
+        <p className={styles.lead}>Esta es tu cuenta en SIGMA·FCEN.</p>
+      </header>
       <dl className={styles.facts}>
-        <div>
+        <div className={styles.fact}>
           <dt>Correo</dt>
           <dd>{email}</dd>
         </div>
-        <div>
+        <div className={styles.fact}>
           <dt>{roles.length === 1 ? "Rol" : "Roles"}</dt>
           <dd>
-            <ul className={styles.roles}>
-              {roles.map((role) => (
-                <li key={role} className={styles.role}>
-                  {ROLE_LABELS[role]}
-                </li>
-              ))}
-            </ul>
+            <RoleTags roles={roles} />
           </dd>
         </div>
       </dl>
