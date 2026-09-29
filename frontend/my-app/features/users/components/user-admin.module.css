@@ -1,0 +1,44 @@
+.admin {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+
+.title {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  margin-top: 0.5rem;
+  color: rgb(255 255 255 / 0.65);
+}
+
+/* The table keeps the room it needs; the panel takes a fixed column beside it. */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 2rem;
+}
+
+.workspace[data-panel="open"] {
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
+}
+
+@media (max-width: 900px) {
+  .workspace[data-panel="open"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

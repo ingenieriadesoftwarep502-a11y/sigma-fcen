@@ -3,10 +3,13 @@ import type { ButtonHTMLAttributes } from "react";
 import styles from "./button.module.css";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "accent" | "ghost";
+  variant?: "accent" | "ghost" | "danger";
 };
 
-/** The app's button. `accent` is the one primary action of a view. */
+/**
+ * The app's button. `accent` is the one primary action of a view; `danger` confirms an
+ * action that takes something away, such as deactivating an account.
+ */
 export default function Button({
   variant = "accent",
   type = "button",

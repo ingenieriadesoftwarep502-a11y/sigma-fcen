@@ -19,6 +19,17 @@ export const INSTITUTIONAL_EMAIL_DOMAIN = "unal.edu.co";
 /** Where a signed-in person lands when nothing else was requested. */
 export const HOME_PATH = "/inicio";
 export const LOGIN_PATH = "/login";
+/** User administration, for the ADMIN role only (T-01.16). */
+export const USERS_ADMIN_PATH = "/admin/usuarios";
+
+/** Every role, in the order the interface lists them, with its Spanish label. */
+export const ROLE_CODES: readonly RoleCode[] = ["STUDENT", "MONITOR", "TEACHER", "ADMIN"];
+export const ROLE_LABELS: Record<RoleCode, string> = {
+  STUDENT: "Estudiante",
+  MONITOR: "Monitor",
+  TEACHER: "Docente",
+  ADMIN: "Administrador",
+};
 
 /** RN-001.2: mirrors the server rule so the form can warn before sending. */
 export function isInstitutionalEmail(email: string): boolean {

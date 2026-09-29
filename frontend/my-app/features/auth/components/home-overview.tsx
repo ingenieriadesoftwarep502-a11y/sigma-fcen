@@ -1,16 +1,9 @@
 "use client";
 
-import type { RoleCode } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/auth";
 
 import { useSession } from "../session/session-provider";
 import styles from "./home-overview.module.css";
-
-const ROLE_LABELS: Record<RoleCode, string> = {
-  STUDENT: "Estudiante",
-  MONITOR: "Monitor",
-  TEACHER: "Docente",
-  ADMIN: "Administrador",
-};
 
 /** First screen after signing in: who you are and with which roles, straight from the API. */
 export default function HomeOverview() {
