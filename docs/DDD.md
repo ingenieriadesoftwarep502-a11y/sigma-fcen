@@ -108,20 +108,68 @@ Cinco contextos. Cada uno corresponde a un grupo de apps del backend (SAD §4.2)
 
 Un **agregado** es la frontera de consistencia: todo lo que dentro de él debe ser verdad al mismo tiempo, en la misma transacción.
 
-### 4.1 Agregado `User` · raíz
+### 4.1 Agregado `User` · raíz · `[IMPLEMENTADO]` FASE-01
+
+Modelo final en `backend/apps/accounts/models.py` (migraciones `0001` a `0009`). `AUTH_USER_MODEL = "accounts.User"` desde la migración inicial.
+
+**`User`** — hereda de `AbstractBaseUser` y `PermissionsMixin` de Django.
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `id` | UUID | Recomendado sobre entero secuencial: no revela volumen ni permite enumeración |
-| `email` | Email único | Identificador de acceso; dominio `@unal.edu.co` — `[CONFIRMADO]` ADR-009 |
-| `first_name`, `last_name` | Texto | — |
+| `id` | UUID (clave primaria) | Generado con `uuid4`, no editable: no revela volumen ni permite enumeración |
+| `email` | `EmailField` único | Identificador de acceso (`USERNAME_FIELD`); se guarda en minúsculas y tiene además un índice único sobre `Lower(email)` (RN-001.1). Dominio `@unal.edu.co` validado en la API — `[CONFIRMADO]` ADR-009 |
+| `first_name`, `last_name` | Texto, máximo 150 | Opcionales en el modelo; obligatorios en registro y alta administrativa |
 | ~~`institutional_id`~~ | — | `[OBSOLETO]` — descartado: el correo `@unal.edu.co` es el único identificador (Nicolás García Orozco, 2026-09-27) |
-| `is_active` | Booleano | Desactivación lógica; nunca se borra físicamente (RF-025) |
-| `date_joined` | Marca de tiempo | UTC |
+| `is_active` | Booleano, por defecto verdadero | Desactivación lógica; nunca se borra físicamente (RF-025) |
+| `is_staff` | Booleano, por defecto falso | Solo da acceso al sitio de administración de Django; **no** es un rol de negocio (ADR-008) |
+| `date_joined` | Marca de tiempo | UTC (`USE_TZ = True`) |
+| `password`, `last_login`, `is_superuser`, `groups`, `user_permissions` | Heredados de Django | Contraseña con hash; los permisos y grupos de Django no se usan para la autorización de negocio |
+| `roles` | N:M con `Role` a través de `UserRole` | Roles de negocio simultáneos (ADR-008) |
 
-**Relación con roles:** `[CONFIRMADO]` ADR-008. Un usuario puede tener varios roles simultáneos; se modela con la tabla `UserRole` (N:M entre `User` y `Role`) con restricción única `(user, role)`.
+**`Role`** — catálogo fijo de cuatro roles, sembrado por la migración `0003_seed_roles`.
 
-**Invariante:** un usuario inactivo no puede autenticarse ni ser destinatario de reservas nuevas.
+| Campo | Tipo | Notas |
+|---|---|---|
+| `code` | Texto único, máximo 16 | Valores: `STUDENT` (Estudiante), `MONITOR` (Monitor), `TEACHER` (Docente), `ADMIN` (Administrador). Una restricción `CHECK` (`accounts_role_code_valid`) impide valores fuera de esa lista |
+
+**`UserRole`** — tabla intermedia `[CONFIRMADO]` ADR-008.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `user` | FK a `User`, `PROTECT` | `PROTECT` respalda RF-025 también en el ORM |
+| `role` | FK a `Role`, `PROTECT` | — |
+
+Restricción única `(user, role)` (`accounts_userrole_unique`, RN-002): un rol se asigna a un usuario como máximo una vez.
+
+**Protección contra borrado (RF-025):** `User.delete()` y `User.objects.all().delete()` lanzan `AccountDeletionError`; las claves foráneas hacia `User` son `PROTECT`.
+
+**Superusuario:** `create_superuser` exige `is_staff` e `is_superuser` y además asigna el rol `ADMIN`; sin ese rol, `IsAdmin` lo rechazaría.
+
+**Invariantes implementadas:**
+
+- Un usuario inactivo no puede autenticarse ni renovar su sesión (RN-002.4, CA-HU11-2). *Que no pueda ser destinatario de reservas nuevas se implementa en FASE-04.*
+- El auto-registro crea una cuenta activa con el rol `STUDENT` y ningún otro (RN-001.4).
+- Siempre queda al menos un administrador activo: un administrador no puede desactivarse ni quitarse el rol `ADMIN` a sí mismo, y nadie puede desactivar o degradar al último administrador activo (`domain/rules.py::ensure_admin_remains`; respuesta `400`). Los servicios bloquean con `select_for_update` la cuenta afectada y a los administradores activos para evitar carreras.
+- La desactivación informa su impacto antes de confirmarse (CA-HU11-3). `future_reservations` devuelve siempre `0` hasta FASE-04 (deuda técnica T-01.12).
+
+#### 4.1.1 Registro de auditoría `AuditLog` · `[IMPLEMENTADO]` FASE-01
+
+Toda operación administrativa sobre cuentas deja una entrada (CA-HU11-5, driver D-6 del SAD). La escriben los servicios de `apps/accounts/services.py` en la misma transacción que el cambio.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `id` | Entero autoincremental (`BigAutoField`) | — |
+| `actor` | FK a `User`, `PROTECT` | Quién ejecutó la operación |
+| `target` | FK a `User`, `PROTECT` | Cuenta afectada |
+| `action` | Texto, máximo 32 | `USER_CREATED`, `USER_UPDATED`, `USER_ACTIVATED`, `USER_DEACTIVATED`, `ROLES_CHANGED`; restricción `CHECK` `accounts_auditlog_action_valid` |
+| `changes` | JSON | Siempre `campo → [antes, después]`; en una creación el valor anterior es `null` (o `[]` para roles) |
+| `context` | JSON | Hechos que no son cambios de campos; por ejemplo, el impacto de una desactivación |
+| `created_at` | Marca de tiempo | Asignada al insertar |
+
+- Índices: `(target, -created_at)` para el historial de una cuenta y `(-created_at)` para el listado global. Orden por defecto: más reciente primero.
+- **Solo inserción:** el ORM rechaza `save()` sobre entradas existentes, `update()` y `delete()` con `AuditLogImmutableError`; la migración `0006_audit_log_append_only` añade un *trigger* de PostgreSQL que rechaza `UPDATE` y `DELETE` incluso desde SQL directo.
+- Nunca almacena contraseñas ni credenciales.
+- En FASE-01 no existe endpoint de consulta del registro; se consulta en base de datos.
 
 ---
 
@@ -416,7 +464,9 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
 ## 8. Modelo entidad-relación propuesto · `[PROPUESTA]`
 
 ```text
-  User ──┬──< UserRole >── Role          (N:M — [CONFIRMADO] ADR-008)
+  User ──┬──< UserRole >── Role          (N:M — [IMPLEMENTADO] FASE-01, ADR-008)
+         │
+         ├──< AuditLog (actor, target)       ([IMPLEMENTADO] FASE-01, §4.1.1)
          │
          ├──< MonitorAssignment >── Subject
          │
@@ -453,7 +503,7 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
 
 | Elemento del dominio | Bloqueado por | Consecuencia de implementarlo antes |
 |---|---|---|
-| `User` + `Role` | ADR-008 | Migración de `AUTH_USER_MODEL` prácticamente irreversible |
+| `User` + `Role` | ADR-008 — cerrado; implementado en FASE-01 (§4.1) | Migración de `AUTH_USER_MODEL` prácticamente irreversible |
 | `AvailabilitySlot.capacity` y duración | ADR-010 | Modelo de agendamiento equivocado de raíz |
 | Ventana de cancelación | ADR-011 | Regla de negocio inventada por el implementador |
 | `Evaluation.rating` | ADR-013 | Escala arbitraria que invalida las métricas históricas |

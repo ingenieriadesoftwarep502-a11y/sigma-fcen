@@ -76,28 +76,28 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 
 ## 4. Requisitos funcionales
 
-**Convención de estado:** `[CONFIRMADO]` habilita implementación. `[PROPUESTA]` y `[PENDIENTE]` la bloquean.
+**Convención de estado:** `[CONFIRMADO]` habilita implementación. `[PROPUESTA]` y `[PENDIENTE]` la bloquean. `[IMPLEMENTADO]` indica un requisito confirmado, construido y verificado con pruebas automatizadas en la fase indicada; `[PARCIAL]` indica que parte del comportamiento depende de una fase posterior y queda registrado como deuda técnica.
 
 ### 4.1 Identidad y acceso (RF-01x)
 
 | ID | Requisito | Prioridad | Estado | Bloqueado por |
 |---|---|---|---|---|
-| RF-010 | El sistema debe permitir el registro de usuarios con datos institucionales | Alta | `[CONFIRMADO]` | — (ADR-009 cerrado) |
-| RF-011 | El sistema debe permitir iniciar y cerrar sesión de forma segura | Alta | `[CONFIRMADO]` | — (ADR-007 cerrado) |
-| RF-012 | El sistema debe restringir cada funcionalidad según el rol del usuario | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
+| RF-010 | El sistema debe permitir el registro de usuarios con datos institucionales | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-009 cerrado) |
+| RF-011 | El sistema debe permitir iniciar y cerrar sesión de forma segura | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-007 cerrado) |
+| RF-012 | El sistema debe restringir cada funcionalidad según el rol del usuario | Alta | `[IMPLEMENTADO]` FASE-01 — permisos por rol disponibles; cada fase posterior los aplica a sus endpoints | — (ADR-008 cerrado) |
 | RF-013 | El sistema debe permitir recuperar la contraseña | Media | `[PENDIENTE]` | Sin SMTP en v1 (ADR-009); se traslada a FASE-10 |
-| RF-014 | El sistema debe invalidar el acceso de las cuentas desactivadas | Alta | `[CONFIRMADO]` | — (ADR-007 cerrado) |
+| RF-014 | El sistema debe invalidar el acceso de las cuentas desactivadas | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-007 cerrado) |
 
 ### 4.2 Usuarios y asignaturas (RF-02x)
 
 | ID | Requisito | Prioridad | Estado | Bloqueado por |
 |---|---|---|---|---|
-| RF-020 | El administrador debe poder crear, editar, activar y desactivar usuarios | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
-| RF-021 | El administrador debe poder asignar y retirar roles | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
+| RF-020 | El administrador debe poder crear, editar, activar y desactivar usuarios | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-008 cerrado) |
+| RF-021 | El administrador debe poder asignar y retirar roles | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-008 cerrado) |
 | RF-022 | El administrador debe poder administrar el catálogo de asignaturas | Alta | `[PROPUESTA]` | — |
 | RF-023 | El administrador debe poder asociar monitores a asignaturas | Alta | `[PROPUESTA]` | — (ADR-009 cerrado) |
 | RF-024 | El administrador debe poder asociar docentes a cursos | Media | `[PROPUESTA]` | — |
-| RF-025 | Las cuentas nunca se eliminan físicamente; solo se desactivan | Alta | `[CONFIRMADO]` | — |
+| RF-025 | Las cuentas nunca se eliminan físicamente; solo se desactivan | Alta | `[IMPLEMENTADO]` FASE-01 | — |
 
 ### 4.3 Disponibilidad (RF-03x)
 
@@ -173,8 +173,8 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 |---|---|---|---|---|
 | RNF-SEC-001 | Seguridad | Ningún secreto en el repositorio; toda configuración sensible por variables de entorno | `git grep` sin coincidencias de secretos; `SECRET_KEY` leída del entorno | `[CONFIRMADO]` ADR-002 |
 | RNF-SEC-002 | Seguridad | Contraseñas almacenadas con el hasher por defecto de Django (PBKDF2) | Revisión de `PASSWORD_HASHERS` | `[PROPUESTA]` |
-| RNF-SEC-003 | Seguridad | Todo endpoint distinto de autenticación exige usuario autenticado | Prueba automatizada: cada endpoint responde 401 sin credenciales | `[CONFIRMADO]` |
-| RNF-SEC-004 | Seguridad | Autorización verificada por rol en cada endpoint, no solo en la interfaz | Prueba por rol y endpoint que confirma 403 | `[CONFIRMADO]` |
+| RNF-SEC-003 | Seguridad | Todo endpoint distinto de autenticación exige usuario autenticado | Prueba automatizada: cada endpoint responde 401 sin credenciales | `[IMPLEMENTADO]` FASE-01 — `IsAuthenticated` es el permiso por defecto de DRF; solo `health`, `schema`, `docs` y los endpoints de autenticación son públicos |
+| RNF-SEC-004 | Seguridad | Autorización verificada por rol en cada endpoint, no solo en la interfaz | Prueba por rol y endpoint que confirma 403 | `[IMPLEMENTADO]` FASE-01 — clases `HasRole` en `backend/shared/permissions.py` |
 | RNF-SEC-005 | Seguridad | CORS restringido a los orígenes de `CORS_ALLOWED_ORIGINS` | Revisión de configuración + prueba | `[CONFIRMADO]` ADR-002 |
 | RNF-CAL-001 | Calidad | Cobertura mínima del 80 % en la capa de dominio y servicios | Reporte de `pytest-cov` en CI | `[PENDIENTE]` — herramienta confirmada (ADR-004); el umbral del 80 % aún no está acordado formalmente |
 | RNF-CAL-002 | Calidad | Toda regla de negocio `RN-xxx` con prueba de camino feliz y de violación | Matriz de trazabilidad §8 completa | `[PROPUESTA]` |
@@ -202,7 +202,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como nuevo usuario (estudiante, monitor, docente o administrador), quiero registrarme en el sistema con mis datos institucionales, de tal manera que pueda acceder a las funcionalidades correspondientes a mi rol sin necesidad de procesos manuales.
 
-**Requisitos:** RF-010, RF-011 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27)
+**Requisitos:** RF-010, RF-011 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27) · **Estado:** implementada y verificada (2026-09-28)
 
 | ID | Criterio (Gherkin) | Estado |
 |---|---|---|
@@ -366,13 +366,13 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como administrador, quiero crear, editar, activar y desactivar cuentas de usuarios y asignarles roles, de tal manera que el acceso al sistema esté controlado y corresponda siempre a la situación real de cada persona en la Facultad.
 
-**Requisitos:** RF-020, RF-021, RF-025 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-008 cerrado el 2026-09-27)
+**Requisitos:** RF-020, RF-021, RF-025 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-008 cerrado el 2026-09-27) · **Estado:** implementada y verificada (2026-09-28), con CA-HU11-3 parcial hasta FASE-04
 
 | ID | Criterio | Estado |
 |---|---|---|
 | CA-HU11-1 | **Dado** un administrador, **cuando** crea un usuario con rol, **entonces** la cuenta queda activa y puede iniciar sesión | `[CONFIRMADO]` ADR-008, ADR-009 |
 | CA-HU11-2 | **Dado** un usuario activo, **cuando** lo desactivo, **entonces** sus credenciales dejan de ser válidas de inmediato | `[CONFIRMADO]` |
-| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[CONFIRMADO]` |
+| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[CONFIRMADO]` · `[PARCIAL]` — el flujo de impacto y confirmación existe, pero el conteo de reservas futuras devuelve 0 hasta FASE-04 (deuda técnica T-01.12) |
 | CA-HU11-4 | **Dado** un usuario no administrador, **cuando** intenta gestionar usuarios, **entonces** recibe `403` | `[CONFIRMADO]` |
 | CA-HU11-5 | **Dado** cualquier operación de gestión de usuarios, **cuando** se ejecuta, **entonces** queda registrada en auditoría | `[CONFIRMADO]` |
 
@@ -426,9 +426,9 @@ Cada requisito se conecta con su historia, su fase y su regla de negocio. Un req
 
 | Requisito | Historia | Fase | Regla de negocio | Estado |
 |---|---|---|---|---|
-| RF-010, RF-011 | HU-01 | FASE-01 | RN-001 | Confirmado |
-| RF-012 | HU-01, HU-11 | FASE-01 | RN-002 | Confirmado |
-| RF-020, RF-021, RF-025 | HU-11 | FASE-01 | RN-002 | Confirmado |
+| RF-010, RF-011 | HU-01 | FASE-01 | RN-001 | Implementado |
+| RF-012 | HU-01, HU-11 | FASE-01 | RN-002 | Implementado |
+| RF-020, RF-021, RF-025 | HU-11 | FASE-01 | RN-002 | Implementado (CA-HU11-3 parcial hasta FASE-04) |
 | RF-022, RF-023, RF-024 | HU-11 | FASE-02 | — | Bloqueado |
 | RF-030 a RF-033 | HU-05 | FASE-03 | RN-003 | Bloqueado |
 | RF-034 | HU-02 | FASE-03 | — | Bloqueado |

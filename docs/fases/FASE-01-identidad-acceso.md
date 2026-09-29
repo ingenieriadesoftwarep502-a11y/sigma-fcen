@@ -127,7 +127,7 @@ npm test && npm run type-check
 - [x] Ninguna contraseña ni credencial en los registros de log. *(`test_auth_session.py` con `caplog`; 2026-09-28)*
 - [x] Esquema OpenAPI actualizado con los endpoints de esta fase. *(`backend/schema/openapi.yaml` con prueba de vigencia; 2026-09-28)*
 - [x] Tipos del frontend generados desde el esquema. *(`frontend/my-app/types/api.d.ts`; 2026-09-28)*
-- [ ] Documentación actualizada: TRD (estados), DDD (modelo final), SAD (permisos).
+- [x] Documentación actualizada: TRD (estados), DDD (modelo final), SAD (permisos). *(TRD, DDD y SAD actualizados; 2026-09-29)*
 - [ ] PRs revisadas y aprobadas; CI en verde. *(CI en verde en el PR #15; falta la revisión y aprobación)*
 - [x] T-01.16 — administración de usuarios en el frontend. *(`/admin/usuarios`, commit `1730d46`; 2026-09-28)*
 - [ ] Deuda técnica de T-01.12 (impacto sobre reservas futuras hasta FASE-04) registrada en Jira.
