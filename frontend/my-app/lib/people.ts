@@ -23,6 +23,11 @@ export function initialsOf(person: Person): string {
   return letters.map((word) => word.charAt(0).toLocaleUpperCase("es")).join("");
 }
 
+/** Initials for a person the API names only by `full_name` (e.g. a monitor or a teacher). */
+export function initialsOfFullName(fullName: string, email: string): string {
+  return initialsOf({ first_name: fullName, last_name: "", email });
+}
+
 export function primaryRole(roles: readonly RoleCode[]): RoleCode | null {
   return ROLE_PRECEDENCE.find((role) => roles.includes(role)) ?? null;
 }

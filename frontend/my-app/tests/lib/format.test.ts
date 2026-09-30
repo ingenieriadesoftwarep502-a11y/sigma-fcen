@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDate, formatRelativeTime } from "@/lib/format";
+import { formatDate, formatDay, formatRelativeTime } from "@/lib/format";
 
 describe("format helpers", () => {
+  it("shows a calendar date as that same day, whatever the time zone", () => {
+    expect(formatDay("2026-08-01")).toMatch(/^1 ago\.? 2026$/);
+    expect(formatDay("2026-12-31")).toMatch(/^31 dic\.? 2026$/);
+  });
+
   const now = new Date("2026-09-29T15:00:00Z");
 
   it("formats a registration date in Colombian Spanish", () => {

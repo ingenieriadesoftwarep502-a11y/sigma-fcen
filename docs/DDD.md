@@ -28,6 +28,7 @@ Tabla normativa. La columna "Código" es obligatoria: los identificadores en ing
 |---|---|---|
 | Usuario | `User` | Persona con acceso al sistema, identificada por su correo institucional |
 | Rol | `Role` | Conjunto de capacidades: `STUDENT`, `MONITOR`, `TEACHER`, `ADMIN` |
+| Departamento | `Department` | Unidad académica de la facultad (por ejemplo, Matemáticas, `MAT`) a la que pertenece cada asignatura |
 | Asignatura | `Subject` | Materia del plan de estudios (código y nombre), independiente del período |
 | Curso | `Course` | Instancia de una asignatura en un período académico, con docente asignado |
 | Asignación de monitoría | `MonitorAssignment` | Autorización de un monitor para atender una asignatura |
@@ -173,19 +174,31 @@ Toda operación administrativa sobre cuentas deja una entrada (CA-HU11-5, driver
 
 ---
 
-### 4.2 Agregado `Course` · raíz, con `Subject` y `MonitorAssignment`
+### 4.2 Agregado `Course` · raíz, con `Subject` y `MonitorAssignment` · `[CONFIRMADO]` 2026-09-29
+
+Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-catalogo-academico.md) §4). Vive en `backend/apps/academics/models.py`.
 
 | Entidad | Campos clave | Notas |
 |---|---|---|
-| `Subject` | `code` único, `name`, `credits`, `is_active` | Existe independientemente del período |
-| `Course` | `subject`, `term`, `teacher`, `group` | Instancia en un período |
-| `MonitorAssignment` | `monitor`, `subject`, `term`, `committed_hours` | Autoriza a un monitor sobre una asignatura |
+| `Department` | `code` único, `name` único, `is_active` | Unidad académica (por ejemplo `MAT`, Matemáticas). El código se guarda en mayúsculas |
+| `Subject` | `code` único, `name`, `credits`, `department`, `is_active` | Existe independientemente del período. `department` es FK `PROTECT` a `Department`; el código se guarda en mayúsculas |
+| `AcademicTerm` | `code` único, `start_date`, `end_date` | Código con formato `AAAA-S`, semestre `1` o `2` (por ejemplo `2026-1`) |
+| `Course` | `subject`, `term`, `teacher`, `group` | Instancia en un período; `teacher` es opcional hasta que el administrador lo asigna |
+| `MonitorAssignment` | `monitor`, `subject`, `term`, `committed_hours` | Autoriza a un monitor sobre una asignatura en un período |
 
 **Invariantes:**
 
-- Un `Course` pertenece a exactamente un `Subject` y un `AcademicTerm`.
+- `Department.code`, `Department.name`, `Subject.code` y `AcademicTerm.code` son únicos en base de datos.
+- `Subject.credits > 0` y `MonitorAssignment.committed_hours > 0` (restricciones `CHECK`).
+- `AcademicTerm.end_date > start_date` y el código cumple `^\d{4}-[12]$` (restricciones `CHECK`).
+- Un `Course` pertenece a exactamente un `Subject` y un `AcademicTerm`, y es único por `(subject, term, group)`.
 - `MonitorAssignment` es única por `(monitor, subject, term)`.
+- El docente de un curso tiene el rol `TEACHER`, y el monitor de una asignación el rol `MONITOR` (RN-002).
+- Una asignatura inactiva no admite franjas nuevas (T-02.7; la franja llega en FASE-03).
+- Borrar un departamento, asignatura o período con datos asociados está bloqueado (`PROTECT`); se desactivan.
 - `committed_hours` alimenta la métrica de cumplimiento (ADR-013).
+
+**Período actual:** el que contiene la fecha de hoy; si ninguno la contiene, el más reciente ya terminado; si no hay ninguno pasado, el próximo en empezar.
 
 ---
 
@@ -482,6 +495,7 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
          │
          └──< Material >── Subject
 
+  Department ──< Subject
   Subject ──< Course >── AcademicTerm
   Course  ── teacher ──> User
 ```

@@ -98,6 +98,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/summary/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Headline numbers of the catalog for one term (the current one by default). */
+        get: operations["catalog_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Courses of one term (the current one by default); administrators only (RF-024). */
+        get: operations["courses_list"];
+        put?: never;
+        /** @description Courses of one term (the current one by default); administrators only (RF-024). */
+        post: operations["courses_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Administrators read a course and change its group or teacher. PUT is not offered. */
+        get: operations["courses_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Administrators read a course and change its group or teacher. PUT is not offered. */
+        patch: operations["courses_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/courses/mine/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The requesting teacher's own courses and their monitors (T-02.8, RN-009.1). */
+        get: operations["courses_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/departments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Everyone reads active departments; administrators also see inactive ones and write. */
+        get: operations["departments_list"];
+        put?: never;
+        /** @description Everyone reads active departments; administrators also see inactive ones and write. */
+        post: operations["departments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/departments/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read one department; administrators edit it. PUT is not offered. */
+        get: operations["departments_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Read one department; administrators edit it. PUT is not offered. */
+        patch: operations["departments_partial_update"];
+        trace?: never;
+    };
     "/api/v1/health/": {
         parameters: {
             query?: never;
@@ -107,6 +213,129 @@ export interface paths {
         };
         /** @description Reports service liveness and database connectivity. No authentication required. */
         get: operations["health_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/monitor-assignments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Monitor assignments of one term; administrators authorize monitors (RF-023). */
+        get: operations["monitor_assignments_list"];
+        put?: never;
+        /** @description Monitor assignments of one term; administrators authorize monitors (RF-023). */
+        post: operations["monitor_assignments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/monitor-assignments/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Administrators withdraw a monitor's authorization. */
+        delete: operations["monitor_assignments_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/monitor-assignments/mine/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The requesting monitor's own assignments and their subjects' teachers (RN-009.1). */
+        get: operations["monitor_assignments_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subjects/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The subject catalog with its filters; administrators create subjects (RF-022). */
+        get: operations["subjects_list"];
+        put?: never;
+        /** @description The subject catalog with its filters; administrators create subjects (RF-022). */
+        post: operations["subjects_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subjects/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read one subject; administrators edit or deactivate it (T-02.7). PUT is not offered. */
+        get: operations["subjects_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Read one subject; administrators edit or deactivate it (T-02.7). PUT is not offered. */
+        patch: operations["subjects_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/terms/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every authenticated user lists terms (term switcher); administrators create them. */
+        get: operations["terms_list"];
+        put?: never;
+        /** @description Every authenticated user lists terms (term switcher); administrators create them. */
+        post: operations["terms_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terms/current/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The term containing today; else the latest past one; else the nearest upcoming one. */
+        get: operations["terms_current_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -240,6 +469,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcademicTerm: {
+            readonly id: number;
+            /** @description Formato AAAA-S, por ejemplo 2026-1. */
+            code: string;
+            /**
+             * Fecha de inicio
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Fecha de fin
+             * Format: date
+             */
+            end_date: string;
+        };
         /**
          * @description * `USER_CREATED` - Usuario creado
          *     * `USER_UPDATED` - Usuario editado
@@ -266,6 +510,15 @@ export interface components {
             /** Format: date-time */
             readonly date_joined: string;
         };
+        /** @description A monitor of one of the teacher's courses; `id` is the monitor's user id. */
+        AssignedMonitor: {
+            /** Format: uuid */
+            id: string;
+            readonly full_name: string;
+            /** Format: email */
+            email: string;
+            committed_hours: number;
+        };
         AuditEntry: {
             id: number;
             action: components["schemas"]["ActionEnum"];
@@ -273,6 +526,39 @@ export interface components {
             created_at: string;
             actor: components["schemas"]["UserReference"] | null;
             target: components["schemas"]["UserReference"] | null;
+        };
+        CatalogSummary: {
+            /** @description Código del período resumido. */
+            term: string | null;
+            subjects_active: number;
+            departments_active: number;
+            courses: number;
+            courses_without_teacher: number;
+            courses_without_monitor: number;
+            monitor_assignments: number;
+            committed_hours_total: number;
+        };
+        Course: {
+            readonly id: number;
+            readonly subject: components["schemas"]["SubjectSummary"];
+            /** Código */
+            readonly term: string;
+            /** Grupo */
+            readonly group: string;
+            readonly teacher: components["schemas"]["UserReference"] | null;
+            /** @description Monitores asignados a la asignatura en el período del curso. */
+            readonly monitor_count: number;
+        };
+        CourseCreate: {
+            subject: number;
+            /** Código */
+            term: string;
+            group: string;
+            /**
+             * Format: uuid
+             * @description Id de un usuario Docente.
+             */
+            teacher?: string | null;
         };
         CsrfToken: {
             csrfToken: string;
@@ -289,6 +575,19 @@ export interface components {
             impact: components["schemas"]["DeactivationImpact"];
             user: components["schemas"]["AdminUser"];
         };
+        Department: {
+            readonly id: number;
+            code: string;
+            name: string;
+            is_active?: boolean;
+        };
+        DepartmentReference: {
+            readonly id: number;
+            /** Código */
+            readonly code: string;
+            /** Nombre */
+            readonly name: string;
+        };
         Health: {
             status: string;
             database: string;
@@ -297,6 +596,50 @@ export interface components {
             /** Format: email */
             email: string;
             password: string;
+        };
+        MonitorAssignment: {
+            readonly id: number;
+            readonly monitor: components["schemas"]["UserReference"];
+            readonly subject: components["schemas"]["SubjectReference"];
+            /** Código */
+            readonly term: string;
+            /** Horas comprometidas */
+            readonly committed_hours: number;
+        };
+        MonitorAssignmentCreate: {
+            /**
+             * Format: uuid
+             * @description Id de un usuario Monitor.
+             */
+            monitor: string;
+            subject: number;
+            /** Código */
+            term: string;
+            committed_hours: number;
+        };
+        MonitorOwnAssignment: {
+            readonly id: number;
+            readonly subject: components["schemas"]["SubjectSummary"];
+            /** Código */
+            readonly term: string;
+            /** Horas comprometidas */
+            readonly committed_hours: number;
+            readonly teachers: components["schemas"]["SubjectTeacher"][];
+        };
+        PaginatedAcademicTermList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AcademicTerm"][];
         };
         PaginatedAdminUserList: {
             /** @example 123 */
@@ -312,6 +655,119 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["AdminUser"][];
+        };
+        PaginatedCourseList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Course"][];
+        };
+        PaginatedDepartmentList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Department"][];
+        };
+        PaginatedMonitorAssignmentList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["MonitorAssignment"][];
+        };
+        PaginatedMonitorOwnAssignmentList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["MonitorOwnAssignment"][];
+        };
+        PaginatedSubjectList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Subject"][];
+        };
+        PaginatedTeacherCourseList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TeacherCourse"][];
+        };
+        PatchedCourseUpdate: {
+            group?: string;
+            /**
+             * Format: uuid
+             * @description Id de un usuario Docente.
+             */
+            teacher?: string | null;
+        };
+        PatchedDepartment: {
+            readonly id?: number;
+            code?: string;
+            name?: string;
+            is_active?: boolean;
+        };
+        PatchedSubjectWrite: {
+            code?: string;
+            /** Nombre */
+            name?: string;
+            /** Créditos */
+            credits?: number;
+            department?: number;
+            is_active?: boolean;
         };
         PatchedUserUpdate: {
             /** Format: email */
@@ -344,6 +800,63 @@ export interface components {
          * @enum {string}
          */
         RolesEnum: "STUDENT" | "MONITOR" | "TEACHER" | "ADMIN";
+        Subject: {
+            readonly id: number;
+            /** Código */
+            readonly code: string;
+            /** Nombre */
+            readonly name: string;
+            /** Créditos */
+            readonly credits: number;
+            readonly is_active: boolean;
+            readonly department: components["schemas"]["DepartmentReference"];
+            /** @description Asignaciones de monitoría de la asignatura en el período. */
+            readonly monitor_count: number;
+        };
+        SubjectReference: {
+            readonly id: number;
+            /** Código */
+            readonly code: string;
+            /** Nombre */
+            readonly name: string;
+        };
+        SubjectSummary: {
+            readonly id: number;
+            /** Código */
+            readonly code: string;
+            /** Nombre */
+            readonly name: string;
+            /** Créditos */
+            readonly credits: number;
+            readonly department: components["schemas"]["DepartmentReference"];
+        };
+        /** @description A teacher of the monitor's subject in the term; `id` is the teacher's user id. */
+        SubjectTeacher: {
+            /** Format: uuid */
+            id: string;
+            readonly full_name: string;
+            /** Format: email */
+            email: string;
+            group: string;
+        };
+        SubjectWrite: {
+            code: string;
+            /** Nombre */
+            name: string;
+            /** Créditos */
+            credits: number;
+            department: number;
+            is_active?: boolean;
+        };
+        TeacherCourse: {
+            readonly id: number;
+            readonly subject: components["schemas"]["SubjectSummary"];
+            /** Código */
+            readonly term: string;
+            /** Grupo */
+            readonly group: string;
+            readonly monitors: components["schemas"]["AssignedMonitor"][];
+        };
         User: {
             /** Format: uuid */
             readonly id: string;
@@ -510,6 +1023,264 @@ export interface operations {
             };
         };
     };
+    catalog_summary_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogSummary"];
+                };
+            };
+        };
+    };
+    courses_list: {
+        parameters: {
+            query?: {
+                /** @description Id o código del departamento. */
+                department?: string;
+                /**
+                 * @description * `code` - code
+                 *     * `name` - name
+                 *     * `-monitor_count` - -monitor_count
+                 */
+                ordering?: "code" | "name" | "-monitor_count";
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Busca en código y nombre de la asignatura y en nombre y correo del docente. */
+                search?: string;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+                without_monitors?: boolean;
+                without_teacher?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCourseList"];
+                };
+            };
+        };
+    };
+    courses_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CourseCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["CourseCreate"];
+                "multipart/form-data": components["schemas"]["CourseCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Course"];
+                };
+            };
+        };
+    };
+    courses_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Course"];
+                };
+            };
+        };
+    };
+    courses_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCourseUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCourseUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedCourseUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Course"];
+                };
+            };
+        };
+    };
+    courses_mine_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTeacherCourseList"];
+                };
+            };
+        };
+    };
+    departments_list: {
+        parameters: {
+            query?: {
+                /** @description Solo administradores. */
+                active?: boolean;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDepartmentList"];
+                };
+            };
+        };
+    };
+    departments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Department"];
+                "application/x-www-form-urlencoded": components["schemas"]["Department"];
+                "multipart/form-data": components["schemas"]["Department"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Department"];
+                };
+            };
+        };
+    };
+    departments_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Department"];
+                };
+            };
+        };
+    };
+    departments_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDepartment"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDepartment"];
+                "multipart/form-data": components["schemas"]["PatchedDepartment"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Department"];
+                };
+            };
+        };
+    };
     health_retrieve: {
         parameters: {
             query?: never;
@@ -534,6 +1305,300 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Health"];
                 };
+            };
+        };
+    };
+    monitor_assignments_list: {
+        parameters: {
+            query?: {
+                /** @description Id del monitor. */
+                monitor?: string;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Busca en nombre y correo del monitor y en código y nombre de la asignatura. */
+                search?: string;
+                /** @description Id de asignatura. */
+                subject?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedMonitorAssignmentList"];
+                };
+            };
+        };
+    };
+    monitor_assignments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonitorAssignmentCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["MonitorAssignmentCreate"];
+                "multipart/form-data": components["schemas"]["MonitorAssignmentCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorAssignment"];
+                };
+            };
+        };
+    };
+    monitor_assignments_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    monitor_assignments_mine_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedMonitorOwnAssignmentList"];
+                };
+            };
+        };
+    };
+    subjects_list: {
+        parameters: {
+            query?: {
+                /** @description Solo administradores. */
+                active?: boolean;
+                credits?: number;
+                /** @description Id o código del departamento. */
+                department?: string;
+                has_monitors?: boolean;
+                /**
+                 * @description * `code` - code
+                 *     * `name` - name
+                 *     * `-monitor_count` - -monitor_count
+                 */
+                ordering?: "code" | "name" | "-monitor_count";
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Busca en código y nombre. */
+                search?: string;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSubjectList"];
+                };
+            };
+        };
+    };
+    subjects_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubjectWrite"];
+                "application/x-www-form-urlencoded": components["schemas"]["SubjectWrite"];
+                "multipart/form-data": components["schemas"]["SubjectWrite"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subject"];
+                };
+            };
+        };
+    };
+    subjects_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subject"];
+                };
+            };
+        };
+    };
+    subjects_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSubjectWrite"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSubjectWrite"];
+                "multipart/form-data": components["schemas"]["PatchedSubjectWrite"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subject"];
+                };
+            };
+        };
+    };
+    terms_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAcademicTermList"];
+                };
+            };
+        };
+    };
+    terms_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcademicTerm"];
+                "application/x-www-form-urlencoded": components["schemas"]["AcademicTerm"];
+                "multipart/form-data": components["schemas"]["AcademicTerm"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcademicTerm"];
+                };
+            };
+        };
+    };
+    terms_current_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcademicTerm"];
+                };
+            };
+            /** @description No terms yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

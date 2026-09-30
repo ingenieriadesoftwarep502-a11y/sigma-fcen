@@ -1,35 +1,23 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type MouseEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
+import Drawer from "@/components/ui/drawer";
 import Icon from "@/components/ui/icon";
-import { requestErrorMessage } from "@/lib/api-client";
-import { type AdminUser, listUsers, NO_FILTERS, type UserFilters, type UserPage } from "@/lib/users";
+import { type AdminUser, listUsers, NO_FILTERS, type UserFilters } from "@/lib/users";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { usePagedList } from "@/lib/use-paged-list";
+import { useUrlQuery } from "@/lib/use-url-query";
 
 import { filtersFromParams, hasFilters, paramsFromFilters } from "../filters";
 import { useUsersExport } from "../use-users-export";
 import styles from "./user-admin.module.css";
 import UserCreateForm from "./user-create-form";
 import UserEditForm from "./user-edit-form";
-import UserPanel from "./user-panel";
 import UsersTable from "./users-table";
 import UsersToolbar from "./users-toolbar";
-
-/** Pause after the last keystroke before the search reaches the API. */
-const SEARCH_DELAY_MS = 300;
-
-type Query = { page: number; filters: UserFilters; attempt: number };
-
-type ListState = {
-  /** The last page received; kept while the next one loads so the table does not flash. */
-  data: UserPage | null;
-  error: string | null;
-  /** The query the current data or error answers; any other query is still loading. */
-  settled: Query | null;
-};
 
 type PanelState = { mode: "create" } | { mode: "edit"; user: AdminUser } | null;
 
@@ -43,16 +31,14 @@ function sameFilters(a: UserFilters, b: UserFilters): boolean {
  * Container: owns the requests, the filters and the drawer state.
  */
 export default function UserAdmin() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const url = useUrlQuery();
   // Read once: afterwards this component owns the filters and writes them to the URL.
-  const [initialFilters] = useState(() => filtersFromParams(searchParams));
-  const [fromShortcut] = useState(() => searchParams.get("nuevo") === "1");
+  const [initialFilters] = useState(() => filtersFromParams(url.initial));
+  const [fromShortcut] = useState(() => url.initial.get("nuevo") === "1");
 
   const [searchInput, setSearchInput] = useState(initialFilters.search);
-  const [query, setQuery] = useState<Query>({ page: 1, filters: initialFilters, attempt: 0 });
-  const [list, setList] = useState<ListState>({ data: null, error: null, settled: null });
+  const search = useDebouncedValue(searchInput);
+  const list = usePagedList(listUsers, initialFilters, sameFilters);
   const [panel, setPanel] = useState<PanelState>(fromShortcut ? { mode: "create" } : null);
   const [notice, setNotice] = useState<string | null>(null);
   // A create, edit or access change is in flight: the drawer stays put until it settles.
@@ -62,46 +48,18 @@ export default function UserAdmin() {
   const newUserButton = useRef<HTMLButtonElement>(null);
   const exporter = useUsersExport();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    listUsers(query.page, query.filters, controller.signal).then(
-      (data) => {
-        if (controller.signal.aborted) return;
-        setList({ data, error: null, settled: query });
-      },
-      (error: unknown) => {
-        if (controller.signal.aborted) return;
-        setList((current) => ({ ...current, error: requestErrorMessage(error), settled: query }));
-      },
-    );
-    return () => controller.abort();
-  }, [query]);
-
   // Arriving from the "Nuevo usuario" shortcut: the form is open, so drop the flag.
+  const dropShortcut = useEffectEvent(() => url.replace(paramsFromFilters(initialFilters)));
   useEffect(() => {
-    if (!fromShortcut) return;
-    const params = paramsFromFilters(initialFilters).toString();
-    router.replace(params ? `${pathname}?${params}` : pathname, { scroll: false });
-  }, [fromShortcut, initialFilters, pathname, router]);
+    if (fromShortcut) dropShortcut();
+  }, [fromShortcut]);
 
   function applyFilters(filters: UserFilters) {
-    if (sameFilters(filters, query.filters)) return;
-    setQuery((current) => ({ page: 1, filters, attempt: current.attempt + 1 }));
-    const params = paramsFromFilters(filters).toString();
-    router.replace(params ? `${pathname}?${params}` : pathname, { scroll: false });
+    if (list.setFilters(filters)) url.replace(paramsFromFilters(filters));
   }
 
-  const applySearch = useEffectEvent(() => applyFilters({ ...query.filters, search: searchInput }));
-
-  useEffect(() => {
-    const timer = setTimeout(applySearch, SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  /** Without a page, reloads the one in view when the update applies (not a stale closure). */
-  function load(page?: number) {
-    setQuery((current) => ({ ...current, page: page ?? current.page, attempt: current.attempt + 1 }));
-  }
+  const applySearch = useEffectEvent((value: string) => applyFilters({ ...list.filters, search: value }));
+  useEffect(() => applySearch(search), [search]);
 
   function clearFilters() {
     setSearchInput("");
@@ -124,10 +82,9 @@ export default function UserAdmin() {
     setNotice(message);
     setBusy(false);
     closePanel();
-    load();
+    list.reload();
   }
 
-  const loading = list.settled !== query;
   const selectedId = panel?.mode === "edit" ? panel.user.id : null;
 
   return (
@@ -152,47 +109,47 @@ export default function UserAdmin() {
 
       <UsersToolbar
         search={searchInput}
-        role={query.filters.role}
-        isActive={query.filters.isActive}
+        role={list.filters.role}
+        isActive={list.filters.isActive}
         count={list.data?.count ?? null}
         exporting={exporter.exporting}
         onSearchChange={setSearchInput}
         onSearchClear={() => {
           setSearchInput("");
-          applyFilters({ ...query.filters, search: "" });
+          applyFilters({ ...list.filters, search: "" });
         }}
-        onRoleChange={(role) => applyFilters({ ...query.filters, role })}
-        onStatusChange={(isActive) => applyFilters({ ...query.filters, isActive })}
-        onExport={() => exporter.download(query.filters)}
+        onRoleChange={(role) => applyFilters({ ...list.filters, role })}
+        onStatusChange={(isActive) => applyFilters({ ...list.filters, isActive })}
+        onExport={() => exporter.download(list.filters)}
       />
 
       {exporter.error && <Alert tone="error">{exporter.error}</Alert>}
       {notice && <Alert tone="success">{notice}</Alert>}
 
       <UsersTable
-        page={query.page}
+        page={list.page}
         data={list.data}
-        loading={loading}
-        error={loading ? null : list.error}
-        filtered={hasFilters(query.filters)}
+        loading={list.loading}
+        error={list.error}
+        filtered={hasFilters(list.filters)}
         selectedId={selectedId}
         locked={busy}
         onSelect={(user, event) => openPanel({ mode: "edit", user }, event)}
-        onPageChange={load}
-        onRetry={() => load()}
+        onPageChange={list.goTo}
+        onRetry={list.reload}
         onClearFilters={clearFilters}
       />
 
       {panel?.mode === "create" && (
-        <UserPanel key="create" title="Nuevo usuario" locked={busy} onClose={closePanel}>
+        <Drawer key="create" title="Nuevo usuario" locked={busy} onClose={closePanel}>
           <UserCreateForm
             onCreated={(user) => handleSaved(`Se creó la cuenta de ${user.email}.`)}
             onBusyChange={setBusy}
           />
-        </UserPanel>
+        </Drawer>
       )}
       {panel?.mode === "edit" && (
-        <UserPanel
+        <Drawer
           key={panel.user.id}
           title="Editar usuario"
           subtitle={panel.user.email}
@@ -205,7 +162,7 @@ export default function UserAdmin() {
             onSaved={handleSaved}
             onBusyChange={setBusy}
           />
-        </UserPanel>
+        </Drawer>
       )}
     </section>
   );

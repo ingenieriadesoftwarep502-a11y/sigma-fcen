@@ -56,6 +56,12 @@
   --danger-fill: rgb(244 63 94 / 0.22);
   --danger-fill-hover: rgb(244 63 94 / 0.34);
 
+  /* Something needs attention but nothing failed, e.g. a course without a teacher. */
+  --warning: #f2c14e;
+  --warning-ink: #fff3d6;
+  --warning-soft: rgb(242 193 78 / 0.12);
+  --warning-line: rgb(242 193 78 / 0.42);
+
   /* One hue per role, validated as a categorical set on surface-1 (CVD-safe, >= 3:1). */
   --role-student: #3987e5;
   --role-monitor: #c98500;

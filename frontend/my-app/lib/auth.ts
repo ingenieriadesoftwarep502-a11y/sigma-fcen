@@ -23,6 +23,14 @@ export const LOGIN_PATH = "/login";
 export const USERS_ADMIN_PATH = "/admin/usuarios";
 /** User administration with the create form already open. */
 export const NEW_USER_PATH = `${USERS_ADMIN_PATH}?nuevo=1`;
+/** The subject catalog as students browse it (FASE-02). */
+export const SUBJECTS_PATH = "/asignaturas";
+/** A teacher's own courses and their monitors (T-02.8). */
+export const MY_COURSES_PATH = "/mis-cursos";
+/** A monitor's own assigned subjects and their teachers (RN-009.1). */
+export const MY_MONITORING_PATH = "/mis-monitorias";
+/** Catalog administration, for the ADMIN role only (FASE-02). */
+export const CATALOG_ADMIN_PATH = "/admin/catalogo";
 
 /** Every role, in the order the interface lists them, with its Spanish label. */
 export const ROLE_CODES: readonly RoleCode[] = ["STUDENT", "MONITOR", "TEACHER", "ADMIN"];

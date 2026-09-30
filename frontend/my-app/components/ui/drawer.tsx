@@ -5,11 +5,11 @@ import { type ReactNode, useEffect, useId, useRef } from "react";
 import Icon from "@/components/ui/icon";
 import { useDialog } from "@/lib/use-dialog";
 
-import styles from "./user-panel.module.css";
+import styles from "./drawer.module.css";
 
-type UserPanelProps = {
+type DrawerProps = {
   title: string;
-  /** Shown under the title, e.g. the email of the account being edited. */
+  /** Shown under the title, e.g. the email of the account or the code of the subject. */
   subtitle?: string;
   /** While a change is being stored, the drawer cannot be closed. */
   locked?: boolean;
@@ -18,17 +18,17 @@ type UserPanelProps = {
 };
 
 /**
- * Modal drawer that slides in from the right over the users list (full width on small
- * screens). Focus stays inside while it is open; Escape, the scrim and the close button
+ * Modal drawer that slides in from the right over a list (full width on small
+ * screens), for creating or editing one of its items. Focus stays inside while it is open; Escape, the scrim and the close button
  * dismiss it unless a save is in flight. The caller puts focus back on what opened it.
  */
-export default function UserPanel({
+export default function Drawer({
   title,
   subtitle,
   locked = false,
   onClose,
   children,
-}: UserPanelProps) {
+}: DrawerProps) {
   const titleId = useId();
   const drawer = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);

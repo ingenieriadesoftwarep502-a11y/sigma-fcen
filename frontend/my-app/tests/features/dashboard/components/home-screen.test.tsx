@@ -11,6 +11,10 @@ vi.mock("@/lib/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/auth")>()),
   getCurrentUser: vi.fn(),
 }));
+vi.mock("@/lib/catalog", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/catalog")>()),
+  getCatalogSummary: () => new Promise(() => {}),
+}));
 vi.mock("@/lib/users", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/users")>()),
   getUserSummary: vi.fn(),

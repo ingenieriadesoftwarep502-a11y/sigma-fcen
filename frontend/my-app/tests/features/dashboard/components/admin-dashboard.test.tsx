@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AdminDashboard from "@/features/dashboard/components/admin-dashboard";
 import { ApiError } from "@/lib/api-client";
+import { getCatalogSummary } from "@/lib/catalog";
 import { saveFile } from "@/lib/download";
 import { exportUsers, getUserSummary, NO_FILTERS, type UserSummary } from "@/lib/users";
 
@@ -12,6 +13,10 @@ vi.mock("@/lib/users", async (importOriginal) => ({
   exportUsers: vi.fn(),
 }));
 vi.mock("@/lib/download", () => ({ saveFile: vi.fn() }));
+vi.mock("@/lib/catalog", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/catalog")>()),
+  getCatalogSummary: vi.fn(),
+}));
 
 const getUserSummaryMock = vi.mocked(getUserSummary);
 const exportUsersMock = vi.mocked(exportUsers);
@@ -36,8 +41,20 @@ const SUMMARY: UserSummary = {
   ],
 };
 
+const CATALOG = {
+  term: "2026-2",
+  subjects_active: 120,
+  departments_active: 6,
+  courses: 48,
+  courses_without_teacher: 5,
+  courses_without_monitor: 12,
+  monitor_assignments: 30,
+  committed_hours_total: 180,
+};
+
 async function renderDashboard(summary: UserSummary = SUMMARY) {
   getUserSummaryMock.mockResolvedValue(summary);
+  vi.mocked(getCatalogSummary).mockResolvedValue(CATALOG);
   render(<AdminDashboard firstName="Ana" />);
   await screen.findByRole("heading", { name: "Actividad reciente" });
 }
@@ -51,6 +68,27 @@ describe("AdminDashboard", () => {
     await renderDashboard();
 
     expect(screen.getByRole("heading", { level: 1, name: "Hola, Ana." })).toBeInTheDocument();
+  });
+
+  it("links to the catalog with the coverage of the current term", async () => {
+    await renderDashboard();
+
+    const card = await screen.findByRole("region", { name: "Catálogo 2026-2" });
+    expect(card).toHaveTextContent("48 cursos");
+    expect(card).toHaveTextContent("5 sin docente");
+    expect(card).toHaveTextContent("12 sin monitor");
+    expect(within(card).getByRole("link", { name: "Abrir catálogo" })).toHaveAttribute(
+      "href",
+      "/admin/catalogo",
+    );
+  });
+
+  it("still links to the catalog when its figures fail", async () => {
+    getUserSummaryMock.mockResolvedValue(SUMMARY);
+    vi.mocked(getCatalogSummary).mockRejectedValue(new ApiError(0, "down"));
+    render(<AdminDashboard firstName="Ana" />);
+
+    expect(await screen.findByRole("link", { name: "Abrir catálogo" })).toBeInTheDocument();
   });
 
   it("shows the headline numbers", async () => {

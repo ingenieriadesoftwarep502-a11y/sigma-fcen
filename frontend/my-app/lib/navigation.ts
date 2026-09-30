@@ -4,7 +4,15 @@
  */
 
 import type { IconName } from "@/components/ui/icon";
-import { HOME_PATH, type RoleCode, USERS_ADMIN_PATH } from "@/lib/auth";
+import {
+  CATALOG_ADMIN_PATH,
+  HOME_PATH,
+  MY_COURSES_PATH,
+  MY_MONITORING_PATH,
+  type RoleCode,
+  SUBJECTS_PATH,
+  USERS_ADMIN_PATH,
+} from "@/lib/auth";
 
 export type NavItem = {
   href: string;
@@ -16,6 +24,10 @@ export type NavItem = {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: HOME_PATH, label: "Inicio", icon: "home" },
+  { href: SUBJECTS_PATH, label: "Asignaturas", icon: "book", roles: ["STUDENT"] },
+  { href: MY_MONITORING_PATH, label: "Mis monitorías", icon: "support", roles: ["MONITOR"] },
+  { href: MY_COURSES_PATH, label: "Mis cursos", icon: "courses", roles: ["TEACHER"] },
+  { href: CATALOG_ADMIN_PATH, label: "Catálogo", icon: "catalog", roles: ["ADMIN"] },
   { href: USERS_ADMIN_PATH, label: "Usuarios", icon: "users", roles: ["ADMIN"] },
 ];
 

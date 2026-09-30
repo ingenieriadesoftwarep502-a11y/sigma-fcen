@@ -49,6 +49,8 @@
   background: rgb(255 255 255 / 0.08);
   color: #fff;
   caret-color: var(--accent);
+  /* Native pickers (dates, numbers) drawn for a dark field. */
+  color-scheme: dark;
 }
 
 .field[data-variant="glass"] .input:hover {

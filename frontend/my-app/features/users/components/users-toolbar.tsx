@@ -1,11 +1,11 @@
-import { useRef } from "react";
-
 import Button from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
+import SearchField from "@/components/ui/search-field";
+import SelectField from "@/components/ui/select-field";
+import styles from "@/components/ui/toolbar.module.css";
 import { ROLE_CODES, ROLE_LABELS, type RoleCode } from "@/lib/auth";
 
 import { isActiveOf, statusValueOf } from "../filters";
-import styles from "./users-toolbar.module.css";
 
 type UsersToolbarProps = {
   /** What is typed in the search box; the list follows it after a short pause. */
@@ -41,50 +41,24 @@ export default function UsersToolbar({
   onStatusChange,
   onExport,
 }: UsersToolbarProps) {
-  const searchInput = useRef<HTMLInputElement>(null);
-
   return (
     <div className={styles.toolbar} role="search" aria-label="Filtrar usuarios">
       <div className={styles.filters}>
-        <div className={styles.search}>
-          <label htmlFor="users-search" className="sr-only">
-            Buscar usuarios
-          </label>
-          <Icon name="search" className={styles.searchIcon} />
-          <input
-            ref={searchInput}
-            id="users-search"
-            type="search"
-            className={styles.searchInput}
-            placeholder="Buscar por nombre o correo"
-            autoComplete="off"
-            spellCheck={false}
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-          />
-          {search && (
-            <button
-              type="button"
-              className={styles.clear}
-              aria-label="Limpiar búsqueda"
-              onClick={() => {
-                onSearchClear();
-                searchInput.current?.focus();
-              }}
-            >
-              <Icon name="close" size={16} />
-            </button>
-          )}
-        </div>
-
-        <label htmlFor="users-role" className="sr-only">
-          Rol
-        </label>
-        <select
+        <SearchField
+          id="users-search"
+          label="Buscar usuarios"
+          placeholder="Buscar por nombre o correo"
+          value={search}
+          onChange={onSearchChange}
+          onClear={onSearchClear}
+          className={styles.search}
+        />
+        <SelectField
           id="users-role"
+          label="Rol"
           className={styles.select}
           value={role ?? ""}
-          onChange={(event) => onRoleChange((event.target.value || null) as RoleCode | null)}
+          onChange={(value) => onRoleChange((value || null) as RoleCode | null)}
         >
           <option value="">Todos los roles</option>
           {ROLE_CODES.map((code) => (
@@ -92,21 +66,18 @@ export default function UsersToolbar({
               {ROLE_LABELS[code]}
             </option>
           ))}
-        </select>
-
-        <label htmlFor="users-status" className="sr-only">
-          Estado
-        </label>
-        <select
+        </SelectField>
+        <SelectField
           id="users-status"
+          label="Estado"
           className={styles.select}
           value={statusValueOf(isActive)}
-          onChange={(event) => onStatusChange(isActiveOf(event.target.value))}
+          onChange={(value) => onStatusChange(isActiveOf(value))}
         >
           <option value="">Todos los estados</option>
           <option value="activas">Activas</option>
           <option value="inactivas">Inactivas</option>
-        </select>
+        </SelectField>
       </div>
 
       <div className={styles.summary}>

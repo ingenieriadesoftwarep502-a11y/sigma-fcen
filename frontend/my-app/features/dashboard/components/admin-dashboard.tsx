@@ -12,6 +12,7 @@ import { getUserSummary, NO_FILTERS, type UserSummary } from "@/lib/users";
 
 import ActivityFeed from "./activity-feed";
 import styles from "./admin-dashboard.module.css";
+import CatalogCard from "./catalog-card";
 import RoleDistribution from "./role-distribution";
 import SummaryFigures from "./summary-figures";
 
@@ -107,6 +108,7 @@ export default function AdminDashboard({ firstName }: AdminDashboardProps) {
       {state.status === "ready" && (
         <>
           <SummaryFigures summary={state.summary} />
+          <CatalogCard />
           <div className={styles.columns}>
             <RoleDistribution counts={state.summary.by_role} />
             <ActivityFeed entries={state.summary.recent_activity} />

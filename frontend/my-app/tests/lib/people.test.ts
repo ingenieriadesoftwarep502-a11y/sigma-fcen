@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { displayName, initialsOf, primaryRole } from "@/lib/people";
+import { displayName, initialsOf, initialsOfFullName, primaryRole } from "@/lib/people";
 
 describe("people helpers", () => {
   it("shows the full name, or the email when there is none", () => {
@@ -18,6 +18,11 @@ describe("people helpers", () => {
       "LC",
     );
     expect(initialsOf({ first_name: "", last_name: "", email: "marta@unal.edu.co" })).toBe("M");
+  });
+
+  it("takes the initials of a full name as the API sends it", () => {
+    expect(initialsOfFullName("Ana María Pérez", "ana@unal.edu.co")).toBe("AP");
+    expect(initialsOfFullName("  ", "luis@unal.edu.co")).toBe("L");
   });
 
   it("names the role with the widest reach as the primary one", () => {

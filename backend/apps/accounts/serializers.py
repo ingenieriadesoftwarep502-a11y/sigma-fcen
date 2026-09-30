@@ -4,8 +4,6 @@ from typing import Any, ClassVar
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.domain.rules import (
@@ -14,6 +12,7 @@ from apps.accounts.domain.rules import (
     normalize_email,
 )
 from apps.accounts.models import AuditLog, Role, User
+from shared.fields import StrictBooleanField
 
 DUPLICATE_EMAIL_MESSAGE = "Ya existe una cuenta con este correo."
 
@@ -120,23 +119,6 @@ class DeactivationResultSerializer(serializers.Serializer[dict[str, Any]]):
     deactivated = serializers.BooleanField()
     impact = DeactivationImpactSerializer()
     user = AdminUserSerializer()
-
-
-@extend_schema_field(OpenApiTypes.BOOL)
-class StrictBooleanField(serializers.Field[bool, bool, bool, Any]):
-    """Accepts only "true" or "false" in any letter case; "1", "yes" or "on" are rejected."""
-
-    CHOICES: ClassVar[dict[str, bool]] = {"true": True, "false": False}
-    default_error_messages = {"invalid": "Usa true o false."}  # noqa: RUF012
-
-    def to_internal_value(self, data: Any) -> bool:
-        try:
-            return self.CHOICES[str(data).strip().lower()]
-        except KeyError:
-            self.fail("invalid")
-
-    def to_representation(self, value: bool) -> bool:
-        return value
 
 
 class UserFilterSerializer(serializers.Serializer[dict[str, Any]]):

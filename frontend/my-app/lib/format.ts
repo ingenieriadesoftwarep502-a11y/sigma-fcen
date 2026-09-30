@@ -26,6 +26,14 @@ export function formatDate(iso: string): string {
   return dateFormat.format(new Date(iso)).replace(/\s+de\s+/g, " ");
 }
 
+/**
+ * A calendar date without a time ("2026-08-01"), e.g. "1 ago 2026". Read at noon UTC, so
+ * the BogotÃ¡ offset can never move it to the day before.
+ */
+export function formatDay(isoDate: string): string {
+  return formatDate(`${isoDate}T12:00:00Z`);
+}
+
 /** e.g. "29 de septiembre de 2026, 9:00 a. m.", for tooltips next to a relative time. */
 export function formatDateTime(iso: string): string {
   return dateTimeFormat.format(new Date(iso));

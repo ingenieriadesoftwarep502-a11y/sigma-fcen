@@ -17,6 +17,10 @@
     border-color var(--duration-fast);
 }
 
+.button[hidden] {
+  display: none;
+}
+
 .button[data-size="sm"] {
   height: 2.5rem;
   padding: 0 var(--space-4);

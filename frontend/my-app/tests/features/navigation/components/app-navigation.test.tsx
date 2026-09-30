@@ -60,6 +60,52 @@ describe("AppNavigation", () => {
     expect(screen.queryByRole("link", { name: "Usuarios" })).not.toBeInTheDocument();
   });
 
+  it("links a student who is also a monitor to the explorer and their monitoring", async () => {
+    await renderFor(["STUDENT", "MONITOR"]);
+
+    expect(screen.getByRole("link", { name: "Asignaturas" })).toHaveAttribute(
+      "href",
+      "/asignaturas",
+    );
+    expect(screen.getByRole("link", { name: "Mis monitorías" })).toHaveAttribute(
+      "href",
+      "/mis-monitorias",
+    );
+    expect(screen.queryByRole("link", { name: "Mis cursos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Catálogo" })).not.toBeInTheDocument();
+  });
+
+  it("links monitors only to their own monitoring, never to the whole catalog", async () => {
+    await renderFor(["MONITOR"]);
+
+    expect(screen.getByRole("link", { name: "Mis monitorías" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Asignaturas" })).not.toBeInTheDocument();
+  });
+
+  it("links students to the explorer but not to monitoring", async () => {
+    await renderFor(["STUDENT"]);
+
+    expect(screen.getByRole("link", { name: "Asignaturas" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mis monitorías" })).not.toBeInTheDocument();
+  });
+
+  it("links teachers to their courses", async () => {
+    await renderFor(["TEACHER"]);
+
+    expect(screen.getByRole("link", { name: "Mis cursos" })).toHaveAttribute("href", "/mis-cursos");
+    expect(screen.queryByRole("link", { name: "Asignaturas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mis monitorías" })).not.toBeInTheDocument();
+  });
+
+  it("links administrators to the catalog", async () => {
+    await renderFor(["ADMIN"]);
+
+    expect(screen.getByRole("link", { name: "Catálogo" })).toHaveAttribute(
+      "href",
+      "/admin/catalogo",
+    );
+  });
+
   it("marks the section in view as the current page", async () => {
     pathname = "/admin/usuarios";
     await renderFor(["ADMIN"]);
