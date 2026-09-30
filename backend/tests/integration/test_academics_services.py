@@ -1,5 +1,7 @@
 """Catalog use cases that enforce role rules on assignments (T-02.5, RN-002, RF-023, RF-024)."""
 
+from datetime import date
+
 import pytest
 
 from apps.academics.models import Course, MonitorAssignment
@@ -7,10 +9,12 @@ from apps.academics.services import (
     CatalogRuleError,
     create_course,
     create_monitor_assignment,
+    ensure_monitor_assigned,
+    is_monitor_assigned,
     update_course,
 )
-from apps.accounts.models import Role
-from tests.catalog_data import make_subject, make_term, make_user
+from apps.accounts.models import Role, UserRole
+from tests.catalog_data import make_assignment, make_subject, make_term, make_user
 
 pytestmark = pytest.mark.django_db
 
@@ -69,3 +73,53 @@ def test_rf_024_updating_course_with_a_non_teacher_fails_and_keeps_the_teacher()
 
     course.refresh_from_db()
     assert course.teacher == teacher
+
+
+def test_rn_003_5_assigned_monitor_may_attend_the_subject_in_that_term() -> None:
+    monitor = make_user("monitor@unal.edu.co", Role.Code.MONITOR)
+    subject, term = make_subject(), make_term()
+    make_assignment(monitor, subject, term)
+
+    assert is_monitor_assigned(monitor, subject, term)
+    ensure_monitor_assigned(monitor, subject, term)
+
+
+def test_rn_003_5_monitor_without_assignment_cannot_operate_on_the_subject() -> None:
+    monitor = make_user("monitor@unal.edu.co", Role.Code.MONITOR)
+    subject, term = make_subject(), make_term()
+
+    assert not is_monitor_assigned(monitor, subject, term)
+    with pytest.raises(CatalogRuleError) as error:
+        ensure_monitor_assigned(monitor, subject, term)
+
+    assert error.value.field == "subject"
+
+
+def test_rn_003_5_assignment_does_not_carry_over_to_other_subjects_or_terms() -> None:
+    monitor = make_user("monitor@unal.edu.co", Role.Code.MONITOR)
+    subject, term = make_subject(), make_term()
+    other_subject = make_subject("1000005", "Cálculo Integral")
+    other_term = make_term("2026-1", date(2026, 2, 2), date(2026, 6, 5))
+    make_assignment(monitor, subject, term)
+
+    assert not is_monitor_assigned(monitor, other_subject, term)
+    assert not is_monitor_assigned(monitor, subject, other_term)
+
+
+def test_rn_003_5_another_monitors_assignment_does_not_authorize() -> None:
+    monitor = make_user("monitor@unal.edu.co", Role.Code.MONITOR)
+    colleague = make_user("colega@unal.edu.co", Role.Code.MONITOR)
+    subject, term = make_subject(), make_term()
+    make_assignment(colleague, subject, term)
+
+    assert not is_monitor_assigned(monitor, subject, term)
+
+
+def test_rn_002_assignment_stops_authorizing_once_the_monitor_role_is_revoked() -> None:
+    monitor = make_user("monitor@unal.edu.co", Role.Code.STUDENT, Role.Code.MONITOR)
+    subject, term = make_subject(), make_term()
+    make_assignment(monitor, subject, term)
+
+    UserRole.objects.filter(user=monitor, role__code=Role.Code.MONITOR).delete()
+
+    assert not is_monitor_assigned(monitor, subject, term)
