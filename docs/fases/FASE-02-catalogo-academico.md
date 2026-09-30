@@ -132,11 +132,11 @@ ruff check . && ruff format --check . && mypy .
 
 ## 8. Definition of Done
 
-- [ ] Las cinco entidades (`Department`, `Subject`, `AcademicTerm`, `Course`, `MonitorAssignment`) existen con sus restricciones de unicidad en base de datos.
-- [ ] Escritura restringida a administrador, con prueba de `403` por rol.
-- [ ] Un monitor sin asignación no puede operar sobre esa asignatura.
-- [ ] Esquema OpenAPI y tipos del frontend actualizados.
-- [ ] Datos semilla mínimos documentados para desarrollo (sin datos reales de personas): `python manage.py seed_catalog` (idempotente) crea seis departamentos de la FCEN, unas cuarenta asignaturas y los períodos `2026-1` y `2026-2`. No crea usuarios, cursos ni asignaciones.
+- [x] Las cinco entidades (`Department`, `Subject`, `AcademicTerm`, `Course`, `MonitorAssignment`) existen con sus restricciones de unicidad en base de datos. *(`academics/0001_initial`; `test_academics_models.py`; 2026-09-30)*
+- [x] Escritura restringida a administrador, con prueba de `403` por rol. *(`test_catalog_permissions.py`; 2026-09-30)*
+- [x] Un monitor sin asignación no puede operar sobre esa asignatura. *(`is_monitor_assigned` y `ensure_monitor_assigned` en `academics/services.py`, guarda para FASE-03; `test_academics_services.py`; 2026-09-30)*
+- [x] Esquema OpenAPI y tipos del frontend actualizados. *(prueba de vigencia del esquema en verde; `npm run gen:api` no produce cambios; 2026-09-30)*
+- [x] Datos semilla mínimos documentados para desarrollo (sin datos reales de personas): `python manage.py seed_catalog` (idempotente) crea seis departamentos de la FCEN, unas cuarenta asignaturas y los períodos `2026-1` y `2026-2`. No crea usuarios, cursos ni asignaciones. *(README §2.3; `test_seed_catalog.py`; 2026-09-30)*
 - [ ] CI en verde; PRs aprobadas.
 
 ---
