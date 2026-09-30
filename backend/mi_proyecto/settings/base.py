@@ -1,23 +1,21 @@
 """Settings shared by every environment.
 
-Values come from environment variables (ADR-002). A repo-root ``.env`` file is loaded when
-present; variables already set in the process environment take precedence over it.
+Values come from environment variables (ADR-002). The repo-root ``.env`` is loaded through
+``mi_proyecto.bootstrap``; variables already set in the process environment take precedence.
 """
 
-import os
+from datetime import timedelta
 from pathlib import Path
 
 import environ
 
+from mi_proyecto.bootstrap import load_env_file
+
 # backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# DJANGO_ENV_FILE lets tooling point at an alternative env file (tests use an empty one).
-ENV_FILE = Path(os.environ.get("DJANGO_ENV_FILE", BASE_DIR.parent / ".env"))
-
+load_env_file()
 env = environ.Env()
-if ENV_FILE.is_file():
-    environ.Env.read_env(str(ENV_FILE))
 
 # --- Security -----------------------------------------------------------------------------
 
@@ -38,6 +36,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    # Revoked refresh tokens: rotation and logout (ADR-007).
+    "rest_framework_simplejwt.token_blacklist",
+    # Local
+    "apps.accounts",
+    "apps.academics",
 ]
 
 MIDDLEWARE = [
@@ -74,10 +77,15 @@ WSGI_APPLICATION = "mi_proyecto.wsgi.application"
 # --- Database (ADR-005: PostgreSQL only, configured through DATABASE_URL) -----------------
 
 DATABASES = {"default": env.db("DATABASE_URL")}
+# Fail fast (e.g. the health check) when the database is unreachable; the URL may override it.
+DATABASES["default"]["OPTIONS"] = {"connect_timeout": 5, **DATABASES["default"].get("OPTIONS", {})}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Authentication -----------------------------------------------------------------------
+
+# Set in the project's first migration (ADR-008); changing it later means rebuilding the database.
+AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -90,6 +98,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 SESSION_COOKIE_SAMESITE = env.str("COOKIE_SAMESITE", default="Lax")
 CSRF_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
+# Scripts receive the token from GET /api/v1/auth/csrf/, never from the cookie.
+CSRF_COOKIE_HTTPONLY = True
 
 # --- CORS (whitelist only) ------------------------------------------------------------------
 
@@ -101,16 +111,15 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 # --- Django REST Framework ----------------------------------------------------------------
 
 REST_FRAMEWORK = {
-    # Only session auth until ADR-007 (authentication mechanism) is confirmed.
+    # JWT in HttpOnly cookies with CSRF protection (ADR-007).
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "apps.accounts.authentication.CookieJWTAuthentication",
     ],
     # Every endpoint is private unless it explicitly opts out.
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PAGINATION_CLASS": "shared.pagination.DefaultPagination",
-    "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
@@ -118,8 +127,24 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": env.str("THROTTLE_RATE_ANON", default="60/minute"),
         "user": env.str("THROTTLE_RATE_USER", default="600/minute"),
+        # Login, registration, refresh and logout (ScopedRateThrottle, SAD section 7).
+        "auth": env.str("THROTTLE_RATE_AUTH", default="10/minute"),
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# --- JWT (ADR-007) ------------------------------------------------------------------------
+
+SIMPLE_JWT = {
+    # Short-lived access token; the refresh cookie renews it silently.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    # Every refresh issues a new refresh token and revokes the previous one.
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    # Tokens carry a hash of the password: changing it ends every open session.
+    "CHECK_REVOKE_TOKEN": True,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -129,9 +154,24 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+# --- Logging --------------------------------------------------------------------------------
+
+# Records go to stderr; never log passwords, tokens or cookies.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "apps": {"handlers": ["console"], "level": "INFO", "propagate": True},
+    },
+}
+
 # --- Internationalization -----------------------------------------------------------------
 
-LANGUAGE_CODE = "en-us"
+# Validation messages reach the Spanish interface as-is (password rules, DRF errors).
+LANGUAGE_CODE = "es"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True

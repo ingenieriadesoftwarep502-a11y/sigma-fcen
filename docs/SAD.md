@@ -159,7 +159,7 @@ Tabla de decisión para agentes. Sin ambigüedad.
 | "no se puede reservar una franja pasada" | `domain/rules.py` | serializer, vista |
 | "reservar y marcar la franja ocupada en una transacción" | `services.py` | vista, modelo |
 | "el cuerpo debe traer `slot_id` numérico" | `serializers.py` | dominio |
-| "solo el rol Estudiante accede" | `permissions.py` | vista, serializer |
+| "solo el rol Estudiante accede" | `permissions.py` (las clases por rol comunes están en `backend/shared/permissions.py`, §7.1) | vista, serializer |
 | "una franja no admite dos reservas activas" | `models.py` como `UniqueConstraint` | solo en Python |
 | "traducir un error de dominio a HTTP 409" | *exception handler* en `shared/` | dominio |
 
@@ -247,7 +247,7 @@ Los tipos de `types/api.d.ts` se **generan** desde el esquema OpenAPI del backen
 
 ### 6.2 Endpoints propuestos
 
-Todos en `[PROPUESTA]`. Ninguno se implementa antes de cerrar el ADR de su fase.
+Todos en `[PROPUESTA]`, salvo los de la fase 01, implementados en FASE-01 (permisos reales en §7.1). Ninguno se implementa antes de cerrar el ADR de su fase.
 
 | Método | Ruta | Rol | Historia | Fase |
 |---|---|---|---|---|
@@ -259,6 +259,8 @@ Todos en `[PROPUESTA]`. Ninguno se implementa antes de cerrar el ADR de su fase.
 | `GET/POST` | `/api/v1/users/` | admin | HU-11 | 01 |
 | `GET/PATCH` | `/api/v1/users/{id}/` | admin | HU-11 | 01 |
 | `POST` | `/api/v1/users/{id}/deactivate/` | admin | HU-11 | 01 |
+| `POST` | `/api/v1/users/{id}/roles/` | admin | HU-11 | 01 |
+| `GET` | `/api/v1/auth/csrf/` | público | HU-01 | 01 |
 | `GET/POST` | `/api/v1/subjects/` | admin (escritura), autenticado (lectura) | HU-11 | 02 |
 | `GET/POST` | `/api/v1/courses/` | admin | HU-11 | 02 |
 | `GET/POST` | `/api/v1/availability-slots/` | monitor (escritura), autenticado (lectura) | HU-05, HU-02 | 03 |
@@ -312,18 +314,86 @@ Formato único de error, inspirado en RFC 9457:
 
 | Aspecto | Decisión | Estado |
 |---|---|---|
-| Autenticación | JWT (`simplejwt`) en cookies `HttpOnly` + `SameSite`, con token de refresco | `[CONFIRMADO]` ADR-007 |
-| Autorización | Clases de permiso DRF por rol (roles múltiples vía `UserRole`) y por propiedad del recurso | `[CONFIRMADO]` ADR-008 |
+| Autenticación | JWT (`simplejwt`) en cookies `HttpOnly` + `SameSite`, con token de refresco | `[CONFIRMADO]` ADR-007 · `[IMPLEMENTADO]` FASE-01 (§7.1) |
+| Autorización | Clases de permiso DRF por rol (roles múltiples vía `UserRole`) y por propiedad del recurso | `[CONFIRMADO]` ADR-008 · por rol `[IMPLEMENTADO]` FASE-01 (§7.1) |
 | Secretos | Solo por variables de entorno; `.env` fuera del repositorio | `[CONFIRMADO]` ADR-002 |
 | CORS | Lista blanca desde `CORS_ALLOWED_ORIGINS` | `[CONFIRMADO]` ADR-002 |
-| CSRF | Activo para autenticación por cookies | `[CONFIRMADO]` ADR-007 |
+| CSRF | Activo para autenticación por cookies | `[CONFIRMADO]` ADR-007 · `[IMPLEMENTADO]` FASE-01 (§7.1) |
 | Transporte | HTTPS obligatorio; `SECURE_SSL_REDIRECT` en producción | `[PROPUESTA]` |
-| Contraseñas | Validadores nativos de Django; hasher PBKDF2 | `[PROPUESTA]` |
-| Limitación de tasa | `throttling` de DRF en autenticación y reservas | `[PROPUESTA]` |
-| Auditoría | Registro de operaciones sensibles con actor, acción y marca de tiempo | `[PROPUESTA]` |
+| Contraseñas | Validadores nativos de Django; hasher PBKDF2 | `[PROPUESTA]` — en FASE-01 se aplican los cuatro validadores nativos y el hasher por defecto de Django (`base.py` no redefine `PASSWORD_HASHERS`) |
+| Limitación de tasa | `throttling` de DRF en autenticación y reservas | `[PROPUESTA]` — en autenticación `[IMPLEMENTADO]` FASE-01: ámbito `auth` (10/min por defecto) en registro, inicio, renovación y cierre de sesión, además de `anon` (60/min) y `user` (600/min) globales |
+| Auditoría | Registro de operaciones sensibles con actor, acción y marca de tiempo | `[PROPUESTA]` — gestión de usuarios `[IMPLEMENTADO]` FASE-01 con `AuditLog` de solo inserción (DDD §4.1.1) |
 | Archivos subidos | Validación de tipo y tamaño; nombres sanitizados; servidos con `Content-Disposition` | `[PENDIENTE]` ADR-012 |
 
 **Deuda de seguridad corregida en FASE-00:** la `SECRET_KEY` que estaba versionada en `backend/mi_proyecto/settings.py` se eliminó del código y se lee del entorno; `DEBUG` se controla por entorno y es siempre `False` en producción. Una prueba falla si la clave activa coincide con la comprometida (R-07 del TRD).
+
+### 7.1 Modelo de permisos implementado · `[IMPLEMENTADO]` FASE-01
+
+Estado real del código al cierre de FASE-01. Si este apartado y el código difieren, manda el código.
+
+**Autenticación (ADR-007).** `CookieJWTAuthentication` (`backend/apps/accounts/authentication.py`) es la única clase de autenticación configurada en DRF.
+
+| Elemento | Implementación |
+|---|---|
+| Token de acceso | Cookie `access_token`, `HttpOnly`, ruta `/`, vigencia de 15 minutos |
+| Token de refresco | Cookie `refresh_token`, `HttpOnly`, ruta `/api/v1/auth/` (solo viaja a los endpoints de autenticación), vigencia de 1 día |
+| Atributos de cookie | `Secure` según `SESSION_COOKIE_SECURE`; `SameSite` desde la variable `COOKIE_SAMESITE` (por defecto `Lax`) |
+| Rotación | Cada renovación emite un refresco nuevo y revoca el anterior (`ROTATE_REFRESH_TOKENS`, `BLACKLIST_AFTER_ROTATION`) |
+| Cambio de contraseña | Los tokens llevan un hash de la contraseña (`CHECK_REVOKE_TOKEN`); al cambiarla dejan de valer tanto el acceso como el refresco emitidos antes |
+| Cuenta desactivada | La validación del token comprueba `is_active` en cada petición y en cada renovación: la cuenta queda bloqueada de inmediato (CA-HU11-2) |
+| CSRF | Las peticiones no seguras autenticadas por cookie exigen `X-CSRFToken`. El token se entrega en el cuerpo de `GET /api/v1/auth/csrf/`, porque la cookie `csrftoken` también es `HttpOnly`. Registro, inicio, renovación y cierre de sesión verifican CSRF de forma explícita; el inicio de sesión rota el token CSRF |
+| Cierre de sesión | Revoca el refresco (lista negra) y borra ambas cookies. Un inicio de sesión nuevo revoca el refresco anterior del mismo navegador |
+
+**Clases de permiso por rol.** Viven en `backend/shared/permissions.py` para que todos los contextos las reutilicen.
+
+| Clase | Concede acceso si el usuario autenticado tiene el rol |
+|---|---|
+| `HasRole` | Base: `user.is_authenticated and user.has_role(role)` |
+| `IsStudent` | `STUDENT` |
+| `IsMonitor` | `MONITOR` |
+| `IsTeacher` | `TEACHER` |
+| `IsAdmin` | `ADMIN` |
+
+Los roles se consultan en `UserRole` en cada petición; `is_staff` e `is_superuser` **no** conceden roles de negocio (ADR-008). El permiso por defecto de DRF es `IsAuthenticated`: un endpoint es privado salvo que declare `AllowAny` de forma explícita. En FASE-01 solo `IsAdmin` está en uso; las demás clases quedan disponibles para las fases siguientes.
+
+**Matriz endpoint → permiso (FASE-01).**
+
+| Método | Ruta | Permiso en código | Credencial que se evalúa | Respuesta correcta |
+|---|---|---|---|---|
+| `GET` | `/api/v1/auth/csrf/` | `AllowAny` | ninguna | `200` con `csrfToken` |
+| `POST` | `/api/v1/auth/register/` | `AllowAny` + CSRF + *throttle* `auth` | ninguna | `201` |
+| `POST` | `/api/v1/auth/login/` | `AllowAny` + CSRF + *throttle* `auth` | ninguna | `200` y cookies; `401` con credenciales inválidas |
+| `POST` | `/api/v1/auth/refresh/` | `AllowAny` + CSRF + *throttle* `auth` | cookie de refresco | `200`; `401` sin refresco válido (y borra las cookies) |
+| `POST` | `/api/v1/auth/logout/` | `AllowAny` + CSRF + *throttle* `auth` | cookie de refresco, si existe | `204` |
+| `GET` | `/api/v1/users/me/` | `IsAuthenticated` (por defecto) | cookie de acceso | `200` |
+| `GET/POST` | `/api/v1/users/` | `IsAdmin` | cookie de acceso | `200` paginado / `201` |
+| `GET/PATCH` | `/api/v1/users/{id}/` | `IsAdmin` | cookie de acceso | `200` |
+| `POST` | `/api/v1/users/{id}/roles/` | `IsAdmin` | cookie de acceso | `200` |
+| `POST` | `/api/v1/users/{id}/deactivate/` | `IsAdmin` | cookie de acceso | `200` |
+| `GET` | `/api/v1/health/`, `/api/v1/schema/`, `/api/v1/docs/` | `AllowAny` | ninguna | `200` |
+
+> **Diferencia con el contrato de FASE-01 §4 y con §6.2:** ambos marcan `logout` y `refresh` como «autenticado». En el código no exigen cookie de acceso (`authentication_classes = ()`): `refresh` debe funcionar con el acceso vencido y `logout` debe poder revocar el refresco aunque el acceso haya expirado. La protección real es la cookie de refresco, CSRF y la limitación de tasa.
+
+**`401` frente a `403`.**
+
+| Situación | Código |
+|---|---|
+| Sin cookie de acceso en un endpoint privado | `401` |
+| Token de acceso inválido o vencido, cuenta desactivada o contraseña cambiada después de emitir el token | `401` |
+| Credenciales incorrectas en el inicio de sesión (mismo mensaje para correo desconocido, contraseña errónea o cuenta inactiva) | `401` |
+| Autenticado, pero sin el rol requerido | `403` |
+| Petición no segura sin token CSRF válido | `403` con `detail` que empieza por `CSRF Failed` |
+| Operación que dejaría el sistema sin administrador activo, o que un administrador aplica sobre sí mismo | `400` |
+
+**Protección de rutas en el frontend (`frontend/my-app`).** Solo oculta lo que la API ya deniega (RN-002.1, RNF-SEC-004).
+
+- `features/auth/session/require-session.tsx` exporta `RequireSession`, que acepta una lista opcional `roles`. Sin sesión redirige a `/login?next=<ruta>`; con sesión pero sin ninguno de los roles indicados redirige a `/inicio`; si la sesión no puede comprobarse, muestra un estado con opción de reintento.
+- `app/(app)/layout.tsx` envuelve todo el grupo de rutas con sesión en `SessionProvider` y `RequireSession` sin roles.
+- `app/(app)/admin/usuarios/page.tsx` usa `RequireSession roles={["ADMIN"]}`.
+- `lib/api-client.ts` envía las cookies (`credentials: "include"`) y adjunta `X-CSRFToken` en peticiones no seguras. Ante un `403` de CSRF pide un token nuevo y reintenta una vez; ante un `401` intenta una sola renovación en `/auth/refresh/` antes de reintentar, salvo en los endpoints de autenticación.
+- `lib/auth.ts` (`safeRedirectPath`) solo acepta rutas internas en `next`, para evitar redirecciones abiertas.
+
+> **Nota:** la estructura de rutas real usa el grupo `app/(app)/` con subrutas por área (`admin/usuarios`, `inicio`), no los grupos por rol `(student)`, `(monitor)`, `(teacher)` y `(admin)` que propone §5.2.
 
 ---
 

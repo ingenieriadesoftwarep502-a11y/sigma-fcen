@@ -1,0 +1,364 @@
+"""HTTP endpoints of the identity and access context."""
+
+import logging
+from typing import cast
+
+from django.contrib.auth import authenticate
+from django.db import IntegrityError
+from django.db.models import QuerySet
+from django.http import HttpResponse
+from django.middleware.csrf import get_token, rotate_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from rest_framework import generics, serializers, status
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import AllowAny
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.accounts.authentication import (
+    REFRESH_COOKIE,
+    SessionRefreshSerializer,
+    clear_token_cookies,
+    enforce_csrf,
+    revoke_refresh_token,
+    set_token_cookies,
+)
+from apps.accounts.domain.rules import AdminLockoutError
+from apps.accounts.exports import XLSX_CONTENT_TYPE, build_users_workbook, export_filename
+from apps.accounts.models import User
+from apps.accounts.selectors import admin_user_listing, filter_users, user_summary
+from apps.accounts.serializers import (
+    DUPLICATE_EMAIL_MESSAGE,
+    AdminUserSerializer,
+    DeactivationRequestSerializer,
+    DeactivationResultSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    RoleAssignmentSerializer,
+    UserCreateSerializer,
+    UserFilterSerializer,
+    UserSerializer,
+    UserSummarySerializer,
+    UserUpdateSerializer,
+)
+from apps.accounts.services import (
+    create_user,
+    deactivate_user,
+    deactivation_impact,
+    register_student,
+    set_roles,
+    update_user,
+)
+from shared.permissions import IsAdmin
+
+logger = logging.getLogger(__name__)
+
+# Same message for unknown email, wrong password and inactive account: no account enumeration.
+INVALID_CREDENTIALS_MESSAGE = "Correo o contraseña incorrectos."
+INVALID_SESSION_MESSAGE = "La sesión no es válida o expiró."
+
+# Credential endpoints get a stricter, shared per-client budget against brute force (SAD 7).
+AUTH_THROTTLE_CLASSES = (AnonRateThrottle, ScopedRateThrottle)
+AUTH_THROTTLE_SCOPE = "auth"
+
+
+def _unauthorized(detail: str) -> Response:
+    return Response({"detail": detail}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class CsrfView(APIView):
+    """Hands out the CSRF token the frontend echoes in X-CSRFToken (ADR-007).
+
+    The token travels in the body because the frontend may run on another host, where it
+    cannot read the API's cookies; the csrftoken cookie itself stays HttpOnly.
+    """
+
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: inline_serializer("CsrfToken", {"csrfToken": serializers.CharField()}),
+        },
+    )
+    @method_decorator(ensure_csrf_cookie)
+    def get(self, request: Request) -> Response:
+        return Response({"csrfToken": get_token(request._request)})
+
+
+class RegisterView(APIView):
+    """Public self-registration with an institutional email (HU-01)."""
+
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
+
+    @extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
+    def post(self, request: Request) -> Response:
+        # No authentication runs here, so CSRF is checked explicitly (login CSRF, ADR-007).
+        enforce_csrf(request)
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = register_student(**serializer.validated_data)
+        except IntegrityError as error:
+            raise _duplicate_email(error) from error
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class LoginView(APIView):
+    """Issues the access and refresh tokens as HttpOnly cookies (ADR-007)."""
+
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
+
+    @extend_schema(
+        request=LoginSerializer,
+        responses={200: UserSerializer, 401: OpenApiResponse(description="Invalid credentials")},
+    )
+    def post(self, request: Request) -> Response:
+        # Prevents login CSRF: a third-party page cannot sign the browser into another account.
+        enforce_csrf(request)
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # ModelBackend also rejects inactive accounts (RN-002.4).
+        user = authenticate(
+            request._request,
+            email=serializer.validated_data["email"],
+            password=serializer.validated_data["password"],
+        )
+        if user is None:
+            # Neither the password nor the submitted email is logged.
+            logger.warning("Failed login attempt.")
+            return _unauthorized(INVALID_CREDENTIALS_MESSAGE)
+        # A session left behind in this browser must not outlive the new one.
+        previous_refresh = request.COOKIES.get(REFRESH_COOKIE)
+        if previous_refresh:
+            revoke_refresh_token(previous_refresh)
+        refresh = RefreshToken.for_user(user)
+        response = Response(UserSerializer(user).data)
+        set_token_cookies(response, access=str(refresh.access_token), refresh=str(refresh))
+        # Like django.contrib.auth.login: a CSRF token seen before signing in stops working.
+        rotate_token(request._request)
+        return response
+
+
+class RefreshView(APIView):
+    """Issues a new access cookie from the refresh cookie, even if the access token expired."""
+
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
+
+    @extend_schema(
+        request=None,
+        responses={200: None, 401: OpenApiResponse(description="Missing or invalid session")},
+    )
+    def post(self, request: Request) -> Response:
+        enforce_csrf(request)
+        raw_refresh = request.COOKIES.get(REFRESH_COOKIE)
+        if not raw_refresh:
+            return _unauthorized(INVALID_SESSION_MESSAGE)
+        serializer = SessionRefreshSerializer(data={"refresh": raw_refresh})
+        try:
+            # Also rejects refresh tokens of deactivated users (CA-HU11-2).
+            serializer.is_valid(raise_exception=True)
+        except (TokenError, AuthenticationFailed) as error:
+            # Only the error type: the token itself is never logged.
+            logger.info("Invalid refresh token rejected (%s).", type(error).__name__)
+            # A dead session must not leave stale token cookies in the browser.
+            response = _unauthorized(INVALID_SESSION_MESSAGE)
+            clear_token_cookies(response)
+            return response
+        response = Response(status=status.HTTP_200_OK)
+        # With ROTATE_REFRESH_TOKENS the serializer also returns a new refresh token.
+        set_token_cookies(
+            response,
+            access=serializer.validated_data["access"],
+            refresh=serializer.validated_data.get("refresh"),
+        )
+        return response
+
+
+class LogoutView(APIView):
+    """Revokes the refresh token and clears the token cookies.
+
+    No authentication: an expired access cookie must not prevent revoking the refresh token.
+    """
+
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+    throttle_classes = AUTH_THROTTLE_CLASSES
+    throttle_scope = AUTH_THROTTLE_SCOPE
+
+    @extend_schema(request=None, responses={204: None})
+    def post(self, request: Request) -> Response:
+        enforce_csrf(request)
+        raw_refresh = request.COOKIES.get(REFRESH_COOKIE)
+        if raw_refresh:
+            revoke_refresh_token(raw_refresh)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        clear_token_cookies(response)
+        return response
+
+
+class MeView(APIView):
+    """The authenticated user's own identity and roles (CA-HU01-5)."""
+
+    @extend_schema(responses={200: UserSerializer})
+    def get(self, request: Request) -> Response:
+        # IsAuthenticated (the default permission) guarantees a real user here.
+        return Response(UserSerializer(cast(User, request.user)).data)
+
+
+def _duplicate_email(error: IntegrityError) -> serializers.ValidationError:
+    # Two concurrent requests for the same email: the database constraint wins.
+    return serializers.ValidationError({"email": [DUPLICATE_EMAIL_MESSAGE]})
+
+
+def _admin_lockout(error: AdminLockoutError) -> Response:
+    # Nothing was written: the service checks the rule before any change or audit entry.
+    return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _filtered_users(request: Request) -> QuerySet[User]:
+    """Applies ?search=, ?role= and ?is_active=; invalid values become a 400 response."""
+    params = UserFilterSerializer(data=request.query_params)
+    params.is_valid(raise_exception=True)
+    return filter_users(admin_user_listing(), **params.validated_data)
+
+
+@extend_schema_view(get=extend_schema(parameters=[UserFilterSerializer]))
+class UserListCreateView(generics.ListAPIView[User]):
+    """Administrators list, search and filter accounts and create new ones (RF-020, RF-021)."""
+
+    permission_classes = (IsAdmin,)
+    serializer_class = AdminUserSerializer
+
+    def get_queryset(self) -> QuerySet[User]:
+        return _filtered_users(self.request)
+
+    @extend_schema(request=UserCreateSerializer, responses={201: AdminUserSerializer})
+    def post(self, request: Request) -> Response:
+        serializer = UserCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = create_user(actor=cast(User, request.user), **serializer.validated_data)
+        except IntegrityError as error:
+            raise _duplicate_email(error) from error
+        return Response(AdminUserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class UserSummaryView(APIView):
+    """Headline numbers and the latest audit entries for the admin dashboard."""
+
+    permission_classes = (IsAdmin,)
+
+    @extend_schema(responses={200: UserSummarySerializer})
+    def get(self, request: Request) -> Response:
+        return Response(UserSummarySerializer(user_summary()).data)
+
+
+class UserExportView(APIView):
+    """Every account matching the list filters as an .xlsx download, without pagination."""
+
+    permission_classes = (IsAdmin,)
+
+    @extend_schema(
+        parameters=[UserFilterSerializer],
+        responses={
+            (200, XLSX_CONTENT_TYPE): OpenApiResponse(
+                response=OpenApiTypes.BINARY, description="Excel workbook"
+            ),
+        },
+    )
+    def get(self, request: Request) -> HttpResponse:
+        # A server-side cursor keeps memory flat; chunk_size lets the roles prefetch still run.
+        users = _filtered_users(request).iterator(chunk_size=500)
+        response = HttpResponse(build_users_workbook(users), content_type=XLSX_CONTENT_TYPE)
+        response["Content-Disposition"] = f'attachment; filename="{export_filename()}"'
+        return response
+
+
+class UserDetailView(generics.RetrieveAPIView[User]):
+    """Administrators read and edit one account; PUT is not offered."""
+
+    permission_classes = (IsAdmin,)
+    queryset = User.objects.all()
+    serializer_class = AdminUserSerializer
+
+    @extend_schema(request=UserUpdateSerializer, responses={200: AdminUserSerializer})
+    def patch(self, request: Request, pk: str) -> Response:
+        user = self.get_object()
+        serializer = UserUpdateSerializer(data=request.data, context={"user": user})
+        serializer.is_valid(raise_exception=True)
+        try:
+            update_user(actor=cast(User, request.user), user=user, data=serializer.validated_data)
+        except IntegrityError as error:
+            raise _duplicate_email(error) from error
+        except AdminLockoutError as error:
+            return _admin_lockout(error)
+        return Response(AdminUserSerializer(user).data)
+
+
+class UserRolesView(generics.GenericAPIView[User]):
+    """Replaces the roles of one account (RF-021)."""
+
+    permission_classes = (IsAdmin,)
+    queryset = User.objects.all()
+    serializer_class = RoleAssignmentSerializer
+
+    @extend_schema(request=RoleAssignmentSerializer, responses={200: AdminUserSerializer})
+    def post(self, request: Request, pk: str) -> Response:
+        user = self.get_object()
+        serializer = RoleAssignmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            set_roles(
+                actor=cast(User, request.user), user=user, roles=serializer.validated_data["roles"]
+            )
+        except AdminLockoutError as error:
+            return _admin_lockout(error)
+        return Response(AdminUserSerializer(user).data)
+
+
+class UserDeactivateView(generics.GenericAPIView[User]):
+    """Reports the impact first; deactivates only with confirm=true (CA-HU11-2, CA-HU11-3)."""
+
+    permission_classes = (IsAdmin,)
+    queryset = User.objects.all()
+    serializer_class = DeactivationRequestSerializer
+
+    @extend_schema(
+        request=DeactivationRequestSerializer, responses={200: DeactivationResultSerializer}
+    )
+    def post(self, request: Request, pk: str) -> Response:
+        user = self.get_object()
+        serializer = DeactivationRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data["confirm"]:
+            try:
+                impact = deactivate_user(actor=cast(User, request.user), user=user)
+            except AdminLockoutError as error:
+                return _admin_lockout(error)
+        else:
+            impact = deactivation_impact(user)
+        result = {"deactivated": not user.is_active, "impact": impact, "user": user}
+        return Response(DeactivationResultSerializer(result).data)

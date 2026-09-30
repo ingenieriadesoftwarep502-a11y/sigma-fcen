@@ -1,0 +1,84 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 3rem;
+  padding: 0 1.25rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform var(--duration) var(--ease-out-expo),
+    box-shadow var(--duration),
+    filter var(--duration),
+    background var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.button[hidden] {
+  display: none;
+}
+
+.button[data-size="sm"] {
+  height: 2.5rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Soft-disabled buttons (aria-disabled) look the same but keep keyboard focus. */
+.button:is(:disabled, [aria-disabled="true"]) {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.button[data-variant="accent"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 10px 24px -14px var(--accent-glow);
+}
+
+.button[data-variant="accent"]:hover:not(:disabled, [aria-disabled="true"]) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 14px 28px -14px var(--accent-glow-strong);
+}
+
+.button[data-variant="accent"]:active:not(:disabled, [aria-disabled="true"]) {
+  transform: translateY(0);
+}
+
+.button[data-variant="ghost"] {
+  height: 2.5rem;
+  border: 1px solid var(--border-strong, currentColor);
+  background: transparent;
+  color: inherit;
+  font-weight: 500;
+}
+
+.button[data-variant="ghost"]:hover:not(:disabled, [aria-disabled="true"]) {
+  border-color: var(--text-subtle, currentColor);
+  background: var(--control-hover);
+}
+
+.button[data-variant="danger"] {
+  height: 2.5rem;
+  border: 1px solid var(--danger-line);
+  background: var(--danger-fill);
+  color: var(--danger-ink);
+}
+
+.button[data-variant="danger"]:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--danger-fill-hover);
+}
+
+.button[data-variant="danger"]:focus-visible {
+  outline-color: var(--danger);
+}

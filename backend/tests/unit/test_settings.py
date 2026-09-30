@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib
+import logging
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -67,6 +68,14 @@ def test_settings_load_from_environment_without_env_file(
     assert base.DATABASES["default"]["NAME"] == "sigma_fcen"
 
 
+def test_database_connect_timeout_defaults_to_5_seconds(isolated_env: pytest.MonkeyPatch) -> None:
+    isolated_env.setenv("DATABASE_URL", f"{REQUIRED_ENV['DATABASE_URL']}?sslmode=require")
+
+    base = _import_fresh("mi_proyecto.settings.base", isolated_env)
+
+    assert base.DATABASES["default"]["OPTIONS"] == {"connect_timeout": 5, "sslmode": "require"}
+
+
 @pytest.mark.parametrize("missing_key", ["SECRET_KEY", "DATABASE_URL"])
 def test_missing_required_variable_fails_with_clear_message(
     isolated_env: pytest.MonkeyPatch, missing_key: str
@@ -82,3 +91,8 @@ def test_production_requires_explicit_allowed_hosts(isolated_env: pytest.MonkeyP
 
     with pytest.raises(ImproperlyConfigured, match="ALLOWED_HOSTS"):
         _import_fresh("mi_proyecto.settings.production", isolated_env)
+
+
+def test_rnf_obs_001_application_loggers_emit_info_records() -> None:
+    # Django applies settings.LOGGING at startup; without it the root level stays at WARNING.
+    assert logging.getLogger("apps.accounts").isEnabledFor(logging.INFO)

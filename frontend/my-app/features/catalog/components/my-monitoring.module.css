@@ -1,0 +1,25 @@
+/* Card, grid, skeleton and state styles are shared with my-courses.module.css. */
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  margin-bottom: calc(var(--space-2) * -1);
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.groupLabel {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}

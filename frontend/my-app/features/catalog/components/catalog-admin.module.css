@@ -1,0 +1,318 @@
+.admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.tabPanel {
+  min-width: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* --- Table columns ------------------------------------------------------------------------ */
+
+.codeColumn {
+  width: 8.5rem;
+}
+
+.wideColumn {
+  width: 32%;
+}
+
+.numberColumn {
+  width: 7rem;
+}
+
+.groupColumn {
+  width: 5.5rem;
+}
+
+.stateColumn {
+  width: 8rem;
+}
+
+.actionsColumn {
+  width: 19rem;
+}
+
+.subjectsTable {
+  min-width: 52rem;
+}
+
+.assignmentsTable {
+  min-width: 56rem;
+}
+
+.code {
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.muted {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.number[data-zero] {
+  color: var(--text-subtle);
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.personName {
+  overflow: hidden;
+  font-weight: 500;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.personEmail {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.personRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Needs attention but nothing failed: tinted like the role tags, in the warning hue. */
+.warningTag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--warning-line);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.warningTag::before {
+  content: "";
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--warning);
+}
+
+.rowActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.confirmText {
+  font-size: 0.875rem;
+  color: var(--danger-ink);
+}
+
+/* --- Departments and terms ---------------------------------------------------------------- */
+
+.organization {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-5);
+}
+
+@media (min-width: 1000px) {
+  .organization {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+}
+
+.blockHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-left: var(--space-1);
+}
+
+.blockTitle {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.blockEmpty {
+  padding: var(--space-4) var(--space-1) var(--space-3);
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 2.5rem;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 3.5rem;
+  padding: var(--space-2) var(--space-1);
+}
+
+.row + .row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.termCode {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.dates {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.currentTag {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.row:has(.termCode) {
+  grid-template-columns: 5rem minmax(0, 1fr) auto;
+}
+
+.listSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1) var(--space-4);
+}
+
+.listSkeleton span {
+  height: 0.75rem;
+  width: 70%;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.listSkeleton span:nth-child(2) {
+  width: 55%;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listSkeleton span {
+    animation: none;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .row:has(.termCode) {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+
+  .row:has(.termCode) .dates {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    white-space: normal;
+  }
+}

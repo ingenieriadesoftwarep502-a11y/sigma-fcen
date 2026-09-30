@@ -1,0 +1,180 @@
+.carousel {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.slide img {
+  transform: scale(1.08);
+  will-change: transform;
+}
+
+.slide[data-previous="true"] {
+  z-index: 1;
+  opacity: 1;
+}
+
+.slide[data-active="true"] {
+  z-index: 2;
+  opacity: 1;
+  animation: reveal 1.6s var(--ease-out-expo) both;
+}
+
+/* The previous slide keeps drifting underneath while the next one sweeps in. */
+.slide:is([data-active="true"], [data-previous="true"])[data-drift="left"] img {
+  animation: drift-left 10s var(--ease-out-expo) forwards;
+}
+
+.slide:is([data-active="true"], [data-previous="true"])[data-drift="right"] img {
+  animation: drift-right 10s var(--ease-out-expo) forwards;
+}
+
+/* A slanted wipe from the right while the photo comes into focus. */
+@keyframes reveal {
+  from {
+    clip-path: polygon(118% 0, 100% 0, 100% 100%, 100% 100%);
+    filter: brightness(1.35) blur(8px);
+  }
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, -18% 100%);
+    filter: brightness(1) blur(0);
+  }
+}
+
+@keyframes drift-left {
+  from { transform: scale(1.2) translate3d(2.5%, 0, 0); }
+  to { transform: scale(1.06) translate3d(-1%, 0, 0); }
+}
+
+@keyframes drift-right {
+  from { transform: scale(1.2) translate3d(-2.5%, 0, 0); }
+  to { transform: scale(1.06) translate3d(1%, 0, 0); }
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background:
+    radial-gradient(120% 90% at 78% 45%, transparent 30%, rgb(7 10 8 / 0.55) 100%),
+    linear-gradient(to top, rgb(7 10 8 / 0.8) 0%, transparent 45%),
+    linear-gradient(to right, rgb(7 10 8 / 0.55) 0%, transparent 55%);
+}
+
+.controls {
+  position: absolute;
+  z-index: 2;
+  bottom: clamp(1.25rem, 4vh, 2.5rem);
+  left: clamp(1rem, 5vw, 4.5rem);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dot {
+  position: relative;
+  display: block;
+  width: 3rem;
+  height: 1.75rem;
+  cursor: pointer;
+}
+
+.dot::before,
+.fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  translate: 0 -50%;
+}
+
+.dot::before {
+  content: "";
+  width: 100%;
+  background: rgb(255 255 255 / 0.28);
+  transition: background 0.3s;
+}
+
+.dot:hover::before {
+  background: rgb(255 255 255 / 0.55);
+}
+
+.fill {
+  width: 0;
+  background: #fff;
+}
+
+.dot[aria-current="true"] .fill {
+  animation: fill var(--slide-duration, 7s) linear forwards;
+}
+
+/* A paused carousel shows the current photo as fully read. */
+.controls[data-paused="true"] .fill {
+  animation-play-state: paused;
+}
+
+@keyframes fill {
+  to { width: 100%; }
+}
+
+.toggle {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  background: rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.toggle:hover {
+  background: rgb(255 255 255 / 0.18);
+  border-color: rgb(255 255 255 / 0.55);
+}
+
+.dot:focus-visible,
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .controls {
+    left: 50%;
+    translate: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide[data-active="true"] {
+    animation: fade-in 0.8s ease-out both;
+  }
+
+  .slide img,
+  .slide:is([data-active="true"], [data-previous="true"]) img {
+    animation: none;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
