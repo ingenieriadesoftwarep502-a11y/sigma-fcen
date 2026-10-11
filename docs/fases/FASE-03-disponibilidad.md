@@ -5,7 +5,7 @@
 | Sprint | 3 (semanas 7–8) |
 | Historias | HU-05 Registro de disponibilidad (5 pts) · HU-02 Consulta de monitorías (5 pts) |
 | Puntos | 10 |
-| Estado | **En curso** — gate G1 pendiente (contratos y modelo) |
+| Estado | **En curso** — diseño confirmado el 2026-10-11 |
 | ADR bloqueantes | Ninguno — ADR-010 cerrado el 2026-10-11 |
 | Requisitos | RF-030 a RF-034 |
 
@@ -40,6 +40,7 @@ Preguntas de ADR-010 que deben estar respondidas antes de la primera línea de c
 ### Entra
 
 - Modelo `AvailabilitySlot` con su máquina de estados.
+- Modelo `SlotTemplate`: plantilla semanal que genera franjas concretas (ADR-010, condición c).
 - Detección y rechazo de solapamientos del mismo monitor.
 - Creación, edición y eliminación de franjas propias.
 - Búsqueda filtrada por asignatura, rango horario y monitor.
@@ -55,17 +56,72 @@ Preguntas de ADR-010 que deben estar respondidas antes de la primera línea de c
 
 ---
 
-## 4. Contratos propuestos · `[PROPUESTA]`
+## 4. Diseño · `[CONFIRMADO]` 2026-10-11 — Nicolás García Orozco
+
+Decisiones del gate G1: retirar una franja la **cancela** (no la borra); una plantilla con choques se **rechaza entera**; las franjas empiezan **en punto o a la media** (hora de Bogotá); modalidad **presencial o virtual**.
+
+App nueva `apps/availability`. Reglas puras en `apps/availability/domain/rules.py`.
+
+### 4.1 Modelo
+
+**`AvailabilitySlot`** — la franja concreta, con fecha. Es lo que se busca y, en FASE-04, lo que se reserva.
+
+| Campo | Tipo | Regla |
+|---|---|---|
+| `monitor` | FK `User` | Rol `MONITOR` y `MonitorAssignment` en `subject` + `term` (RN-003.5) |
+| `subject` | FK `Subject` | Activa (T-02.7) |
+| `term` | FK `AcademicTerm` | La franja cae dentro de las fechas del período |
+| `template` | FK `SlotTemplate`, nulo | Plantilla que la generó; nulo si se publicó suelta |
+| `starts_at`, `ends_at` | `DateTimeField` UTC | `ends_at - starts_at` = `SLOT_DURATION_MINUTES` (60); inicio en punto o a la media, hora de Bogotá (`SLOT_START_STEP_MINUTES` = 30) |
+| `capacity` | Entero 1–20 | Por defecto `SLOT_DEFAULT_CAPACITY` (1) |
+| `status` | `AVAILABLE` · `RESERVED` · `CANCELLED` · `EXPIRED` | Transiciones de DDD §6.1 |
+| `modality` | `IN_PERSON` · `VIRTUAL` | — |
+| `location` | Texto ≤ 200 | Obligatorio: aula o enlace |
+
+Restricciones en base de datos: `CHECK (ends_at > starts_at)`, `CHECK (capacity BETWEEN 1 AND 20)` y **exclusión de solapamiento** por monitor sobre franjas no canceladas (`ExclusionConstraint` de PostgreSQL con `tstzrange`), además de la regla en el servicio. Índice `(subject, starts_at, status)`.
+
+**`SlotTemplate`** — la plantilla semanal.
+
+| Campo | Tipo | Regla |
+|---|---|---|
+| `monitor`, `subject`, `term` | FK | Mismas reglas que la franja |
+| `weekday` | 0–6 (lunes = 0) | — |
+| `start_time` | Hora local de Bogotá, en punto o a la media | — |
+| `capacity`, `modality`, `location` | — | Se copian a cada franja generada |
+| `is_active` | Booleano | Al desactivarla se cancelan sus franjas futuras sin reserva |
+
+Al crear la plantilla se generan, en una sola transacción, las franjas de ese día y hora para cada semana desde hoy hasta el fin del período. **Si alguna choca con otra franja del monitor, no se crea nada** y la respuesta `400` lista las fechas en conflicto.
+
+### 4.2 Contratos
 
 | Método | Ruta | Rol | Notas |
 |---|---|---|---|
-| `POST` | `/api/v1/availability-slots/` | monitor | `400` si se solapa |
-| `GET` | `/api/v1/availability-slots/mine/` | monitor | Franjas propias |
-| `PATCH` | `/api/v1/availability-slots/{id}/` | monitor propietario | `409` si tiene reserva |
-| `DELETE` | `/api/v1/availability-slots/{id}/` | monitor propietario | `409` si tiene reserva |
-| `GET` | `/api/v1/availability-slots/search/` | autenticado | Filtros: `subject`, `monitor`, `date_from`, `date_to` |
+| `POST` | `/api/v1/availability-slots/` | monitor | Franja suelta. `400` si se solapa, está en el pasado o la asignatura no está asignada → `403` |
+| `GET` | `/api/v1/availability-slots/mine/` | monitor | Franjas propias. Filtros: `term`, `subject`, `status`, `date_from`, `date_to` |
+| `PATCH` | `/api/v1/availability-slots/{id}/` | monitor propietario | Cambia `starts_at`, `modality`, `location`, `capacity`. `409` si ya está `RESERVED` |
+| `DELETE` | `/api/v1/availability-slots/{id}/` | monitor propietario | **Retira** la franja: pasa a `CANCELLED`, no se borra la fila. `409` si está `RESERVED` |
+| `GET` | `/api/v1/availability-slots/search/` | autenticado | Solo `AVAILABLE` y futuras. Filtros: `subject`, `monitor`, `date_from`, `date_to`, `modality`; orden por `starts_at` |
+| `POST` | `/api/v1/slot-templates/` | monitor | Crea la plantilla y genera sus franjas. `400` con las fechas en conflicto |
+| `GET` | `/api/v1/slot-templates/mine/` | monitor | Plantillas propias, filtro `term` |
+| `DELETE` | `/api/v1/slot-templates/{id}/` | monitor propietario | Desactiva la plantilla y cancela sus franjas futuras sin reserva |
 
-**Modelo:** ver [`../DDD.md`](../DDD.md) §4.3.
+Sin credenciales `401`; con otro rol `403`; sobre una franja ajena `404`. Las fechas viajan en ISO 8601 con zona; los filtros `date_from`/`date_to` son fechas locales de Bogotá. Listados con la paginación estándar.
+
+### 4.3 Parámetros configurables (ADR-010, condición a)
+
+| Parámetro | Valor | Usado en |
+|---|---|---|
+| `SLOT_DURATION_MINUTES` | 60 | FASE-03 |
+| `SLOT_DEFAULT_CAPACITY` | 1 | FASE-03 |
+| `SLOT_START_STEP_MINUTES` | 30 | FASE-03 |
+| `RESERVATION_MIN_ADVANCE_HOURS` | 2 | FASE-04 |
+| `RESERVATION_MAX_ACTIVE_PER_SUBJECT_WEEK` | 1 | FASE-04 |
+
+### 4.4 Fuera de este diseño
+
+`EXPIRED` se define en el modelo, pero el proceso que marca las franjas vencidas llega con FASE-05; mientras tanto, la búsqueda excluye las franjas pasadas por fecha. La regla de `409` por reserva se prueba con el estado `RESERVED`, porque `Reservation` aún no existe.
+
+**Modelo de dominio:** ver [`../DDD.md`](../DDD.md) §4.3.
 
 ---
 

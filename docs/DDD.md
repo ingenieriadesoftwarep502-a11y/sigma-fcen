@@ -202,18 +202,20 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 
 ---
 
-### 4.3 Agregado `AvailabilitySlot` · raíz
+### 4.3 Agregado `AvailabilitySlot` · raíz, con `SlotTemplate` · `[CONFIRMADO]` 2026-10-11
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | `id` | UUID | — |
 | `monitor` | FK a `User` | Debe tener rol `MONITOR` |
-| `subject` | FK a `Subject` | Debe existir `MonitorAssignment` vigente |
-| `starts_at`, `ends_at` | Marca de tiempo UTC | RNF-DAT-001 |
+| `subject` | FK a `Subject` | Activa; debe existir `MonitorAssignment` en el período |
+| `term` | FK a `AcademicTerm` | La franja cae dentro de las fechas del período |
+| `template` | FK a `SlotTemplate`, nulo | Plantilla semanal que la generó |
+| `starts_at`, `ends_at` | Marca de tiempo UTC | RNF-DAT-001; bloque de 60 min que empieza en punto o a la media (hora de Bogotá) |
 | `capacity` | Entero | `[CONFIRMADO]` ADR-010; configurable, por defecto 1 |
 | `status` | `AVAILABLE` · `RESERVED` · `CANCELLED` · `EXPIRED` | — |
-| `modality` | `IN_PERSON` · `VIRTUAL` | `[PENDIENTE]` |
-| `location` | Texto | Aula o enlace |
+| `modality` | `IN_PERSON` · `VIRTUAL` | `[CONFIRMADO]` 2026-10-11 |
+| `location` | Texto | Aula o enlace; obligatorio |
 
 **Invariantes:**
 
@@ -221,6 +223,9 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 - Dos franjas del mismo monitor no se solapan (RN-003).
 - Una franja con reserva confirmada no se elimina (RN-003.4).
 - `starts_at` está en el futuro al crearse.
+- Retirar una franja la pasa a `CANCELLED`; la fila no se borra.
+
+**`SlotTemplate`** (plantilla semanal, ADR-010): `monitor`, `subject`, `term`, `weekday`, `start_time` local, `capacity`, `modality`, `location`, `is_active`. Al crearse genera las franjas concretas de cada semana hasta el fin del período, en una transacción; si alguna se solapa no se crea ninguna. Desactivarla cancela sus franjas futuras sin reserva. Detalle en `fases/FASE-03-disponibilidad.md` §4.
 
 ---
 
@@ -329,11 +334,11 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 
 | # | Regla | Estado |
 |---|---|---|
-| 003.1 | `ends_at > starts_at` | `[PROPUESTA]` |
-| 003.2 | Una franja no se crea en el pasado | `[PROPUESTA]` |
-| 003.3 | Dos franjas del mismo monitor no se solapan | `[PROPUESTA]` |
-| 003.4 | Una franja con reserva confirmada no se elimina ni se modifica en su horario | `[PROPUESTA]` |
-| 003.5 | El monitor solo publica franjas de asignaturas que tiene asignadas | `[PROPUESTA]` (ADR-009 cerrado) |
+| 003.1 | `ends_at > starts_at` | `[CONFIRMADO]` 2026-10-11 |
+| 003.2 | Una franja no se crea en el pasado | `[CONFIRMADO]` 2026-10-11 |
+| 003.3 | Dos franjas del mismo monitor no se solapan | `[CONFIRMADO]` 2026-10-11 |
+| 003.4 | Una franja con reserva confirmada no se elimina ni se modifica en su horario | `[CONFIRMADO]` 2026-10-11 |
+| 003.5 | El monitor solo publica franjas de asignaturas que tiene asignadas | `[CONFIRMADO]` 2026-10-11 |
 | 003.6 | Duración estándar: bloques fijos de 60 min; la franja guarda `starts_at` y `ends_at` explícitos | `[CONFIRMADO]` ADR-010 |
 | 003.7 | Las franjas se publican desde una plantilla semanal que genera franjas concretas con fecha | `[CONFIRMADO]` ADR-010 |
 
