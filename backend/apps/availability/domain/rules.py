@@ -1,6 +1,7 @@
 """Pure availability rules, free of Django and HTTP (DDD section 4.3, RN-003, ADR-010)."""
 
 from datetime import datetime, timedelta
+from enum import StrEnum
 from zoneinfo import ZoneInfo
 
 LOCAL_TZ = ZoneInfo("America/Bogota")
@@ -13,6 +14,26 @@ NAIVE_DATETIME_MESSAGE = "Las fechas de una franja deben llevar zona horaria."
 
 def duration_message(minutes: int) -> str:
     return f"La franja debe durar {minutes} minutos."
+
+
+class SlotStatus(StrEnum):
+    """Life cycle of a slot (DDD section 6.1)."""
+
+    AVAILABLE = "AVAILABLE"
+    RESERVED = "RESERVED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+
+
+# Reserve, withdraw, cancel the reservation, and the hour passing without a session.
+ALLOWED_TRANSITIONS = frozenset(
+    {
+        (SlotStatus.AVAILABLE, SlotStatus.RESERVED),
+        (SlotStatus.AVAILABLE, SlotStatus.CANCELLED),
+        (SlotStatus.RESERVED, SlotStatus.AVAILABLE),
+        (SlotStatus.RESERVED, SlotStatus.EXPIRED),
+    }
+)
 
 
 class SlotRuleError(Exception):
@@ -49,3 +70,9 @@ def ensure_valid_window(
         raise SlotRuleError("starts_at", START_STEP_MESSAGE)
     if starts_at <= now:
         raise SlotRuleError("starts_at", PAST_START_MESSAGE)
+
+
+def ensure_transition(current: SlotStatus, target: SlotStatus) -> None:
+    """States change only through the explicit transitions of DDD section 6.1."""
+    if (current, target) not in ALLOWED_TRANSITIONS:
+        raise SlotRuleError("status", f"No se puede pasar una franja de {current} a {target}.")

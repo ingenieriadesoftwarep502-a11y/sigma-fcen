@@ -6,6 +6,8 @@ import pytest
 
 from apps.availability.domain.rules import (
     SlotRuleError,
+    SlotStatus,
+    ensure_transition,
     ensure_valid_window,
     overlaps,
 )
@@ -96,3 +98,28 @@ def test_rnf_dat_001_naive_datetime_is_a_programming_error() -> None:
     # Never silently read a naive datetime as UTC or as Bogotá time.
     with pytest.raises(ValueError, match="zona horaria"):
         window(BASE.replace(tzinfo=None))
+
+
+# --- T-03.4 State machine (DDD section 6.1) ---------------------------------------------------
+
+ALLOWED = {
+    (SlotStatus.AVAILABLE, SlotStatus.RESERVED),
+    (SlotStatus.AVAILABLE, SlotStatus.CANCELLED),
+    (SlotStatus.RESERVED, SlotStatus.AVAILABLE),
+    (SlotStatus.RESERVED, SlotStatus.EXPIRED),
+}
+
+
+@pytest.mark.parametrize(("current", "target"), sorted(ALLOWED))
+def test_t_03_4_allowed_transitions(current: SlotStatus, target: SlotStatus) -> None:
+    ensure_transition(current, target)
+
+
+@pytest.mark.parametrize(
+    ("current", "target"),
+    sorted({(a, b) for a in SlotStatus for b in SlotStatus} - ALLOWED),
+)
+def test_t_03_4_forbidden_transitions_are_rejected(current: SlotStatus, target: SlotStatus) -> None:
+    with pytest.raises(SlotRuleError, match="No se puede pasar") as exc:
+        ensure_transition(current, target)
+    assert exc.value.field == "status"

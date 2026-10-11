@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # Local
     "apps.accounts",
     "apps.academics",
+    "apps.availability",
 ]
 
 MIDDLEWARE = [
@@ -153,6 +154,16 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# --- Scheduling rules (ADR-010: adjustable without touching the model) ----------------------
+
+SLOT_DURATION_MINUTES = 60
+SLOT_START_STEP_MINUTES = 30
+SLOT_DEFAULT_CAPACITY = 1
+SLOT_MAX_CAPACITY = 20
+# Read by FASE-04 (reservations).
+RESERVATION_MIN_ADVANCE_HOURS = 2
+RESERVATION_MAX_ACTIVE_PER_SUBJECT_WEEK = 1
 
 # --- Logging --------------------------------------------------------------------------------
 
