@@ -13,6 +13,8 @@ api_v1_patterns: list[URLPattern | URLResolver] = [
     path("users/", include(users_patterns)),
     # Academic catalog (FASE-02): departments, subjects, terms, courses, assignments.
     path("", include("apps.academics.urls")),
+    # Availability (FASE-03): slots, weekly templates and the student search.
+    path("", include("apps.availability.urls")),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]

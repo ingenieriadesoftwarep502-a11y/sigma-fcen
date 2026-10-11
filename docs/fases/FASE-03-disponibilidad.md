@@ -5,7 +5,7 @@
 | Sprint | 3 (semanas 7–8) |
 | Historias | HU-05 Registro de disponibilidad (5 pts) · HU-02 Consulta de monitorías (5 pts) |
 | Puntos | 10 |
-| Estado | **En curso** — diseño confirmado el 2026-10-11 |
+| Estado | **En curso** — backend T-03.1 a T-03.15 implementado (2026-10-11); pendiente el frontend (T-03.16, T-03.17) |
 | ADR bloqueantes | Ninguno — ADR-010 cerrado el 2026-10-11 |
 | Requisitos | RF-030 a RF-034 |
 
@@ -186,13 +186,13 @@ ruff check . && mypy .
 
 ## 8. Definition of Done
 
-- [ ] ADR-010 cerrado y reflejado en TRD, DDD y esta ficha.
-- [ ] Los 8 casos de solapamiento probados en `tests/unit/`, sin base de datos.
-- [ ] Los 11 criterios de aceptación con prueba automatizada.
-- [ ] Índices creados y verificados con `EXPLAIN` sobre la consulta de búsqueda.
-- [ ] Sin consultas N+1 en el listado (assert de número de consultas).
-- [ ] Todas las marcas de tiempo en UTC.
-- [ ] Esquema OpenAPI y tipos del frontend actualizados.
+- [x] ADR-010 cerrado y reflejado en TRD, DDD y esta ficha. *(2026-10-11)*
+- [x] Los 8 casos de solapamiento probados en `tests/unit/`, sin base de datos. *(`test_availability_rules.py`; 2026-10-11)*
+- [x] Los 11 criterios de aceptación con prueba automatizada en el backend. *(CA-HU05-1 a 5 y CA-HU02-1 a 6 en `test_availability_services.py` y `test_availability_api.py`; 2026-10-11)*
+- [x] Índices creados y verificados con `EXPLAIN` sobre la consulta de búsqueda. *(`test_availability_search_index.py`, 1 000 franjas; con el índice PostgreSQL lo elige solo, sin él recorre la tabla; 2026-10-11)*
+- [x] Sin consultas N+1 en el listado (assert de número de consultas). *(`test_t_03_14_rnf_per_001_search_runs_a_fixed_number_of_queries`; 2026-10-11)*
+- [x] Todas las marcas de tiempo en UTC. *(`test_t_03_15_rnf_dat_001_times_are_stored_and_returned_in_utc`; 2026-10-11)*
+- [x] Esquema OpenAPI y tipos del frontend actualizados. *(`spectacular --validate --fail-on-warn` sin avisos; `npm run gen:api` y `npm run type-check` en verde; 2026-10-11)*
 - [ ] CI en verde; PRs aprobadas.
 
 ---
