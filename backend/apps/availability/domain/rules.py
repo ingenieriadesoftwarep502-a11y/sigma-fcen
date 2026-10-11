@@ -1,6 +1,6 @@
 """Pure availability rules, free of Django and HTTP (DDD section 4.3, RN-003, ADR-010)."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from enum import StrEnum
 from zoneinfo import ZoneInfo
 
@@ -50,6 +50,12 @@ def overlaps(a_start: datetime, a_end: datetime, b_start: datetime, b_end: datet
     return a_start < b_end and b_start < a_end
 
 
+def ensure_start_step(local_start: time, start_step_minutes: int, field: str) -> None:
+    """RN-003.6: blocks start on the hour or on the half hour, in Bogotá time (ADR-010)."""
+    if local_start.second or local_start.microsecond or local_start.minute % start_step_minutes:
+        raise SlotRuleError(field, START_STEP_MESSAGE)
+
+
 def ensure_valid_window(
     starts_at: datetime,
     ends_at: datetime,
@@ -65,9 +71,7 @@ def ensure_valid_window(
         raise SlotRuleError("ends_at", END_BEFORE_START_MESSAGE)
     if ends_at - starts_at != timedelta(minutes=duration_minutes):
         raise SlotRuleError("ends_at", duration_message(duration_minutes))
-    local = starts_at.astimezone(LOCAL_TZ)
-    if local.second or local.microsecond or local.minute % start_step_minutes:
-        raise SlotRuleError("starts_at", START_STEP_MESSAGE)
+    ensure_start_step(starts_at.astimezone(LOCAL_TZ).time(), start_step_minutes, "starts_at")
     if starts_at <= now:
         raise SlotRuleError("starts_at", PAST_START_MESSAGE)
 
