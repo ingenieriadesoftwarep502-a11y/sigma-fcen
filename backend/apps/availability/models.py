@@ -30,7 +30,7 @@ def _capacity_field() -> "models.PositiveSmallIntegerField[int, int]":
     return models.PositiveSmallIntegerField(
         "capacidad",
         default=settings.SLOT_DEFAULT_CAPACITY,
-        validators=[MinValueValidator(1), MaxValueValidator(settings.SLOT_MAX_CAPACITY)],
+        validators=[MinValueValidator(1)],
     )
 
 
@@ -59,8 +59,8 @@ class SlotTemplate(models.Model):
                 condition=models.Q(weekday__lte=6), name="availability_template_weekday_range"
             ),
             models.CheckConstraint(
-                condition=models.Q(capacity__gte=1, capacity__lte=settings.SLOT_MAX_CAPACITY),
-                name="availability_template_capacity_range",
+                condition=models.Q(capacity__gte=1),
+                name="availability_template_capacity_positive",
             ),
         ]
 
@@ -117,8 +117,8 @@ class AvailabilitySlot(models.Model):
                 name="availability_slot_ends_after_start",
             ),
             models.CheckConstraint(
-                condition=models.Q(capacity__gte=1, capacity__lte=settings.SLOT_MAX_CAPACITY),
-                name="availability_slot_capacity_range",
+                condition=models.Q(capacity__gte=1),
+                name="availability_slot_capacity_positive",
             ),
             models.CheckConstraint(
                 condition=models.Q(status__in=[status.value for status in SlotStatus]),

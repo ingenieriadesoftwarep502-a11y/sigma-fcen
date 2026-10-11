@@ -73,12 +73,12 @@ App nueva `apps/availability`. Reglas puras en `apps/availability/domain/rules.p
 | `term` | FK `AcademicTerm` | La franja cae dentro de las fechas del período |
 | `template` | FK `SlotTemplate`, nulo | Plantilla que la generó; nulo si se publicó suelta |
 | `starts_at`, `ends_at` | `DateTimeField` UTC | `ends_at - starts_at` = `SLOT_DURATION_MINUTES` (60); inicio en punto o a la media, hora de Bogotá (`SLOT_START_STEP_MINUTES` = 30) |
-| `capacity` | Entero 1–20 | Por defecto `SLOT_DEFAULT_CAPACITY` (1) |
+| `capacity` | Entero ≥ 1, sin tope | Por defecto `SLOT_DEFAULT_CAPACITY` (1); sin máximo, confirmado 2026-10-11 |
 | `status` | `AVAILABLE` · `RESERVED` · `CANCELLED` · `EXPIRED` | Transiciones de DDD §6.1 |
 | `modality` | `IN_PERSON` · `VIRTUAL` | — |
 | `location` | Texto ≤ 200 | Obligatorio: aula o enlace |
 
-Restricciones en base de datos: `CHECK (ends_at > starts_at)`, `CHECK (capacity BETWEEN 1 AND 20)` y **exclusión de solapamiento** por monitor sobre franjas no canceladas (`ExclusionConstraint` de PostgreSQL con `tstzrange`), además de la regla en el servicio. Índice `(subject, starts_at, status)`.
+Restricciones en base de datos: `CHECK (ends_at > starts_at)`, `CHECK (capacity >= 1)` y **exclusión de solapamiento** por monitor sobre franjas no canceladas (`ExclusionConstraint` de PostgreSQL con `tstzrange`), además de la regla en el servicio. Índice `(subject, starts_at, status)`.
 
 **`SlotTemplate`** — la plantilla semanal.
 

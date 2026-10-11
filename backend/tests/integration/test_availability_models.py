@@ -33,11 +33,18 @@ def test_rn_003_1_end_not_after_start_is_rejected_by_the_database() -> None:
     _rejected(lambda: make_slot(*owner, ends_at=SLOT_START))
 
 
-@pytest.mark.parametrize("capacity", [0, 21])
-def test_adr_010_capacity_out_of_range_is_rejected(capacity: int) -> None:
+def test_adr_010_capacity_below_one_is_rejected() -> None:
     owner = make_assigned_monitor()
 
-    _rejected(lambda: make_slot(*owner, capacity=capacity))
+    _rejected(lambda: make_slot(*owner, capacity=0))
+
+
+def test_adr_010_capacity_has_no_upper_bound() -> None:
+    # Confirmed 2026-10-11: group sessions may hold any number of students.
+    slot = make_slot(*make_assigned_monitor(), capacity=200)
+
+    slot.refresh_from_db()
+    assert slot.capacity == 200
 
 
 def test_t_03_4_unknown_status_is_rejected() -> None:
