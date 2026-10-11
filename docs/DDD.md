@@ -210,7 +210,7 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 | `monitor` | FK a `User` | Debe tener rol `MONITOR` |
 | `subject` | FK a `Subject` | Debe existir `MonitorAssignment` vigente |
 | `starts_at`, `ends_at` | Marca de tiempo UTC | RNF-DAT-001 |
-| `capacity` | Entero | `[PENDIENTE]` ADR-010; por defecto 1 |
+| `capacity` | Entero | `[CONFIRMADO]` ADR-010; configurable, por defecto 1 |
 | `status` | `AVAILABLE` · `RESERVED` · `CANCELLED` · `EXPIRED` | — |
 | `modality` | `IN_PERSON` · `VIRTUAL` | `[PENDIENTE]` |
 | `location` | Texto | Aula o enlace |
@@ -325,7 +325,7 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | 002.3 | Un docente accede únicamente a información de sus cursos | `[CONFIRMADO]` |
 | 002.4 | Un usuario inactivo no puede autenticarse | `[CONFIRMADO]` |
 
-### RN-003 · Disponibilidad · `[PENDIENTE]` ADR-010
+### RN-003 · Disponibilidad · ADR-010 `[CONFIRMADO]` 2026-10-11
 
 | # | Regla | Estado |
 |---|---|---|
@@ -334,9 +334,10 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | 003.3 | Dos franjas del mismo monitor no se solapan | `[PROPUESTA]` |
 | 003.4 | Una franja con reserva confirmada no se elimina ni se modifica en su horario | `[PROPUESTA]` |
 | 003.5 | El monitor solo publica franjas de asignaturas que tiene asignadas | `[PROPUESTA]` (ADR-009 cerrado) |
-| 003.6 | Duración estándar de la franja | `[PENDIENTE]` ADR-010 |
+| 003.6 | Duración estándar: bloques fijos de 60 min; la franja guarda `starts_at` y `ends_at` explícitos | `[CONFIRMADO]` ADR-010 |
+| 003.7 | Las franjas se publican desde una plantilla semanal que genera franjas concretas con fecha | `[CONFIRMADO]` ADR-010 |
 
-### RN-004 · Reserva · `[PENDIENTE]` ADR-010
+### RN-004 · Reserva · ADR-010 `[CONFIRMADO]` 2026-10-11
 
 | # | Regla | Estado |
 |---|---|---|
@@ -345,8 +346,8 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | 004.3 | Una franja de capacidad 1 admite una sola reserva `CONFIRMED`, incluso bajo concurrencia | `[PROPUESTA]` |
 | 004.4 | Un estudiante no tiene dos reservas `CONFIRMED` solapadas | `[PROPUESTA]` |
 | 004.5 | La franja cambia a `RESERVED` en la misma transacción que crea la reserva | `[PROPUESTA]` |
-| 004.6 | Anticipación mínima para reservar | `[PENDIENTE]` ADR-010 |
-| 004.7 | Límite de reservas activas por estudiante | `[PENDIENTE]` ADR-010 |
+| 004.6 | Anticipación mínima para reservar: 2 h, configurable | `[CONFIRMADO]` ADR-010 |
+| 004.7 | Límite de reservas activas: 1 por estudiante, asignatura y semana, configurable | `[CONFIRMADO]` ADR-010 |
 
 ### RN-005 · Cancelación · `[PENDIENTE]` ADR-011
 
@@ -518,7 +519,7 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
 | Elemento del dominio | Bloqueado por | Consecuencia de implementarlo antes |
 |---|---|---|
 | `User` + `Role` | ADR-008 — cerrado; implementado en FASE-01 (§4.1) | Migración de `AUTH_USER_MODEL` prácticamente irreversible |
-| `AvailabilitySlot.capacity` y duración | ADR-010 | Modelo de agendamiento equivocado de raíz |
+| ~~`AvailabilitySlot.capacity` y duración~~ | ADR-010 `[CONFIRMADO]` 2026-10-11 | — |
 | Ventana de cancelación | ADR-011 | Regla de negocio inventada por el implementador |
 | `Evaluation.rating` | ADR-013 | Escala arbitraria que invalida las métricas históricas |
 | `Material.file` | ADR-012 | Almacenamiento y validaciones a rehacer |

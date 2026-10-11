@@ -5,8 +5,8 @@
 | Sprint | 3 (semanas 7–8) |
 | Historias | HU-05 Registro de disponibilidad (5 pts) · HU-02 Consulta de monitorías (5 pts) |
 | Puntos | 10 |
-| Estado | **Bloqueada** |
-| ADR bloqueantes | ADR-010 |
+| Estado | **En curso** — gate G1 pendiente (contratos y modelo) |
+| ADR bloqueantes | Ninguno — ADR-010 cerrado el 2026-10-11 |
 | Requisitos | RF-030 a RF-034 |
 
 ---
@@ -21,8 +21,8 @@ Que un monitor publique sus franjas horarias y que un estudiante las encuentre f
 
 ## 2. Gate de entrada
 
-- [ ] FASE-02 cerrada con su DoD completa
-- [ ] **ADR-010 cerrado** — sin duración de franja, capacidad y reglas de solapamiento confirmadas, el modelo se construye sobre suposiciones
+- [ ] FASE-02 cerrada con su DoD completa — *pendiente de la aprobación del PR #16; FASE-03 avanza en paralelo, como hizo FASE-02*
+- [x] **ADR-010 cerrado** *(2026-10-11)* — sin duración de franja, capacidad y reglas de solapamiento confirmadas, el modelo se construye sobre suposiciones
 
 Preguntas de ADR-010 que deben estar respondidas antes de la primera línea de código:
 
@@ -50,7 +50,6 @@ Preguntas de ADR-010 que deben estar respondidas antes de la primera línea de c
 ### No entra
 
 - Reservar — es FASE-04.
-- Recurrencia semanal si ADR-010 la deja `[PENDIENTE]`; en ese caso se registra como deuda y se implementa en FASE-10.
 - Notificaciones.
 - Sincronización con calendarios externos (fuera de alcance de la versión 1).
 

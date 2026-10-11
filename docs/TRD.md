@@ -106,7 +106,7 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 | RF-030 | El monitor debe poder registrar sus franjas de disponibilidad | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-031 | El monitor debe poder editar o eliminar franjas sin reservas activas | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-032 | El sistema debe impedir franjas solapadas del mismo monitor | Alta | `[PROPUESTA]` | ADR-010 |
-| RF-033 | El sistema debe soportar franjas recurrentes semanales | Media | `[PENDIENTE]` | ADR-010 |
+| RF-033 | El sistema debe soportar franjas recurrentes semanales | Media | `[CONFIRMADO]` | ADR-010 |
 | RF-034 | El estudiante debe poder consultar franjas disponibles filtrando por asignatura, horario y monitor | Alta | `[PROPUESTA]` | ADR-010 |
 
 ### 4.4 Reservas (RF-04x)
@@ -243,7 +243,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 | CA-HU03-2 | **Dado** una franja ya reservada, **cuando** intento reservarla, **entonces** recibo `409` y no se crea una segunda reserva | `[PROPUESTA]` |
 | CA-HU03-3 | **Dado** dos estudiantes reservando la misma franja de forma simultánea, **cuando** ambos envían la petición, **entonces** exactamente uno obtiene `201` y el otro `409` | `[PROPUESTA]` |
 | CA-HU03-4 | **Dado** una franja pasada, **cuando** intento reservar, **entonces** recibo `400` | `[PROPUESTA]` |
-| CA-HU03-5 | **Dado** una reserva activa mía en el mismo horario, **cuando** intento reservar otra, **entonces** el sistema lo impide | `[PENDIENTE]` ADR-010 |
+| CA-HU03-5 | **Dado** una reserva activa mía en el mismo horario, **cuando** intento reservar otra, **entonces** el sistema lo impide | `[CONFIRMADO]` ADR-010 |
 | CA-HU03-6 | **Dado** un usuario con rol distinto de estudiante, **cuando** intenta reservar, **entonces** recibe `403` | `[PROPUESTA]` — revisar en FASE-04 el caso de un usuario con varios roles (ADR-008) |
 
 > **CA-HU03-3 es el criterio técnicamente más exigente del proyecto.** Exige bloqueo a nivel de base de datos o restricción de unicidad; no se resuelve con una validación en el serializer.
