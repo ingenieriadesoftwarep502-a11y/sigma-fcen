@@ -137,7 +137,7 @@ El corazón de esta fase es la **detección de solapamientos**, y es lógica pur
 | T-03.4 | Modelo `AvailabilitySlot` | Estados válidos; transiciones prohibidas rechazadas | DDD §6.1 |
 | T-03.5 | Servicio de creación | Franja válida se crea; solapada lanza error de dominio | CA-HU05-1, CA-HU05-2 |
 | T-03.6 | Autorización por asignatura asignada | Publicar en asignatura no asignada → `403` | CA-HU05-5, RN-003.5 |
-| T-03.7 | Eliminación de franja | Sin reservas se elimina; con reserva se impide | CA-HU05-3, CA-HU05-4 |
+| T-03.7 | Eliminación de franja | Sin reservas se cancela (estado CANCELLED, el registro se conserva); con reserva se impide | CA-HU05-3, CA-HU05-4 |
 | T-03.8 | Búsqueda: solo disponibles y futuras | Franjas pasadas y ocupadas no aparecen | CA-HU02-1 |
 | T-03.9 | Filtro por asignatura | Solo franjas de esa asignatura | CA-HU02-2 |
 | T-03.10 | Filtro por rango horario | Solo franjas dentro del rango | CA-HU02-3 |

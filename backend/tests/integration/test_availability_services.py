@@ -7,6 +7,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 
 import pytest
+from django.db import IntegrityError
 from django.utils import timezone
 
 from apps.academics.models import AcademicTerm
@@ -77,6 +78,24 @@ def test_t_03_5_ca_hu05_2_overlapping_slot_raises_a_domain_error(offset: int) ->
 
     assert exc.value.field == "starts_at"
     assert AvailabilitySlot.objects.count() == 1
+
+
+def test_t_03_5_concurrent_overlap_caught_by_the_constraint_is_a_domain_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner = make_assigned_monitor()
+    publish(owner)
+    monkeypatch.setattr("apps.availability.services._ensure_free", lambda *a, **k: None)
+
+    with pytest.raises(SlotRuleError, match="Se solapa con otra franja tuya"):
+        publish(owner, SLOT_START + timedelta(minutes=30))
+
+    assert AvailabilitySlot.objects.count() == 1
+
+
+def test_t_03_5_other_integrity_errors_are_not_reported_as_overlap() -> None:
+    with pytest.raises(IntegrityError, match="availability_slot_capacity_positive"):
+        publish(make_assigned_monitor(), capacity=0)
 
 
 def test_t_03_5_touching_slot_is_allowed() -> None:

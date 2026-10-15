@@ -37,6 +37,8 @@ NO_WEEKS_MESSAGE = "El período no tiene semanas restantes para esta plantilla."
 
 EDITABLE_FIELDS = frozenset({"starts_at", "modality", "location", "capacity"})
 
+NO_OVERLAP_CONSTRAINT = "availability_slot_no_overlap"
+
 T = TypeVar("T")
 
 
@@ -116,12 +118,19 @@ def _ensure_free(monitor: User, starts_at: datetime, *, ignore: int | None = Non
         raise SlotRuleError("starts_at", OVERLAP_MESSAGE)
 
 
+def _violated_constraint(error: IntegrityError) -> str | None:
+    diag = getattr(error.__cause__, "diag", None)
+    return getattr(diag, "constraint_name", None)
+
+
 def _save_or_overlap(save: Callable[[], T]) -> T:
-    """A concurrent request may take the time between the check and the write."""
+    """A concurrent request may take the time between the check and the write; other errors pass."""
     try:
         with transaction.atomic():
             return save()
     except IntegrityError as error:
+        if _violated_constraint(error) != NO_OVERLAP_CONSTRAINT:
+            raise
         raise SlotRuleError("starts_at", OVERLAP_MESSAGE) from error
 
 

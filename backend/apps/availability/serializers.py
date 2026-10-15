@@ -3,6 +3,7 @@
 from datetime import date
 from typing import Any, ClassVar
 
+from django.conf import settings
 from rest_framework import serializers
 
 from apps.academics.models import AcademicTerm, Subject
@@ -13,6 +14,16 @@ from apps.availability.models import AvailabilitySlot, Modality, SlotTemplate
 
 DATE_RANGE_MESSAGE = "La fecha final no puede ser anterior a la inicial."
 LOCATION_HELP = "Aula o enlace de la sesión."
+MAX_SLOT_CAPACITY = 32767  # PositiveSmallIntegerField column limit
+
+
+def _capacity_field() -> serializers.IntegerField:
+    return serializers.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=MAX_SLOT_CAPACITY,
+        help_text=f"Cupos; por defecto {settings.SLOT_DEFAULT_CAPACITY}.",
+    )
 
 
 class MonitorReferenceSerializer(serializers.Serializer[User]):
@@ -59,9 +70,7 @@ class _SlotFieldsSerializer(serializers.Serializer[dict[str, Any]]):
     )
     modality = serializers.ChoiceField(choices=Modality.choices)
     location = serializers.CharField(max_length=200, help_text=LOCATION_HELP)
-    capacity = serializers.IntegerField(
-        required=False, min_value=1, help_text="Cupos; por defecto 1."
-    )
+    capacity = _capacity_field()
 
 
 class SlotCreateSerializer(_SlotFieldsSerializer):
@@ -147,6 +156,4 @@ class SlotTemplateCreateSerializer(serializers.Serializer[dict[str, Any]]):
     )
     modality = serializers.ChoiceField(choices=Modality.choices)
     location = serializers.CharField(max_length=200, help_text=LOCATION_HELP)
-    capacity = serializers.IntegerField(
-        required=False, min_value=1, help_text="Cupos; por defecto 1."
-    )
+    capacity = _capacity_field()

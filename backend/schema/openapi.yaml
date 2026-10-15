@@ -2124,6 +2124,7 @@ components:
           maxLength: 200
         capacity:
           type: integer
+          maximum: 32767
           minimum: 1
           description: Cupos; por defecto 1.
     PatchedSubjectWrite:
@@ -2234,6 +2235,7 @@ components:
           maxLength: 200
         capacity:
           type: integer
+          maximum: 32767
           minimum: 1
           description: Cupos; por defecto 1.
         subject:
@@ -2322,6 +2324,7 @@ components:
           maxLength: 200
         capacity:
           type: integer
+          maximum: 32767
           minimum: 1
           description: Cupos; por defecto 1.
       required:

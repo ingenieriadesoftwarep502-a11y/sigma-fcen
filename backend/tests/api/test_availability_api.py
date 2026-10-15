@@ -130,6 +130,7 @@ def test_t_03_6_ca_hu05_5_unassigned_subject_is_forbidden(world: dict[str, Any])
         ({"location": ""}, "location"),
         ({"modality": "HYBRID"}, "modality"),
         ({"capacity": 0}, "capacity"),
+        ({"capacity": 32768}, "capacity"),
         ({"starts_at": "mañana"}, "starts_at"),
         ({"subject": 999999}, "subject"),
     ],
@@ -228,6 +229,17 @@ def test_patch_moves_the_slot(world: dict[str, Any]) -> None:
     assert slot.starts_at == moved
     assert slot.ends_at == moved + HOUR
     assert slot.modality == "VIRTUAL"
+
+
+def test_patch_with_capacity_over_the_limit_is_a_400(world: dict[str, Any]) -> None:
+    slot = make_slot(world["sofia"], world["calculo"], world["term"])
+
+    response = client_for(world["sofia"]).patch(
+        slot_url(slot.pk), {"capacity": 32768}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert "capacity" in response.json()
 
 
 def test_rn_003_4_patch_on_a_reserved_slot_is_409(world: dict[str, Any]) -> None:
@@ -424,6 +436,16 @@ def test_template_is_created_with_its_slots(world: dict[str, Any]) -> None:
     assert data["slots_created"] == template.slots.count() > 0
     assert data["is_active"] is True
     assert data["start_time"] == "10:00:00"
+
+
+def test_template_with_capacity_over_the_limit_is_a_400(world: dict[str, Any]) -> None:
+    response = client_for(world["sofia"]).post(
+        TEMPLATES_URL, template_body(world, capacity=32768), format="json"
+    )
+
+    assert response.status_code == 400
+    assert "capacity" in response.json()
+    assert SlotTemplate.objects.count() == 0
 
 
 def test_template_with_conflicts_is_a_400_listing_the_dates(world: dict[str, Any]) -> None:
