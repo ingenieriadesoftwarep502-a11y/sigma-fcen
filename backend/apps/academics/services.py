@@ -13,6 +13,7 @@ from apps.accounts.models import Role, User
 
 TEACHER_ROLE_MESSAGE = "El usuario no tiene el rol Docente."
 MONITOR_ROLE_MESSAGE = "El usuario no tiene el rol Monitor."
+NOT_ASSIGNED_MESSAGE = "No tienes asignada esta asignatura como monitor en el período."
 
 
 class CatalogRuleError(Exception):
@@ -64,3 +65,21 @@ def create_monitor_assignment(
     return MonitorAssignment.objects.create(
         monitor=monitor, subject=subject, term=term, committed_hours=committed_hours
     )
+
+
+def is_monitor_assigned(monitor: User, subject: Subject, term: AcademicTerm) -> bool:
+    """A monitor attends a subject only while holding the role and an assignment for that term.
+
+    RN-003.5 and RN-002: revoking the MONITOR role withdraws the authorization even though the
+    assignment row is kept as history.
+    """
+    return (
+        monitor.has_role(Role.Code.MONITOR)
+        and MonitorAssignment.objects.filter(monitor=monitor, subject=subject, term=term).exists()
+    )
+
+
+def ensure_monitor_assigned(monitor: User, subject: Subject, term: AcademicTerm) -> None:
+    """Guard for FASE-03 onwards: a monitor without assignment cannot operate on the subject."""
+    if not is_monitor_assigned(monitor, subject, term):
+        raise CatalogRuleError("subject", NOT_ASSIGNED_MESSAGE)

@@ -107,6 +107,220 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+  /api/v1/availability-slots/:
+    post:
+      operationId: availability_slots_create
+      description: A monitor publishes a single slot on an assigned subject (CA-HU05-1,
+        CA-HU05-5).
+      tags:
+      - availability-slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SlotCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SlotCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySlot'
+          description: ''
+  /api/v1/availability-slots/{id}/:
+    patch:
+      operationId: availability_slots_partial_update
+      description: The owner moves, edits or withdraws a slot; another monitor's slot
+        is a 404.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - availability-slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSlotUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSlotUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSlotUpdate'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySlot'
+          description: ''
+        '409':
+          description: La franja tiene una reserva o ya no está disponible.
+    delete:
+      operationId: availability_slots_destroy
+      description: The owner moves, edits or withdraws a slot; another monitor's slot
+        is a 404.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - availability-slots
+      security:
+      - cookieJWT: []
+      responses:
+        '204':
+          description: No response body
+        '409':
+          description: La franja tiene una reserva o ya no está disponible.
+  /api/v1/availability-slots/mine/:
+    get:
+      operationId: availability_slots_mine_list
+      description: The requesting monitor's own slots, every state, of one term (the
+        current by default).
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          enum:
+          - AVAILABLE
+          - RESERVED
+          - CANCELLED
+          - EXPIRED
+          type: string
+          minLength: 1
+        description: |-
+          * `AVAILABLE` - AVAILABLE
+          * `RESERVED` - RESERVED
+          * `CANCELLED` - CANCELLED
+          * `EXPIRED` - EXPIRED
+      - in: query
+        name: subject
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de asignatura.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - availability-slots
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAvailabilitySlotList'
+          description: ''
+  /api/v1/availability-slots/search/:
+    get:
+      operationId: availability_slots_search_list
+      description: Bookable slots for any authenticated user, with combinable filters
+        (HU-02).
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - in: query
+        name: modality
+        schema:
+          enum:
+          - IN_PERSON
+          - VIRTUAL
+          type: string
+          minLength: 1
+        description: |-
+          * `IN_PERSON` - Presencial
+          * `VIRTUAL` - Virtual
+      - in: query
+        name: monitor
+        schema:
+          type: string
+          format: uuid
+        description: Id del monitor.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: subject
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de asignatura.
+      tags:
+      - availability-slots
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAvailabilitySlotList'
+          description: ''
   /api/v1/catalog/summary/:
     get:
       operationId: catalog_summary_retrieve
@@ -584,6 +798,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedMonitorOwnAssignmentList'
+          description: ''
+  /api/v1/slot-templates/:
+    post:
+      operationId: slot_templates_create
+      description: A monitor creates a weekly template; its slots are generated all
+        or nothing (ADR-010).
+      tags:
+      - slot-templates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotTemplateCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SlotTemplateCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SlotTemplateCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotTemplate'
+          description: ''
+  /api/v1/slot-templates/{id}/:
+    delete:
+      operationId: slot_templates_destroy
+      description: The owner deactivates a template and withdraws its future unreserved
+        slots.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - slot-templates
+      security:
+      - cookieJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/slot-templates/mine/:
+    get:
+      operationId: slot_templates_mine_list
+      description: The requesting monitor's templates of one term (the current one
+        by default).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - slot-templates
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSlotTemplateList'
           description: ''
   /api/v1/subjects/:
     get:
@@ -1222,6 +1517,66 @@ components:
       - created_at
       - id
       - target
+    AvailabilitySlot:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        monitor:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        template:
+          type: integer
+          readOnly: true
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Inicio
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Fin
+        capacity:
+          type: integer
+          readOnly: true
+          title: Capacidad
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        modality:
+          allOf:
+          - $ref: '#/components/schemas/ModalityEnum'
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+          title: Lugar o enlace
+      required:
+      - capacity
+      - ends_at
+      - id
+      - location
+      - modality
+      - monitor
+      - starts_at
+      - status
+      - subject
+      - template
+      - term
     CatalogSummary:
       type: object
       properties:
@@ -1397,6 +1752,14 @@ components:
       required:
       - email
       - password
+    ModalityEnum:
+      enum:
+      - IN_PERSON
+      - VIRTUAL
+      type: string
+      description: |-
+        * `IN_PERSON` - Presencial
+        * `VIRTUAL` - Virtual
     MonitorAssignment:
       type: object
       properties:
@@ -1475,6 +1838,19 @@ components:
       - subject
       - teachers
       - term
+    MonitorReference:
+      type: object
+      description: Only what a student needs to recognize the monitor; no email (RNF-SEC).
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+          readOnly: true
+      required:
+      - full_name
+      - id
     PaginatedAcademicTermList:
       type: object
       required:
@@ -1521,6 +1897,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AdminUser'
+    PaginatedAvailabilitySlotList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilitySlot'
     PaginatedCourseList:
       type: object
       required:
@@ -1613,6 +2012,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MonitorOwnAssignment'
+    PaginatedSlotTemplateList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotTemplate'
     PaginatedSubjectList:
       type: object
       required:
@@ -1684,6 +2106,27 @@ components:
           maxLength: 150
         is_active:
           type: boolean
+    PatchedSlotUpdate:
+      type: object
+      description: Fields a monitor sets on a slot; the end and the term are derived
+        (ADR-010).
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+          description: Inicio en ISO 8601 con zona; en punto o a la media, hora de
+            Bogotá.
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        location:
+          type: string
+          description: Aula o enlace de la sesión.
+          maxLength: 200
+        capacity:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          description: Cupos; por defecto 1.
     PatchedSubjectWrite:
       type: object
       properties:
@@ -1774,6 +2217,135 @@ components:
         * `MONITOR` - Monitor
         * `TEACHER` - Docente
         * `ADMIN` - Administrador
+    SlotCreate:
+      type: object
+      description: Fields a monitor sets on a slot; the end and the term are derived
+        (ADR-010).
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+          description: Inicio en ISO 8601 con zona; en punto o a la media, hora de
+            Bogotá.
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        location:
+          type: string
+          description: Aula o enlace de la sesión.
+          maxLength: 200
+        capacity:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          description: Cupos; por defecto 1.
+        subject:
+          type: integer
+      required:
+      - location
+      - modality
+      - starts_at
+      - subject
+    SlotTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        weekday:
+          type: integer
+          readOnly: true
+          title: Día de la semana
+        start_time:
+          type: string
+          format: time
+          readOnly: true
+          title: Hora de inicio
+        capacity:
+          type: integer
+          readOnly: true
+          title: Capacidad
+        modality:
+          allOf:
+          - $ref: '#/components/schemas/ModalityEnum'
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+          title: Lugar o enlace
+        is_active:
+          type: boolean
+          readOnly: true
+        slots_created:
+          type: integer
+          readOnly: true
+          description: Franjas que generó la plantilla.
+      required:
+      - capacity
+      - id
+      - is_active
+      - location
+      - modality
+      - slots_created
+      - start_time
+      - subject
+      - term
+      - weekday
+    SlotTemplateCreate:
+      type: object
+      properties:
+        subject:
+          type: integer
+        term:
+          type: string
+          title: Código
+          description: Código del período, por ejemplo 2026-2.
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
+          description: 'Día de la semana: 0 lunes … 6 domingo.'
+        start_time:
+          type: string
+          format: time
+          description: Hora local de Bogotá, en punto o a la media (por ejemplo 10:00).
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        location:
+          type: string
+          description: Aula o enlace de la sesión.
+          maxLength: 200
+        capacity:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          description: Cupos; por defecto 1.
+      required:
+      - location
+      - modality
+      - start_time
+      - subject
+      - term
+      - weekday
+    StatusEnum:
+      enum:
+      - AVAILABLE
+      - RESERVED
+      - CANCELLED
+      - EXPIRED
+      type: string
+      description: |-
+        * `AVAILABLE` - AVAILABLE
+        * `RESERVED` - RESERVED
+        * `CANCELLED` - CANCELLED
+        * `EXPIRED` - EXPIRED
     Subject:
       type: object
       properties:

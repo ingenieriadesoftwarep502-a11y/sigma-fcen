@@ -32,22 +32,7 @@ Cerrada el 2026-09-27. ADR-007, ADR-008 y ADR-009 están confirmados y registrad
 
 ---
 
-#### ADR-010 · Granularidad de franjas y reglas de conflicto
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-03, FASE-04, RN-003, RN-004
-- **Contexto:** "prevenir conflictos de horario" no es implementable sin números concretos.
-
-| # | Pregunta | Propuesta a validar |
-|---|---|---|
-| 1 | Duración de una sesión de monitoría | 60 minutos fijos |
-| 2 | ¿Las franjas se dividen en bloques fijos o el monitor define rangos libres? | Bloques fijos de 60 min |
-| 3 | ¿Una franja admite un estudiante o varios (monitoría grupal)? | Capacidad configurable, por defecto 1 |
-| 4 | ¿Un estudiante puede tener varias reservas activas simultáneas? | Máximo 1 por asignatura y semana |
-| 5 | ¿Las franjas se repiten semanalmente o se publican fecha a fecha? | Plantilla semanal recurrente |
-| 6 | ¿Con cuánta anticipación mínima se puede reservar? | 2 horas antes del inicio |
-
-- **Pregunta:** ¿Se aprueban las seis propuestas de la tabla, o cuáles cambian?
+ADR-010 cerrado el 2026-10-11 y registrado en [§2](#2-decisiones-cerradas). Siguen abiertos los ADR de esta tanda que se listan a continuación.
 
 ---
 
@@ -142,6 +127,7 @@ Se registran aquí al confirmarse. Formato obligatorio:
 | ADR-007 | Mecanismo de autenticación: **Opción A** — JWT (`djangorestframework-simplejwt`) en cookies `HttpOnly` + `SameSite`, con protección CSRF y renovación mediante token de refresco. El SSO institucional queda como integración futura (ADR-015). | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, SAD §7, TRD §4.1 |
 | ADR-008 | Modelo de usuario y roles: **Opción A** — `User` personalizado con `email` como identificador de acceso y relación N:M con `Role` mediante `UserRole` (`unique(user, role)`). Un usuario puede tener varios roles simultáneos. `AUTH_USER_MODEL` se define en la primera migración. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1, §5 y §8, SAD §7, TRD §2, §4, §5 y §6 |
 | ADR-009 | Política de registro: (1) registro restringido al dominio `@unal.edu.co`; (2) el auto-registro asigna únicamente el rol Estudiante; (3) sin verificación por correo — la cuenta queda activa al registrarse y no se requiere SMTP en v1; (4) los roles Monitor, Docente y Administrador los asigna un administrador. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1 y §5, TRD §4.1 y §6 |
+| ADR-010 | Granularidad de franjas: (1) sesión de 60 min; (2) bloques fijos de 60 min; (3) capacidad configurable, por defecto 1; (4) máximo 1 reserva activa por estudiante, asignatura y semana; (5) plantilla semanal recurrente que genera franjas concretas; (6) anticipación mínima de 2 h para reservar. Capacidad, límite y anticipación son parámetros configurables; cada franja guarda inicio y fin explícitos. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-10-11 | FASE-03, FASE-04, DDD §4.3 y §5, TRD §3 |
 
 ---
 
@@ -261,6 +247,27 @@ Se conserva el contexto original de cada ADR para trazabilidad.
 
 ---
 
+#### ADR-010 · Granularidad de franjas y reglas de conflicto
+
+- **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-10-11
+- **Decisión:** se aprueban las seis propuestas de la tabla, con tres condiciones de diseño para que las reglas 1, 3, 4 y 6 se puedan ajustar sin rehacer el modelo: (a) capacidad, límite de reservas y anticipación mínima son parámetros configurables; (b) cada franja guarda `starts_at` y `ends_at` explícitos, sin asumir la duración; (c) la plantilla semanal solo genera franjas concretas con fecha, que son las que se reservan.
+- **Bloqueaba:** FASE-03, FASE-04, RN-003, RN-004
+- **Contexto:** "prevenir conflictos de horario" no es implementable sin números concretos.
+
+| # | Pregunta | Propuesta a validar |
+|---|---|---|
+| 1 | Duración de una sesión de monitoría | 60 minutos fijos |
+| 2 | ¿Las franjas se dividen en bloques fijos o el monitor define rangos libres? | Bloques fijos de 60 min |
+| 3 | ¿Una franja admite un estudiante o varios (monitoría grupal)? | Capacidad configurable, por defecto 1 |
+| 4 | ¿Un estudiante puede tener varias reservas activas simultáneas? | Máximo 1 por asignatura y semana |
+| 5 | ¿Las franjas se repiten semanalmente o se publican fecha a fecha? | Plantilla semanal recurrente |
+| 6 | ¿Con cuánta anticipación mínima se puede reservar? | 2 horas antes del inicio |
+
+- **Pregunta:** ¿Se aprueban las seis propuestas de la tabla, o cuáles cambian?
+- **Costo de revertir:** bajo para 1, 3, 4 y 6 gracias a las condiciones (a) y (b); alto para 2 (algoritmo de solapamiento y pantalla del monitor) y moderado para 5 (gracias a la condición (c)). Cualquier cambio es más barato antes de FASE-04, cuando aún no hay reservas guardadas.
+
+---
+
 #### ADR-008 · Modelo de usuario y representación de roles
 
 - **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-09-27
@@ -323,13 +330,13 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-00 | Ninguno (ADR-001 a ADR-006 confirmados el 2026-09-25) |
 | FASE-01 | Ninguno (ADR-007 a ADR-009 confirmados el 2026-09-27) |
 | FASE-02 | Ninguno (ADR-008 confirmado el 2026-09-27) |
-| FASE-03 | ADR-010 |
-| FASE-04 | ADR-010, ADR-011 |
-| FASE-05 | ADR-010 |
+| FASE-03 | Ninguno (ADR-010 confirmado el 2026-10-11) |
+| FASE-04 | ADR-011 |
+| FASE-05 | Ninguno por ADR (ADR-010 confirmado) |
 | FASE-06 | ADR-013 (escala de calificación) |
 | FASE-07 | ADR-012 |
 | FASE-08 | Ninguno por ADR (ADR-008 confirmado); sigue abierta la definición de RF-083 |
 | FASE-09 | ADR-013 |
 | FASE-10 | ADR-014, ADR-015 |
 
-> **6 decisiones abiertas. 9 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**
+> **5 decisiones abiertas. 10 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**

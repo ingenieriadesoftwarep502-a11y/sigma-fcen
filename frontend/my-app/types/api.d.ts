@@ -98,6 +98,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/availability-slots/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A monitor publishes a single slot on an assigned subject (CA-HU05-1, CA-HU05-5). */
+        post: operations["availability_slots_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/availability-slots/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description The owner moves, edits or withdraws a slot; another monitor's slot is a 404. */
+        delete: operations["availability_slots_destroy"];
+        options?: never;
+        head?: never;
+        /** @description The owner moves, edits or withdraws a slot; another monitor's slot is a 404. */
+        patch: operations["availability_slots_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/availability-slots/mine/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The requesting monitor's own slots, every state, of one term (the current by default). */
+        get: operations["availability_slots_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/availability-slots/search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Bookable slots for any authenticated user, with combinable filters (HU-02). */
+        get: operations["availability_slots_search_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/summary/": {
         parameters: {
             query?: never;
@@ -265,6 +334,57 @@ export interface paths {
         };
         /** @description The requesting monitor's own assignments and their subjects' teachers (RN-009.1). */
         get: operations["monitor_assignments_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/slot-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A monitor creates a weekly template; its slots are generated all or nothing (ADR-010). */
+        post: operations["slot_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/slot-templates/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description The owner deactivates a template and withdraws its future unreserved slots. */
+        delete: operations["slot_templates_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/slot-templates/mine/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The requesting monitor's templates of one term (the current one by default). */
+        get: operations["slot_templates_mine_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -527,6 +647,30 @@ export interface components {
             actor: components["schemas"]["UserReference"] | null;
             target: components["schemas"]["UserReference"] | null;
         };
+        AvailabilitySlot: {
+            readonly id: number;
+            readonly subject: components["schemas"]["SubjectReference"];
+            readonly monitor: components["schemas"]["MonitorReference"];
+            /** Código */
+            readonly term: string;
+            readonly template: number | null;
+            /**
+             * Inicio
+             * Format: date-time
+             */
+            readonly starts_at: string;
+            /**
+             * Fin
+             * Format: date-time
+             */
+            readonly ends_at: string;
+            /** Capacidad */
+            readonly capacity: number;
+            readonly status: components["schemas"]["StatusEnum"];
+            readonly modality: components["schemas"]["ModalityEnum"];
+            /** Lugar o enlace */
+            readonly location: string;
+        };
         CatalogSummary: {
             /** @description Código del período resumido. */
             term: string | null;
@@ -597,6 +741,12 @@ export interface components {
             email: string;
             password: string;
         };
+        /**
+         * @description * `IN_PERSON` - Presencial
+         *     * `VIRTUAL` - Virtual
+         * @enum {string}
+         */
+        ModalityEnum: "IN_PERSON" | "VIRTUAL";
         MonitorAssignment: {
             readonly id: number;
             readonly monitor: components["schemas"]["UserReference"];
@@ -625,6 +775,12 @@ export interface components {
             /** Horas comprometidas */
             readonly committed_hours: number;
             readonly teachers: components["schemas"]["SubjectTeacher"][];
+        };
+        /** @description Only what a student needs to recognize the monitor; no email (RNF-SEC). */
+        MonitorReference: {
+            /** Format: uuid */
+            id: string;
+            readonly full_name: string;
         };
         PaginatedAcademicTermList: {
             /** @example 123 */
@@ -655,6 +811,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["AdminUser"][];
+        };
+        PaginatedAvailabilitySlotList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AvailabilitySlot"][];
         };
         PaginatedCourseList: {
             /** @example 123 */
@@ -716,6 +887,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["MonitorOwnAssignment"][];
         };
+        PaginatedSlotTemplateList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["SlotTemplate"][];
+        };
         PaginatedSubjectList: {
             /** @example 123 */
             count: number;
@@ -760,6 +946,19 @@ export interface components {
             name?: string;
             is_active?: boolean;
         };
+        /** @description Fields a monitor sets on a slot; the end and the term are derived (ADR-010). */
+        PatchedSlotUpdate: {
+            /**
+             * Format: date-time
+             * @description Inicio en ISO 8601 con zona; en punto o a la media, hora de Bogotá.
+             */
+            starts_at?: string;
+            modality?: components["schemas"]["ModalityEnum"];
+            /** @description Aula o enlace de la sesión. */
+            location?: string;
+            /** @description Cupos; por defecto 1. */
+            capacity?: number;
+        };
         PatchedSubjectWrite: {
             code?: string;
             /** Nombre */
@@ -800,6 +999,69 @@ export interface components {
          * @enum {string}
          */
         RolesEnum: "STUDENT" | "MONITOR" | "TEACHER" | "ADMIN";
+        /** @description Fields a monitor sets on a slot; the end and the term are derived (ADR-010). */
+        SlotCreate: {
+            /**
+             * Format: date-time
+             * @description Inicio en ISO 8601 con zona; en punto o a la media, hora de Bogotá.
+             */
+            starts_at: string;
+            modality: components["schemas"]["ModalityEnum"];
+            /** @description Aula o enlace de la sesión. */
+            location: string;
+            /** @description Cupos; por defecto 1. */
+            capacity?: number;
+            subject: number;
+        };
+        SlotTemplate: {
+            readonly id: number;
+            readonly subject: components["schemas"]["SubjectReference"];
+            /** Código */
+            readonly term: string;
+            /** Día de la semana */
+            readonly weekday: number;
+            /**
+             * Hora de inicio
+             * Format: time
+             */
+            readonly start_time: string;
+            /** Capacidad */
+            readonly capacity: number;
+            readonly modality: components["schemas"]["ModalityEnum"];
+            /** Lugar o enlace */
+            readonly location: string;
+            readonly is_active: boolean;
+            /** @description Franjas que generó la plantilla. */
+            readonly slots_created: number;
+        };
+        SlotTemplateCreate: {
+            subject: number;
+            /**
+             * Código
+             * @description Código del período, por ejemplo 2026-2.
+             */
+            term: string;
+            /** @description Día de la semana: 0 lunes … 6 domingo. */
+            weekday: number;
+            /**
+             * Format: time
+             * @description Hora local de Bogotá, en punto o a la media (por ejemplo 10:00).
+             */
+            start_time: string;
+            modality: components["schemas"]["ModalityEnum"];
+            /** @description Aula o enlace de la sesión. */
+            location: string;
+            /** @description Cupos; por defecto 1. */
+            capacity?: number;
+        };
+        /**
+         * @description * `AVAILABLE` - AVAILABLE
+         *     * `RESERVED` - RESERVED
+         *     * `CANCELLED` - CANCELLED
+         *     * `EXPIRED` - EXPIRED
+         * @enum {string}
+         */
+        StatusEnum: "AVAILABLE" | "RESERVED" | "CANCELLED" | "EXPIRED";
         Subject: {
             readonly id: number;
             /** Código */
@@ -1019,6 +1281,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    availability_slots_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlotCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SlotCreate"];
+                "multipart/form-data": components["schemas"]["SlotCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilitySlot"];
+                };
+            };
+        };
+    };
+    availability_slots_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La franja tiene una reserva o ya no está disponible. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    availability_slots_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSlotUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSlotUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedSlotUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilitySlot"];
+                };
+            };
+            /** @description La franja tiene una reserva o ya no está disponible. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    availability_slots_mine_list: {
+        parameters: {
+            query?: {
+                /** @description Fecha local de Bogotá, incluida. */
+                date_from?: string;
+                /** @description Fecha local de Bogotá, incluida. */
+                date_to?: string;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /**
+                 * @description * `AVAILABLE` - AVAILABLE
+                 *     * `RESERVED` - RESERVED
+                 *     * `CANCELLED` - CANCELLED
+                 *     * `EXPIRED` - EXPIRED
+                 */
+                status?: "AVAILABLE" | "RESERVED" | "CANCELLED" | "EXPIRED";
+                /** @description Id de asignatura. */
+                subject?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAvailabilitySlotList"];
+                };
+            };
+        };
+    };
+    availability_slots_search_list: {
+        parameters: {
+            query?: {
+                /** @description Fecha local de Bogotá, incluida. */
+                date_from?: string;
+                /** @description Fecha local de Bogotá, incluida. */
+                date_to?: string;
+                /**
+                 * @description * `IN_PERSON` - Presencial
+                 *     * `VIRTUAL` - Virtual
+                 */
+                modality?: "IN_PERSON" | "VIRTUAL";
+                /** @description Id del monitor. */
+                monitor?: string;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Id de asignatura. */
+                subject?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAvailabilitySlotList"];
                 };
             };
         };
@@ -1407,6 +1831,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedMonitorOwnAssignmentList"];
+                };
+            };
+        };
+    };
+    slot_templates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlotTemplateCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SlotTemplateCreate"];
+                "multipart/form-data": components["schemas"]["SlotTemplateCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlotTemplate"];
+                };
+            };
+        };
+    };
+    slot_templates_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    slot_templates_mine_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSlotTemplateList"];
                 };
             };
         };
