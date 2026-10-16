@@ -7,6 +7,7 @@ import type { IconName } from "@/components/ui/icon";
 import {
   CATALOG_ADMIN_PATH,
   HOME_PATH,
+  MY_AVAILABILITY_PATH,
   MY_COURSES_PATH,
   MY_MONITORING_PATH,
   type RoleCode,
@@ -26,6 +27,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: HOME_PATH, label: "Inicio", icon: "home" },
   { href: SUBJECTS_PATH, label: "Asignaturas", icon: "book", roles: ["STUDENT"] },
   { href: MY_MONITORING_PATH, label: "Mis monitorías", icon: "support", roles: ["MONITOR"] },
+  {
+    href: MY_AVAILABILITY_PATH,
+    label: "Mi disponibilidad",
+    icon: "calendar",
+    roles: ["MONITOR"],
+  },
   { href: MY_COURSES_PATH, label: "Mis cursos", icon: "courses", roles: ["TEACHER"] },
   { href: CATALOG_ADMIN_PATH, label: "Catálogo", icon: "catalog", roles: ["ADMIN"] },
   { href: USERS_ADMIN_PATH, label: "Usuarios", icon: "users", roles: ["ADMIN"] },

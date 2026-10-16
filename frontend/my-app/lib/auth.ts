@@ -29,6 +29,8 @@ export const SUBJECTS_PATH = "/asignaturas";
 export const MY_COURSES_PATH = "/mis-cursos";
 /** A monitor's own assigned subjects and their teachers (RN-009.1). */
 export const MY_MONITORING_PATH = "/mis-monitorias";
+/** A monitor's own slots and weekly templates (T-03.16). */
+export const MY_AVAILABILITY_PATH = "/disponibilidad";
 /** Catalog administration, for the ADMIN role only (FASE-02). */
 export const CATALOG_ADMIN_PATH = "/admin/catalogo";
 

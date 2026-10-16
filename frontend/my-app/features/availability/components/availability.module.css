@@ -1,0 +1,284 @@
+/* --- Page ------------------------------------------------------------------------------------ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.term {
+  min-width: 11rem;
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.tabPanel {
+  min-width: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.panelLead {
+  flex: 1 1 20rem;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+/* --- Tables ---------------------------------------------------------------------------------- */
+
+.whenColumn {
+  width: 13rem;
+}
+
+.sessionColumn {
+  width: 10rem;
+}
+
+.modalityColumn {
+  width: 14rem;
+}
+
+.countColumn {
+  width: 7rem;
+}
+
+.stateColumn {
+  width: 8rem;
+}
+
+.actionsColumn {
+  width: 17rem;
+}
+
+.slotsTable {
+  min-width: 60rem;
+}
+
+.templatesTable {
+  min-width: 66rem;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.primary {
+  overflow: hidden;
+  font-weight: 500;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primary::first-letter {
+  text-transform: uppercase;
+}
+
+.secondary {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Individual or group session: a tag, so the type reads at a glance in a long list. */
+.session {
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.session[data-group] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+/* The state as a dot and a word (the dot alone would rely on color). */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.status::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--text-subtle);
+}
+
+.status[data-status="AVAILABLE"]::before {
+  background: var(--accent);
+}
+
+.status[data-status="RESERVED"]::before {
+  background: var(--warning);
+}
+
+.status[data-status="CANCELLED"],
+.status[data-status="EXPIRED"] {
+  color: var(--text-muted);
+}
+
+.rowActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.confirmText {
+  font-size: 0.875rem;
+  color: var(--danger-ink);
+}
+
+/* --- Forms ----------------------------------------------------------------------------------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1.25rem 1rem;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.hint {
+  margin-top: -0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* What an edit form cannot change, stated once at its top. */
+.fixed {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-0);
+  font-size: 0.9375rem;
+}
+
+.fixed dt {
+  color: var(--text-muted);
+}
+
+.fixed dd {
+  overflow-wrap: anywhere;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+}
+
+.legend {
+  margin-bottom: 0.625rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast),
+    background var(--duration-fast);
+}
+
+.option:hover {
+  border-color: var(--border-strong);
+}
+
+.option:has(:checked) {
+  border-color: var(--accent-line);
+  background: var(--surface-selected);
+}
+
+.option:has(:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.radio {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+}
+
+.errors {
+  font-size: 0.875rem;
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}
