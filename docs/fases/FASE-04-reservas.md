@@ -6,7 +6,7 @@
 | Historias | HU-03 Reserva (8 pts) · HU-04 Cancelación (3 pts) |
 | Puntos | 11 |
 | Estado | **Bloqueada** |
-| ADR bloqueantes | ADR-010, ADR-011 |
+| ADR bloqueantes | ADR-011 |
 | Requisitos | RF-040 a RF-046 |
 
 ---
@@ -30,7 +30,7 @@ Un `if` en el serializer **no** resuelve esto. Entre la comprobación y la escri
 ## 3. Gate de entrada
 
 - [ ] FASE-03 cerrada con su DoD completa
-- [ ] ADR-010 cerrado — capacidad de la franja, anticipación mínima, límite de reservas activas
+- [x] ADR-010 cerrado *(2026-10-11)* — capacidad de la franja, anticipación mínima, límite de reservas activas
 - [ ] ADR-011 cerrado — ventana de cancelación, consecuencia de cancelar tarde, cancelación por el monitor
 
 > Sin ADR-011, la pregunta "¿qué significa suficiente anticipación?" queda al criterio del implementador. Eso es inventar una regla de negocio, y está prohibido por el protocolo.

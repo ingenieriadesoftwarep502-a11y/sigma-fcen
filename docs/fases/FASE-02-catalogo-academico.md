@@ -153,4 +153,4 @@ ruff check . && ruff format --check . && mypy .
 
 ## 10. Siguiente fase
 
-[FASE-03 · Disponibilidad y búsqueda](FASE-03-disponibilidad.md) — requiere cerrar ADR-010.
+[FASE-03 · Disponibilidad y búsqueda](FASE-03-disponibilidad.md) — ADR-010 cerrado el 2026-10-11.
