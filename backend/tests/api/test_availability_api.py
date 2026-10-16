@@ -89,6 +89,30 @@ def test_ca_hu05_1_monitor_publishes_a_slot(world: dict[str, Any]) -> None:
     assert slot.ends_at - slot.starts_at == HOUR
 
 
+def test_adr_010_monitor_publishes_a_group_slot(world: dict[str, Any]) -> None:
+    response = client_for(world["sofia"]).post(
+        SLOTS_URL, body(subject=world["calculo"].pk, capacity=5), format="json"
+    )
+
+    assert response.status_code == 201, response.json()
+    data = response.json()
+    assert data["capacity"] == 5
+    assert data["status"] == "AVAILABLE"
+    assert AvailabilitySlot.objects.get(pk=data["id"]).capacity == 5
+    found = client_for(world["student"]).get(SEARCH_URL).json()["results"]
+    assert [(s["id"], s["capacity"]) for s in found] == [(data["id"], 5)]
+
+
+def test_adr_010_slot_without_capacity_is_an_individual_session(world: dict[str, Any]) -> None:
+    response = client_for(world["sofia"]).post(
+        SLOTS_URL, body(subject=world["calculo"].pk), format="json"
+    )
+
+    assert response.status_code == 201, response.json()
+    assert response.json()["capacity"] == 1
+    assert AvailabilitySlot.objects.get(pk=response.json()["id"]).capacity == 1
+
+
 def test_t_03_15_rnf_dat_001_times_are_stored_and_returned_in_utc(world: dict[str, Any]) -> None:
     local = SLOT_START.astimezone(LOCAL_TZ).isoformat()  # ...T10:00:00-05:00
 
@@ -436,6 +460,22 @@ def test_template_is_created_with_its_slots(world: dict[str, Any]) -> None:
     assert data["slots_created"] == template.slots.count() > 0
     assert data["is_active"] is True
     assert data["start_time"] == "10:00:00"
+
+
+def test_adr_010_monitor_creates_a_group_template(world: dict[str, Any]) -> None:
+    response = client_for(world["sofia"]).post(
+        TEMPLATES_URL, template_body(world, capacity=4), format="json"
+    )
+
+    assert response.status_code == 201, response.json()
+    data = response.json()
+    assert data["capacity"] == 4
+    template = SlotTemplate.objects.get(pk=data["id"])
+    assert template.capacity == 4
+    capacities = set(template.slots.values_list("capacity", flat=True))
+    assert capacities == {4}
+    listed = client_for(world["sofia"]).get(TEMPLATES_MINE_URL).json()["results"]
+    assert [(t["id"], t["capacity"]) for t in listed] == [(data["id"], 4)]
 
 
 def test_template_with_capacity_over_the_limit_is_a_400(world: dict[str, Any]) -> None:
