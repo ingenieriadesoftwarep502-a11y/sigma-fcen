@@ -160,7 +160,7 @@ Tabla de decisión para agentes. Sin ambigüedad.
 | "reservar y marcar la franja ocupada en una transacción" | `services.py` | vista, modelo |
 | "el cuerpo debe traer `slot_id` numérico" | `serializers.py` | dominio |
 | "solo el rol Estudiante accede" | `permissions.py` (las clases por rol comunes están en `backend/shared/permissions.py`, §7.1) | vista, serializer |
-| "una franja no admite dos reservas activas" | `models.py` como `UniqueConstraint` | solo en Python |
+| "un estudiante no admite dos reservas activas en la misma franja" (el tope de cupos se valida con un conteo bajo bloqueo en `services.py`) | `models.py` como `UniqueConstraint` sobre (franja, estudiante) | solo en Python |
 | "traducir un error de dominio a HTTP 409" | *exception handler* en `shared/` | dominio |
 
 ### 4.4 Garantía de la invariante crítica (D-1) · `[PROPUESTA]`
