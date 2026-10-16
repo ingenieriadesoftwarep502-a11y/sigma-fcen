@@ -28,9 +28,11 @@ export const WEEKDAY_LABELS = [
   "Domingo",
 ] as const;
 
-/** e.g. "Individual", "Grupal · 6 cupos". */
+/** e.g. "Individual · 1 cupo", "Grupal · 6 cupos": the session type and its seats. */
 export function sessionLabel(capacity: number): string {
-  return isGroupSession(capacity) ? `Grupal · ${numberFormat.format(capacity)} cupos` : "Individual";
+  return isGroupSession(capacity)
+    ? `Grupal · ${numberFormat.format(capacity)} cupos`
+    : "Individual · 1 cupo";
 }
 
 /** e.g. "3 franjas". */

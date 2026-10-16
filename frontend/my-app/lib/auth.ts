@@ -31,6 +31,8 @@ export const MY_COURSES_PATH = "/mis-cursos";
 export const MY_MONITORING_PATH = "/mis-monitorias";
 /** A monitor's own slots and weekly templates (T-03.16). */
 export const MY_AVAILABILITY_PATH = "/disponibilidad";
+/** The slot search, as students look for a monitoring session (T-03.17). */
+export const SLOT_SEARCH_PATH = "/buscar-monitorias";
 /** Catalog administration, for the ADMIN role only (FASE-02). */
 export const CATALOG_ADMIN_PATH = "/admin/catalogo";
 

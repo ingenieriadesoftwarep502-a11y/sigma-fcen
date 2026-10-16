@@ -11,6 +11,7 @@ import {
   MY_COURSES_PATH,
   MY_MONITORING_PATH,
   type RoleCode,
+  SLOT_SEARCH_PATH,
   SUBJECTS_PATH,
   USERS_ADMIN_PATH,
 } from "@/lib/auth";
@@ -26,6 +27,7 @@ export type NavItem = {
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: HOME_PATH, label: "Inicio", icon: "home" },
   { href: SUBJECTS_PATH, label: "Asignaturas", icon: "book", roles: ["STUDENT"] },
+  { href: SLOT_SEARCH_PATH, label: "Buscar monitorías", icon: "search", roles: ["STUDENT"] },
   { href: MY_MONITORING_PATH, label: "Mis monitorías", icon: "support", roles: ["MONITOR"] },
   {
     href: MY_AVAILABILITY_PATH,
