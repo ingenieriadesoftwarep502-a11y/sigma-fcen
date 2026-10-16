@@ -64,6 +64,11 @@ describe("SlotSearch (T-03.17, HU-02)", () => {
     expect(items[0]).toHaveTextContent("Individual · 1 cupo");
     expect(items[1]).toHaveTextContent("Grupal · 6 cupos");
     expect(items[1]).toHaveTextContent("Virtual");
+    // Each detail is named by its term, not by its value.
+    const terms = (item: HTMLElement) =>
+      within(item).getAllByRole("term").map((term) => term.textContent);
+    expect(terms(items[0]!)).toEqual(["Monitor", "Modalidad", "Aula o lugar"]);
+    expect(terms(items[1]!)).toEqual(["Monitor", "Modalidad", "Enlace de la sesión"]);
     expect(screen.getByText("2 franjas disponibles")).toBeInTheDocument();
     expect(searchMock).toHaveBeenCalledWith(1, NO_SLOT_SEARCH_FILTERS, expect.any(AbortSignal));
   });

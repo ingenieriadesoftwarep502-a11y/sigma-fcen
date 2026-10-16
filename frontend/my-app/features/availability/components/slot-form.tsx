@@ -99,8 +99,16 @@ export default function SlotForm({ slot, assignments, onSaved, onBusyChange }: S
       // e.g. it overlaps another slot (400), the subject is not assigned (403) or the slot
       // is no longer available (409).
       const { byField, message } = availabilityFormErrors(error, FIELDS);
-      setErrors(byField);
-      setFormError(message);
+      const { subject: subjectErrors, ...rest } = byField;
+      if (editing && subjectErrors) {
+        // The edit form shows the subject as fixed text, so its errors go to the form alert
+        // (e.g. a new date falls in a term where the monitor is not assigned to it).
+        setErrors(rest);
+        setFormError([...subjectErrors, message].filter(Boolean).join(" "));
+      } else {
+        setErrors(byField);
+        setFormError(message);
+      }
       setSubmitting(false);
       onBusyChange(false);
     }

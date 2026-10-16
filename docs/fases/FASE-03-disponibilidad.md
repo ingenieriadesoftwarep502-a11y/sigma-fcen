@@ -148,7 +148,7 @@ El corazón de esta fase es la **detección de solapamientos**, y es lógica pur
 | T-03.13 | Acceso no autenticado | `401` | CA-HU02-6 |
 | T-03.14 | Rendimiento de la búsqueda | Sin consultas N+1; índice `(subject, starts_at, status)` | RNF-PER-001, RNF-PER-002 |
 | T-03.15 | Zona horaria | Guardado en UTC, presentado en `America/Bogota` | RNF-DAT-001 |
-| T-03.16 | Frontend: gestión de disponibilidad | Crear, listar y eliminar franjas y plantillas; el monitor elige sesión individual o grupal y, si es grupal, la capacidad (> 1) | ADR-010 (ampliación 2026-10-15) |
+| T-03.16 | Frontend: gestión de disponibilidad | Crear y listar franjas y plantillas, retirar (cancelar) franjas y desactivar plantillas; el monitor elige sesión individual o grupal y, si es grupal, la capacidad (> 1) | ADR-010 (ampliación 2026-10-15) |
 | T-03.17 | Frontend: búsqueda | Filtros combinados y estado vacío; cada resultado indica si la sesión es individual o grupal y su capacidad | ADR-010 (ampliación 2026-10-15) |
 
 ### Casos de solapamiento que T-03.1 debe cubrir

@@ -1,7 +1,7 @@
 import Icon from "@/components/ui/icon";
 import { isGroupSession, type Slot } from "@/lib/availability";
 
-import { MODALITY_LABELS, sessionLabel, slotDayLabel, slotTimeRange } from "../labels";
+import { locationLabel, MODALITY_LABELS, sessionLabel, slotDayLabel, slotTimeRange } from "../labels";
 import styles from "./slot-search.module.css";
 
 type SlotResultCardProps = {
@@ -50,7 +50,11 @@ export default function SlotResultCard({ slot, onPickMonitor }: SlotResultCardPr
           </dd>
         </div>
         <div>
-          <dt>{MODALITY_LABELS[slot.modality]}</dt>
+          <dt>Modalidad</dt>
+          <dd>{MODALITY_LABELS[slot.modality]}</dd>
+        </div>
+        <div>
+          <dt>{locationLabel(slot.modality)}</dt>
           <dd className={styles.location} title={slot.location}>
             {slot.location}
           </dd>

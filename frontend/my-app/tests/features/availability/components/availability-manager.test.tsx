@@ -251,6 +251,35 @@ describe("AvailabilityManager slots (T-03.16)", () => {
     expect(await within(form).findByText(detail)).toBeInTheDocument();
   });
 
+  it("explains on edit that the monitor is not assigned to the subject in the new term", async () => {
+    const detail = "No tienes una asignación de monitoría en esta asignatura y período.";
+    updateSlotMock.mockRejectedValue(new ApiError(403, "Forbidden", { detail }));
+    const table = await renderSlots();
+
+    fireEvent.click(within(within(table).getAllByRole("row")[1]!).getByRole("button", {
+      name: /Editar franja/,
+    }));
+    const form = screen.getByRole("dialog", { name: "Editar franja" });
+    fill(form, "Fecha", "2027-02-16");
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await within(form).findByRole("alert")).toHaveTextContent(detail);
+  });
+
+  it("shows a subject error on edit even though the subject cannot be changed", async () => {
+    const message = "La asignatura no está activa en el período de la nueva fecha.";
+    updateSlotMock.mockRejectedValue(new ApiError(400, "Bad Request", { subject: [message] }));
+    const table = await renderSlots();
+
+    fireEvent.click(within(within(table).getAllByRole("row")[1]!).getByRole("button", {
+      name: /Editar franja/,
+    }));
+    const form = screen.getByRole("dialog", { name: "Editar franja" });
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await within(form).findByRole("alert")).toHaveTextContent(message);
+  });
+
   it("withdraws a slot after confirming", async () => {
     cancelSlotMock.mockResolvedValue(undefined);
     const table = await renderSlots();
