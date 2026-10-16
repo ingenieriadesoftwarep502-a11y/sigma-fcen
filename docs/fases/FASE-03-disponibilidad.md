@@ -5,7 +5,7 @@
 | Sprint | 3 (semanas 7–8) |
 | Historias | HU-05 Registro de disponibilidad (5 pts) · HU-02 Consulta de monitorías (5 pts) |
 | Puntos | 10 |
-| Estado | **En curso** — backend T-03.1 a T-03.15 implementado (2026-10-11); pendiente el frontend (T-03.16, T-03.17) |
+| Estado | **En curso** — backend T-03.1 a T-03.15 implementado (2026-10-11); frontend T-03.16 y T-03.17 implementado (2026-10-15); pendientes CI y aprobación de PRs |
 | ADR bloqueantes | Ninguno — ADR-010 cerrado el 2026-10-11 |
 | Requisitos | RF-030 a RF-034 |
 
@@ -148,7 +148,7 @@ El corazón de esta fase es la **detección de solapamientos**, y es lógica pur
 | T-03.13 | Acceso no autenticado | `401` | CA-HU02-6 |
 | T-03.14 | Rendimiento de la búsqueda | Sin consultas N+1; índice `(subject, starts_at, status)` | RNF-PER-001, RNF-PER-002 |
 | T-03.15 | Zona horaria | Guardado en UTC, presentado en `America/Bogota` | RNF-DAT-001 |
-| T-03.16 | Frontend: gestión de disponibilidad | Crear, listar y eliminar franjas y plantillas; el monitor elige sesión individual o grupal y, si es grupal, la capacidad (> 1) | ADR-010 (ampliación 2026-10-15) |
+| T-03.16 | Frontend: gestión de disponibilidad | Crear y listar franjas y plantillas, retirar (cancelar) franjas y desactivar plantillas; el monitor elige sesión individual o grupal y, si es grupal, la capacidad (> 1) | ADR-010 (ampliación 2026-10-15) |
 | T-03.17 | Frontend: búsqueda | Filtros combinados y estado vacío; cada resultado indica si la sesión es individual o grupal y su capacidad | ADR-010 (ampliación 2026-10-15) |
 
 ### Casos de solapamiento que T-03.1 debe cubrir
@@ -195,7 +195,10 @@ ruff check . && mypy .
 - [x] Sin consultas N+1 en el listado (assert de número de consultas). *(`test_t_03_14_rnf_per_001_search_runs_a_fixed_number_of_queries`; 2026-10-11)*
 - [x] Todas las marcas de tiempo en UTC. *(`test_t_03_15_rnf_dat_001_times_are_stored_and_returned_in_utc`; 2026-10-11)*
 - [x] Esquema OpenAPI y tipos del frontend actualizados. *(`spectacular --validate --fail-on-warn` sin avisos; `npm run gen:api` y `npm run type-check` en verde; 2026-10-11)*
+- [x] Pantallas del frontend con pruebas de componentes: gestión de disponibilidad del monitor en `/disponibilidad` (T-03.16) y búsqueda del estudiante en `/buscar-monitorias` (T-03.17). *(`npm run lint`, `npm run type-check`, `npm test` —44 archivos, 333 pruebas— y `npm run build` en verde en local; 2026-10-15)*
 - [ ] CI en verde; PRs aprobadas.
+
+> **Alcance del frontend (2026-10-15):** la búsqueda filtra por asignatura, modalidad y rango de **fechas**; el contrato no tiene filtro por hora del día, así que no se ofrece. El filtro de monitor se aplica desde un resultado («Ver solo las franjas de…»), porque ningún endpoint abierto al estudiante lista los monitores de una asignatura. Los resultados muestran la capacidad total; los cupos restantes (R4) llegan con FASE-04.
 
 ---
 

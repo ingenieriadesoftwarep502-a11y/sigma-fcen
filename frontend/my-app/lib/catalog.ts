@@ -7,7 +7,7 @@
  * `term` is always a term code (e.g. "2026-1"); leaving it out means the current term.
  */
 
-import { ApiError, apiRequest } from "@/lib/api-client";
+import { ApiError, apiRequest, queryString } from "@/lib/api-client";
 import type { components } from "@/types/api";
 
 type Schemas = components["schemas"];
@@ -96,18 +96,7 @@ export type AssignmentFilters = {
 
 export const NO_ASSIGNMENT_FILTERS: AssignmentFilters = { search: "", term: null };
 
-type Params = Record<string, string | number | boolean | null | undefined>;
-
-/** A query string with the empty values left out; booleans travel as "true"/"false". */
-function query(params: Params): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === null || value === undefined || value === "") continue;
-    search.set(key, String(value));
-  }
-  const text = search.toString();
-  return text ? `?${text}` : "";
-}
+const query = queryString;
 
 // --- Departments -----------------------------------------------------------------------------
 

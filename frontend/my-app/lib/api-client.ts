@@ -316,6 +316,19 @@ async function run<T>(path: string, options: ApiRequestOptions, reading: Reading
   }
 }
 
+export type QueryParams = Record<string, string | number | boolean | null | undefined>;
+
+/** A query string with the empty values left out; booleans travel as "true"/"false". */
+export function queryString(params: QueryParams): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined || value === "") continue;
+    search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text ? `?${text}` : "";
+}
+
 /** Per-field messages of a DRF validation error (`{"field": ["message", ...]}`). */
 export function fieldErrors(error: unknown): Record<string, string[]> {
   if (!(error instanceof ApiError) || typeof error.body !== "object" || error.body === null) {
