@@ -15,7 +15,7 @@
 
 Que un estudiante reserve una franja disponible con garantía de que nadie más puede tomarla, y que pueda cancelarla dentro de la política definida liberando el espacio.
 
-**Resultado observable:** dos estudiantes envían una reserva sobre la misma franja **en el mismo instante**; exactamente uno recibe `201` y el otro `409`. La base de datos nunca contiene dos reservas confirmadas sobre la misma franja.
+**Resultado observable:** dos estudiantes envían una reserva sobre el último cupo de una franja **en el mismo instante**; exactamente uno recibe `201` y el otro `409`. La base de datos nunca contiene más reservas confirmadas que la capacidad de la franja (ADR-010: la capacidad la elige el monitor; 1 = individual, >1 = grupal).
 
 ---
 
@@ -42,8 +42,10 @@ Un `if` en el serializer **no** resuelve esto. Entre la comprobación y la escri
 ### Entra
 
 - Modelo `Reservation` con máquina de estados.
-- **Restricción única parcial en base de datos** sobre franja con estado `CONFIRMED`.
-- Servicio de reserva transaccional con bloqueo de fila.
+- **Restricción única parcial en base de datos** sobre `(franja, estudiante)` con estado `CONFIRMED`.
+- Servicio de reserva transaccional con bloqueo de fila y conteo de reservas `CONFIRMED` frente a la capacidad.
+- Transiciones de la franja por cupos: `AVAILABLE` → `RESERVED` al llenarse y `RESERVED` → `AVAILABLE` al cancelar una reserva de una franja llena.
+- Validaciones de `apps/availability/services.py` por conteo de reservas `CONFIRMED` y cupos restantes en la búsqueda.
 - Servicio de cancelación transaccional que libera la franja.
 - Validación de solapamiento de reservas del propio estudiante.
 - Consulta de reservas propias para estudiante y monitor.
@@ -84,8 +86,8 @@ Tres capas de defensa. Las tres son obligatorias; ninguna sustituye a las otras.
 
 | Capa | Mecanismo | Qué garantiza |
 |---|---|---|
-| Base de datos | `UniqueConstraint(fields=["slot"], condition=Q(status="CONFIRMED"))` | Garantía absoluta, incluso con varios procesos o servidores |
-| Servicio | `select_for_update()` dentro de `transaction.atomic()` | Serializa el acceso y produce un error de dominio limpio |
+| Base de datos | `UniqueConstraint(fields=["slot", "student"], condition=Q(status="CONFIRMED"))` | Un estudiante no ocupa dos cupos de la misma franja, incluso con varios procesos o servidores |
+| Servicio | `select_for_update()` sobre la franja dentro de `transaction.atomic()` y conteo de reservas `CONFIRMED` frente a `capacity` | Serializa el acceso, impide superar la capacidad y produce un error de dominio limpio |
 | API | `IntegrityError` → `409 Conflict` | Respuesta comprensible y consistente para el cliente |
 
 ```text
@@ -98,14 +100,16 @@ transaction.atomic()
       │
       ├─▶ Reglas de dominio: futura, disponible, sin solapamiento propio
       │
-      ├─▶ INSERT Reservation (status=CONFIRMED)
-      │      └─ la restricción única es la última línea de defensa
+      ├─▶ COUNT reservas CONFIRMED del slot < capacity
       │
-      └─▶ UPDATE slot → RESERVED
+      ├─▶ INSERT Reservation (status=CONFIRMED)
+      │      └─ la restricción única (slot, student) es la última línea de defensa
+      │
+      └─▶ si COUNT + 1 == capacity: UPDATE slot → RESERVED
             (todo junto, o nada)
 ```
 
-> Si la capacidad de la franja resulta ser mayor que 1 (ADR-010), la restricción única se sustituye por una verificación de conteo **bajo bloqueo**, no por un contador en memoria.
+> **ADR-010, ampliación 2026-10-15:** la capacidad la elige el monitor. El tope se verifica por conteo **bajo bloqueo** de la fila de la franja, no por un contador en memoria. `RESERVED` significa llena (R1); las validaciones del monitor se hacen por conteo de reservas `CONFIRMED` (R2); un estudiante tiene como máximo una reserva por franja (R3); la búsqueda expone los cupos restantes (R4). Ver DECISIONES-ABIERTAS ADR-010.
 
 ---
 
@@ -115,7 +119,7 @@ transaction.atomic()
 |---|---|---|---|
 | T-04.1 | Reglas puras de reserva | Franja pasada, franja no disponible, solapamiento propio | RN-004.1, 004.2, 004.4 |
 | T-04.2 | Modelo `Reservation` y estados | Transiciones prohibidas del DDD §6.2 son rechazadas | DDD §6.2 |
-| T-04.3 | **Restricción única en base de datos** | Insertar dos `CONFIRMED` sobre la misma franja lanza `IntegrityError` | RN-004.3 |
+| T-04.3 | **Restricción única en base de datos** | Insertar dos `CONFIRMED` del mismo estudiante sobre la misma franja lanza `IntegrityError` | RN-004.3 |
 | T-04.4 | Servicio de reserva transaccional | Reserva válida crea la reserva y marca la franja | CA-HU03-1, RN-004.5 |
 | T-04.5 | Franja ya reservada | `409`, sin segunda reserva | CA-HU03-2 |
 | T-04.6 | **Prueba de concurrencia real** | Dos transacciones simultáneas: exactamente una gana | **CA-HU03-3** |
@@ -133,6 +137,11 @@ transaction.atomic()
 | T-04.18 | Completar T-01.12 | Desactivar usuario con reservas futuras informa el impacto | CA-HU11-3 |
 | T-04.19 | Frontend: reservar | Flujo desde la búsqueda, con manejo de `409` |  — |
 | T-04.20 | Frontend: mis reservas y cancelar | Listado, confirmación y estado tras cancelar | — |
+| T-04.21 | Validaciones de disponibilidad por conteo | `update_slot`, `cancel_slot` y `deactivate_template` pasan de validar por estado a contar reservas `CONFIRMED` bajo bloqueo de fila: franja con capacidad > 1 y una reserva → retirar, mover la hora de inicio o desactivar la plantilla da `409`; bajar `capacity` por debajo de las reservas `CONFIRMED` da `409` | CA-HU05-4, RN-003.4, ADR-010 R2 |
+| T-04.22 | Transiciones por cupos | Capacidad 3: la primera y la segunda reserva dejan la franja `AVAILABLE`; la tercera la pasa a `RESERVED`; cancelar una la devuelve a `AVAILABLE` | RN-004.1, RN-004.5, RN-005.2, ADR-010 R1 |
+| T-04.23 | Una reserva por estudiante y franja | El mismo estudiante reservando dos veces una franja grupal → `409`; la restricción `(slot, student)` lanza `IntegrityError` | RN-004.3, ADR-010 R3 |
+| T-04.24 | Cupos restantes en la búsqueda | El resultado expone `remaining_seats` = capacidad − reservas `CONFIRMED`, sin consultas N+1 | CA-HU02-1, RNF-PER-001, ADR-010 R4 |
+| T-04.25 | Concurrencia con capacidad > 1 | Capacidad 2 con una reserva: dos transacciones simultáneas sobre el último cupo, exactamente una gana y nunca se supera la capacidad | CA-HU03-3, RN-004.3 |
 
 ### Cómo se prueba realmente T-04.6
 

@@ -165,14 +165,14 @@ Tabla de decisión para agentes. Sin ambigüedad.
 
 ### 4.4 Garantía de la invariante crítica (D-1) · `[PROPUESTA]`
 
-CA-HU03-3 exige que, ante dos peticiones simultáneas sobre la misma franja, exactamente una gane. Validar con un `if` en el serializer **no** lo garantiza: entre la comprobación y la escritura existe una ventana de carrera.
+CA-HU03-3 exige que, ante dos peticiones simultáneas sobre el último cupo de una franja, exactamente una gane (la capacidad la elige el monitor, ADR-010). Validar con un `if` en el serializer **no** lo garantiza: entre la comprobación y la escritura existe una ventana de carrera.
 
 Defensa en tres capas:
 
 | Capa | Mecanismo | Qué aporta |
 |---|---|---|
-| Base de datos | `UniqueConstraint(fields=["slot"], condition=Q(status="CONFIRMED"))` | Garantía absoluta, incluso con varios procesos |
-| Servicio | `select_for_update()` dentro de `transaction.atomic()` | Serializa el acceso y produce un error limpio |
+| Base de datos | `UniqueConstraint(fields=["slot", "student"], condition=Q(status="CONFIRMED"))` | Un estudiante no ocupa dos cupos de la misma franja, incluso con varios procesos |
+| Servicio | `select_for_update()` sobre la franja dentro de `transaction.atomic()` y conteo de reservas `CONFIRMED` frente a `capacity` | Serializa el acceso, impide superar la capacidad y produce un error limpio |
 | API | Traducción de `IntegrityError` a `409 Conflict` | Respuesta comprensible para el cliente |
 
 **La prueba de CA-HU03-3 debe ejercitar concurrencia real** (hilos o transacciones simultáneas), no dos llamadas secuenciales.
@@ -267,7 +267,7 @@ Todos en `[PROPUESTA]`, salvo los de la fase 01, implementados en FASE-01 (permi
 | `PATCH/DELETE` | `/api/v1/availability-slots/{id}/` | monitor propietario | HU-05 | 03 |
 | `GET` | `/api/v1/availability-slots/search/` | autenticado | HU-02 | 03 |
 | `GET/POST` | `/api/v1/reservations/` | estudiante | HU-03 | 04 |
-| `POST` | `/api/v1/reservations/{id}/cancel/` | estudiante propietario | HU-04 | 04 |
+| `POST` | `/api/v1/reservations/{id}/cancel/` | estudiante propietario, monitor o admin | HU-04 | 04 |
 | `GET` | `/api/v1/reservations/mine/` | estudiante o monitor | HU-03, HU-12 | 04 |
 | `POST` | `/api/v1/tutoring-sessions/` | monitor | HU-06 | 05 |
 | `GET` | `/api/v1/tutoring-sessions/{id}/` | participantes o docente del curso | HU-06 | 05 |

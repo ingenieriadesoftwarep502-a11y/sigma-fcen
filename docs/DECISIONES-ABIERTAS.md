@@ -127,7 +127,7 @@ Se registran aquí al confirmarse. Formato obligatorio:
 | ADR-007 | Mecanismo de autenticación: **Opción A** — JWT (`djangorestframework-simplejwt`) en cookies `HttpOnly` + `SameSite`, con protección CSRF y renovación mediante token de refresco. El SSO institucional queda como integración futura (ADR-015). | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, SAD §7, TRD §4.1 |
 | ADR-008 | Modelo de usuario y roles: **Opción A** — `User` personalizado con `email` como identificador de acceso y relación N:M con `Role` mediante `UserRole` (`unique(user, role)`). Un usuario puede tener varios roles simultáneos. `AUTH_USER_MODEL` se define en la primera migración. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1, §5 y §8, SAD §7, TRD §2, §4, §5 y §6 |
 | ADR-009 | Política de registro: (1) registro restringido al dominio `@unal.edu.co`; (2) el auto-registro asigna únicamente el rol Estudiante; (3) sin verificación por correo — la cuenta queda activa al registrarse y no se requiere SMTP en v1; (4) los roles Monitor, Docente y Administrador los asigna un administrador. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1 y §5, TRD §4.1 y §6 |
-| ADR-010 | Granularidad de franjas: (1) sesión de 60 min; (2) bloques fijos de 60 min; (3) capacidad configurable, por defecto 1; (4) máximo 1 reserva activa por estudiante, asignatura y semana; (5) plantilla semanal recurrente que genera franjas concretas; (6) anticipación mínima de 2 h para reservar. Capacidad, límite y anticipación son parámetros configurables; cada franja guarda inicio y fin explícitos. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-10-11 | FASE-03, FASE-04, DDD §4.3 y §5, TRD §3 |
+| ADR-010 | Granularidad de franjas: (1) sesión de 60 min; (2) bloques fijos de 60 min; (3) capacidad configurable, por defecto 1; (4) máximo 1 reserva activa por estudiante, asignatura y semana; (5) plantilla semanal recurrente que genera franjas concretas; (6) anticipación mínima de 2 h para reservar. Capacidad, límite y anticipación son parámetros configurables; cada franja guarda inicio y fin explícitos. **Ampliación 2026-10-15:** la capacidad de cada franja o plantilla la elige el monitor (1 = individual, >1 = grupal); semántica de cupos R1–R4 en el detalle. | `[CONFIRMADO]` | Nicolás García Orozco (2026-10-11) · Alejandro Puerta Loaiza (ampliación) | 2026-10-11 · 2026-10-15 | FASE-03, FASE-04, DDD §4.3, §4.4, §5 y §6.1, SAD §4.4, TRD §3 |
 
 ---
 
@@ -264,6 +264,16 @@ Se conserva el contexto original de cada ADR para trazabilidad.
 | 6 | ¿Con cuánta anticipación mínima se puede reservar? | 2 horas antes del inicio |
 
 - **Pregunta:** ¿Se aprueban las seis propuestas de la tabla, o cuáles cambian?
+- **Ampliación de la regla 3:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-10-15. Las monitorías grupales están permitidas y la decisión es del monitor: elige la capacidad (número de cupos) de cada franja o plantilla semanal; capacidad 1 es una sesión individual y mayor que 1, una sesión grupal. Semántica acordada de cupos:
+
+| # | Regla |
+|---|---|
+| R1 | Una franja sigue `AVAILABLE` (visible en la búsqueda y reservable) mientras las reservas `CONFIRMED` sean menos que su capacidad; pasa a `RESERVED` (llena) solo cuando las reservas `CONFIRMED` igualan la capacidad. Si se cancela una reserva de una franja llena, vuelve de `RESERVED` a `AVAILABLE`. |
+| R2 | El monitor no puede retirar una franja, mover su hora de inicio ni desactivar las franjas futuras de una plantilla mientras la franja tenga al menos una reserva `CONFIRMED`: CA-HU05-4 y RN-003.4 se aplican por conteo de reservas, no solo por el estado `RESERVED`. Tampoco puede bajar la capacidad por debajo del número de reservas `CONFIRMED`. |
+| R3 | Un estudiante tiene como máximo una reserva por franja. Las reglas vigentes ya lo implican y se conservan: RN-004.4 (sin reservas `CONFIRMED` solapadas) y RN-004.7 (una reserva activa por asignatura y semana). |
+| R4 | La búsqueda expone los cupos restantes (capacidad − reservas `CONFIRMED`). Se implementa en FASE-04, cuando exista `Reservation`. |
+
+  Las validaciones de FASE-03 (`update_slot`, `cancel_slot`, `deactivate_template`) comprueban solo el estado, lo cual es correcto mientras no exista `Reservation`; FASE-04 las cambia a un conteo de reservas `CONFIRMED` bajo bloqueo de fila.
 - **Costo de revertir:** bajo para 1, 3, 4 y 6 gracias a las condiciones (a) y (b); alto para 2 (algoritmo de solapamiento y pantalla del monitor) y moderado para 5 (gracias a la condición (c)). Cualquier cambio es más barato antes de FASE-04, cuando aún no hay reservas guardadas.
 
 ---

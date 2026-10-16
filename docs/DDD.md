@@ -212,8 +212,8 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 | `term` | FK a `AcademicTerm` | La franja cae dentro de las fechas del período |
 | `template` | FK a `SlotTemplate`, nulo | Plantilla semanal que la generó |
 | `starts_at`, `ends_at` | Marca de tiempo UTC | RNF-DAT-001; bloque de 60 min que empieza en punto o a la media (hora de Bogotá) |
-| `capacity` | Entero | `[CONFIRMADO]` ADR-010; configurable, por defecto 1 |
-| `status` | `AVAILABLE` · `RESERVED` · `CANCELLED` · `EXPIRED` | — |
+| `capacity` | Entero | `[CONFIRMADO]` ADR-010; la elige el monitor, por defecto 1 (1 = individual, >1 = grupal; ampliación 2026-10-15) |
+| `status` | `AVAILABLE` · `RESERVED` · `CANCELLED` · `EXPIRED` | `RESERVED` significa llena: reservas `CONFIRMED` = capacidad (§6.1) |
 | `modality` | `IN_PERSON` · `VIRTUAL` | `[CONFIRMADO]` 2026-10-11 |
 | `location` | Texto | Aula o enlace; obligatorio |
 
@@ -221,11 +221,11 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 
 - `ends_at > starts_at`.
 - Dos franjas del mismo monitor no se solapan (RN-003).
-- Una franja con reserva confirmada no se elimina (RN-003.4).
+- Una franja con al menos una reserva confirmada no se elimina ni cambia su hora de inicio, y su capacidad no baja del número de reservas confirmadas (RN-003.4).
 - `starts_at` está en el futuro al crearse.
 - Retirar una franja la pasa a `CANCELLED`; la fila no se borra.
 
-**`SlotTemplate`** (plantilla semanal, ADR-010): `monitor`, `subject`, `term`, `weekday`, `start_time` local, `capacity`, `modality`, `location`, `is_active`. Al crearse genera las franjas concretas de cada semana hasta el fin del período, en una transacción; si alguna se solapa no se crea ninguna. Desactivarla cancela sus franjas futuras sin reserva. Detalle en `fases/FASE-03-disponibilidad.md` §4.
+**`SlotTemplate`** (plantilla semanal, ADR-010): `monitor`, `subject`, `term`, `weekday`, `start_time` local, `capacity`, `modality`, `location`, `is_active`. Al crearse genera las franjas concretas de cada semana hasta el fin del período, en una transacción; si alguna se solapa no se crea ninguna. Desactivarla cancela sus franjas futuras sin reservas confirmadas. Detalle en `fases/FASE-03-disponibilidad.md` §4.
 
 ---
 
@@ -244,7 +244,7 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 
 **Invariantes — las más importantes del sistema:**
 
-1. Una franja con capacidad 1 admite **exactamente una** reserva en estado `CONFIRMED`. Garantizada por restricción única en base de datos (SAD §4.4), no por validación en Python.
+1. Una franja admite **como máximo tantas** reservas `CONFIRMED` como su capacidad (exactamente una si la capacidad es 1). Garantizada por conteo bajo bloqueo de fila de la franja, más una restricción única en base de datos sobre `(slot, student)` para reservas `CONFIRMED` (SAD §4.4), no por validación en Python sin bloqueo.
 2. No se crean reservas sobre franjas pasadas.
 3. Un estudiante no tiene dos reservas `CONFIRMED` que se solapen en el tiempo.
 4. Cancelar libera la franja de forma atómica: ambos cambios ocurren en la misma transacción o ninguno.
@@ -337,7 +337,7 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | 003.1 | `ends_at > starts_at` | `[CONFIRMADO]` 2026-10-11 |
 | 003.2 | Una franja no se crea en el pasado | `[CONFIRMADO]` 2026-10-11 |
 | 003.3 | Dos franjas del mismo monitor no se solapan | `[CONFIRMADO]` 2026-10-11 |
-| 003.4 | Una franja con reserva confirmada no se elimina ni se modifica en su horario | `[CONFIRMADO]` 2026-10-11 |
+| 003.4 | Una franja con al menos una reserva `CONFIRMED` no se retira ni se modifica en su horario, y su capacidad no baja del número de reservas `CONFIRMED`; se evalúa por conteo de reservas, no solo por el estado `RESERVED` | `[CONFIRMADO]` 2026-10-11 · conteo 2026-10-15 |
 | 003.5 | El monitor solo publica franjas de asignaturas que tiene asignadas | `[CONFIRMADO]` 2026-10-11 |
 | 003.6 | Duración estándar: bloques fijos de 60 min; la franja guarda `starts_at` y `ends_at` explícitos | `[CONFIRMADO]` ADR-010 |
 | 003.7 | Las franjas se publican desde una plantilla semanal que genera franjas concretas con fecha | `[CONFIRMADO]` ADR-010 |
@@ -346,11 +346,11 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 
 | # | Regla | Estado |
 |---|---|---|
-| 004.1 | Solo se reservan franjas en estado `AVAILABLE` | `[PROPUESTA]` |
+| 004.1 | Solo se reservan franjas en estado `AVAILABLE`, es decir, con cupos restantes (reservas `CONFIRMED` < capacidad) | `[CONFIRMADO]` 2026-10-15 |
 | 004.2 | Solo se reservan franjas futuras | `[PROPUESTA]` |
-| 004.3 | Una franja de capacidad 1 admite una sola reserva `CONFIRMED`, incluso bajo concurrencia | `[PROPUESTA]` |
+| 004.3 | Una franja no supera su capacidad en reservas `CONFIRMED`, incluso bajo concurrencia; un estudiante tiene como máximo una reserva por franja | `[PROPUESTA]` |
 | 004.4 | Un estudiante no tiene dos reservas `CONFIRMED` solapadas | `[PROPUESTA]` |
-| 004.5 | La franja cambia a `RESERVED` en la misma transacción que crea la reserva | `[PROPUESTA]` |
+| 004.5 | La franja cambia a `RESERVED` en la misma transacción que crea la reserva que completa su capacidad; con cupos restantes sigue `AVAILABLE` | `[CONFIRMADO]` 2026-10-15 |
 | 004.6 | Anticipación mínima para reservar: 2 h, configurable | `[CONFIRMADO]` ADR-010 |
 | 004.7 | Límite de reservas activas: 1 por estudiante, asignatura y semana, configurable | `[CONFIRMADO]` ADR-010 |
 
@@ -359,7 +359,7 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | # | Regla | Estado |
 |---|---|---|
 | 005.1 | El estudiante cancela dentro de la ventana definida | `[PENDIENTE]` |
-| 005.2 | Al cancelar, la franja vuelve a `AVAILABLE` de forma atómica | `[PROPUESTA]` |
+| 005.2 | Al cancelar una reserva de una franja llena, la franja vuelve de `RESERVED` a `AVAILABLE` de forma atómica | `[PROPUESTA]` |
 | 005.3 | Una reserva `CANCELLED` no se cancela de nuevo | `[PROPUESTA]` |
 | 005.4 | Solo el estudiante propietario, el monitor o un administrador cancelan | `[PROPUESTA]` |
 | 005.5 | La cancelación del monitor exige justificación | `[PENDIENTE]` |
@@ -422,10 +422,10 @@ Los estados no cambian por asignación directa: cambian por transiciones explíc
 
 ```text
                  ┌──────────────┐
-  crear ────────▶│  AVAILABLE   │◀──────── cancelar reserva
+  crear ────────▶│  AVAILABLE   │◀──────── cancelar una reserva de la franja llena
                  └───┬──────┬───┘
-      reservar       │      │       el monitor la retira
-                     ▼      ▼
+  reservar el        │      │       el monitor la retira
+  último cupo        ▼      ▼       (sin reservas CONFIRMED)
               ┌──────────┐  ┌───────────┐
               │ RESERVED │  │ CANCELLED │
               └────┬─────┘  └───────────┘
@@ -435,6 +435,8 @@ Los estados no cambian por asignación directa: cambian por transiciones explíc
               │ EXPIRED  │
               └──────────┘
 ```
+
+`RESERVED` significa **llena**: la franja tiene tantas reservas `CONFIRMED` como su capacidad (ADR-010, ampliación 2026-10-15). Mientras queden cupos sigue `AVAILABLE`, visible en la búsqueda y reservable; con capacidad 1 la primera reserva la llena. Las restricciones del monitor (retirar, mover la hora de inicio, desactivar la plantilla, bajar la capacidad) se evalúan por el conteo de reservas `CONFIRMED`, no por el estado (RN-003.4).
 
 ### 6.2 `Reservation`
 
@@ -513,7 +515,7 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
 | `AvailabilitySlot` | `(subject, starts_at, status)` | Consulta principal de HU-02 |
 | `AvailabilitySlot` | `(monitor, starts_at)` | Detección de solapamientos |
 | `Reservation` | `(student, status)` | Historial del estudiante |
-| `Reservation` | única parcial sobre `slot` donde `status = CONFIRMED` | **Invariante RN-004.3** |
+| `Reservation` | única parcial sobre `(slot, student)` donde `status = CONFIRMED`; el tope de capacidad se verifica por conteo bajo bloqueo | **Invariante RN-004.3** |
 | `TutoringSession` | `(recorded_at)` | Agregados de métricas |
 | `Evaluation` | única sobre `(session, student)` | Invariante RN-007.2 |
 

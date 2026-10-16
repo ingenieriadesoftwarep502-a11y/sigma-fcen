@@ -121,6 +121,8 @@ Sin credenciales `401`; con otro rol `403`; sobre una franja ajena `404`. Las fe
 
 `EXPIRED` se define en el modelo, pero el proceso que marca las franjas vencidas llega con FASE-05; mientras tanto, la búsqueda excluye las franjas pasadas por fecha. La regla de `409` por reserva se prueba con el estado `RESERVED`, porque `Reservation` aún no existe.
 
+> **Nota (ADR-010, ampliación 2026-10-15):** la capacidad la elige el monitor (1 = individual, >1 = grupal) y `RESERVED` significa llena. Hasta FASE-04, `update_slot`, `cancel_slot` y `deactivate_template` validan solo por estado; FASE-04 las cambia a un conteo de reservas `CONFIRMED` bajo bloqueo de fila (T-04.21), de modo que una franja grupal con al menos una reserva tampoco se retire ni se mueva.
+
 **Modelo de dominio:** ver [`../DDD.md`](../DDD.md) §4.3.
 
 ---
@@ -146,8 +148,8 @@ El corazón de esta fase es la **detección de solapamientos**, y es lógica pur
 | T-03.13 | Acceso no autenticado | `401` | CA-HU02-6 |
 | T-03.14 | Rendimiento de la búsqueda | Sin consultas N+1; índice `(subject, starts_at, status)` | RNF-PER-001, RNF-PER-002 |
 | T-03.15 | Zona horaria | Guardado en UTC, presentado en `America/Bogota` | RNF-DAT-001 |
-| T-03.16 | Frontend: gestión de disponibilidad | Crear, listar y eliminar franjas | — |
-| T-03.17 | Frontend: búsqueda | Filtros combinados y estado vacío | — |
+| T-03.16 | Frontend: gestión de disponibilidad | Crear, listar y eliminar franjas y plantillas; el monitor elige sesión individual o grupal y, si es grupal, la capacidad (> 1) | ADR-010 (ampliación 2026-10-15) |
+| T-03.17 | Frontend: búsqueda | Filtros combinados y estado vacío; cada resultado indica si la sesión es individual o grupal y su capacidad | ADR-010 (ampliación 2026-10-15) |
 
 ### Casos de solapamiento que T-03.1 debe cubrir
 
