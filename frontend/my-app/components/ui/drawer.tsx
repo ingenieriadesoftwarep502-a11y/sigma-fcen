@@ -13,6 +13,8 @@ type DrawerProps = {
   subtitle?: string;
   /** While a change is being stored, the drawer cannot be closed. */
   locked?: boolean;
+  /** On small screens, rise from the bottom as a sheet instead of covering the screen. */
+  sheet?: boolean;
   onClose: () => void;
   children: ReactNode;
 };
@@ -26,6 +28,7 @@ export default function Drawer({
   title,
   subtitle,
   locked = false,
+  sheet = false,
   onClose,
   children,
 }: DrawerProps) {
@@ -56,7 +59,9 @@ export default function Drawer({
         aria-modal="true"
         aria-labelledby={titleId}
         className={styles.drawer}
+        data-sheet={sheet || undefined}
       >
+        {sheet && <span className={styles.grip} aria-hidden="true" />}
         <header className={styles.header}>
           <div className={styles.heading}>
             <h2 id={titleId} ref={heading} tabIndex={-1} className={styles.title}>

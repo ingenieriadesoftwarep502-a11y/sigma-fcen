@@ -1,9 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import MyMonitoring from "@/features/catalog/components/my-monitoring";
 import { ApiError } from "@/lib/api-client";
-import { listMySlots, listMyTemplates } from "@/lib/availability";
 import {
   getCurrentTerm,
   listAllTerms,
@@ -25,11 +24,6 @@ vi.mock("@/lib/catalog", async (importOriginal) => ({
   listAllTerms: vi.fn(),
   getCurrentTerm: vi.fn(),
 }));
-vi.mock("@/lib/availability", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/availability")>()),
-  listMySlots: vi.fn(),
-  listMyTemplates: vi.fn(),
-}));
 
 const TERM_2 = { id: 2, code: "2026-2", start_date: "2026-08-01", end_date: "2026-12-10" };
 const TERM_1 = { id: 1, code: "2026-1", start_date: "2026-02-01", end_date: "2026-06-10" };
@@ -45,6 +39,9 @@ const CALCULO: MonitorOwnAssignment = {
     { id: "t-1", full_name: "Laura Gómez", email: "laura@unal.edu.co", group: "1" },
     { id: "t-2", full_name: "Pedro Ruiz", email: "pedro@unal.edu.co", group: "2" },
   ],
+  upcoming_slots: 5,
+  next_slot_at: "2026-10-20T15:00:00Z",
+  active_templates: 1,
 };
 const MECANICA: MonitorOwnAssignment = {
   id: 11,
@@ -52,25 +49,25 @@ const MECANICA: MonitorOwnAssignment = {
   term: "2026-2",
   committed_hours: 4,
   teachers: [],
+  upcoming_slots: 0,
+  next_slot_at: null,
+  active_templates: 0,
 };
 
 const listMock = vi.mocked(listMyAssignments);
-const EMPTY_PAGE = { count: 0, next: null, previous: null, results: [] };
 
 describe("MyMonitoring", () => {
   beforeEach(() => {
     searchParams = new URLSearchParams();
     vi.mocked(listAllTerms).mockResolvedValue([TERM_2, TERM_1]);
     vi.mocked(getCurrentTerm).mockResolvedValue(TERM_2);
-    vi.mocked(listMySlots).mockResolvedValue(EMPTY_PAGE);
-    vi.mocked(listMyTemplates).mockResolvedValue(EMPTY_PAGE);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("shows each assigned subject with its hours and teachers", async () => {
+  it("shows each assigned subject with its hours, availability and teachers", async () => {
     listMock.mockResolvedValue([CALCULO, MECANICA]);
     render(<MyMonitoring />);
 
@@ -79,18 +76,33 @@ describe("MyMonitoring", () => {
     expect(calculo).toHaveTextContent("4 créditos");
     expect(calculo).toHaveTextContent("Matemáticas");
     expect(calculo).toHaveTextContent("6 h");
-    expect(calculo).toHaveTextContent("Período 2026-2");
-    const teachers = within(calculo).getByRole("list", { name: "Docentes de Cálculo diferencial" });
-    expect(within(teachers).getAllByRole("listitem")).toHaveLength(2);
-    expect(teachers).toHaveTextContent("Laura Gómez");
-    expect(teachers).toHaveTextContent("laura@unal.edu.co");
-    expect(teachers).toHaveTextContent("Grupo 1");
-    expect(teachers).toHaveTextContent("Grupo 2");
+    expect(calculo).toHaveTextContent("5franjas disponibles");
+    expect(calculo).toHaveTextContent(/Próxima: .+, 10:00/);
+    expect(calculo).toHaveTextContent("1 plantilla activa");
+    expect(calculo).toHaveTextContent("Laura Gómez · G1, Pedro Ruiz · G2");
+    expect(calculo).toHaveTextContent("Organizar disponibilidad");
 
     const mecanica = screen.getByRole("article", { name: /Mecánica/ });
-    expect(mecanica).toHaveTextContent("Aún no hay docentes asignados");
+    expect(mecanica).toHaveTextContent("Sin franjas próximas");
+    expect(mecanica).toHaveTextContent("Sin plantillas semanales");
+    expect(mecanica).toHaveTextContent("Sin docentes asignados en el período");
+    expect(mecanica).toHaveTextContent("Publicar disponibilidad");
     expect(screen.getByText("10 h comprometidas en el período")).toBeInTheDocument();
     expect(listMock).toHaveBeenCalledWith(null, expect.any(AbortSignal));
+  });
+
+  it("opens each assignment's workspace, in the assignment's own term", async () => {
+    listMock.mockResolvedValue([CALCULO, { ...MECANICA, term: "2026-1" }]);
+    render(<MyMonitoring />);
+
+    expect(await screen.findByRole("link", { name: "Cálculo diferencial" })).toHaveAttribute(
+      "href",
+      "/mis-monitorias/10?periodo=2026-2",
+    );
+    expect(screen.getByRole("link", { name: "Mecánica" })).toHaveAttribute(
+      "href",
+      "/mis-monitorias/11?periodo=2026-1",
+    );
   });
 
   it("reads the term from the URL", async () => {
@@ -110,7 +122,9 @@ describe("MyMonitoring", () => {
     listMock.mockResolvedValue([]);
     fireEvent.change(term, { target: { value: "2026-1" } });
 
-    await waitFor(() => expect(listMock).toHaveBeenLastCalledWith("2026-1", expect.any(AbortSignal)));
+    await waitFor(() =>
+      expect(listMock).toHaveBeenLastCalledWith("2026-1", expect.any(AbortSignal)),
+    );
     expect(replace).toHaveBeenLastCalledWith("/mis-monitorias?periodo=2026-1", { scroll: false });
     expect(
       await screen.findByText("No tienes monitorías asignadas en este período."),
@@ -134,72 +148,5 @@ describe("MyMonitoring", () => {
     fireEvent.click(screen.getByRole("button", { name: "Intentar de nuevo" }));
 
     expect(await screen.findByRole("article", { name: /Mecánica/ })).toBeInTheDocument();
-  });
-
-  it("opens the availability of one assignment, scoped to its subject and term", async () => {
-    listMock.mockResolvedValue([CALCULO, MECANICA]);
-    render(<MyMonitoring />);
-    const calculo = await screen.findByRole("article", { name: /Cálculo diferencial/ });
-    const toggle = within(calculo).getByRole("button", { name: /Disponibilidad/ });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(listMySlots).not.toHaveBeenCalled();
-
-    fireEvent.click(toggle);
-
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(
-      await within(calculo).findByRole("tab", { name: "Franjas", selected: true }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(listMySlots).toHaveBeenCalledWith(
-        1,
-        { term: "2026-2", subject: 1, status: null },
-        expect.any(AbortSignal),
-      ),
-    );
-
-    fireEvent.click(within(calculo).getByRole("tab", { name: "Plantillas semanales" }));
-    await waitFor(() =>
-      expect(listMyTemplates).toHaveBeenCalledWith(
-        1,
-        { term: "2026-2", subject: 1 },
-        expect.any(AbortSignal),
-      ),
-    );
-  });
-
-  it("keeps one assignment open at a time", async () => {
-    listMock.mockResolvedValue([CALCULO, MECANICA]);
-    render(<MyMonitoring />);
-    const calculo = await screen.findByRole("article", { name: /Cálculo diferencial/ });
-    const mecanica = screen.getByRole("article", { name: /Mecánica/ });
-
-    fireEvent.click(within(calculo).getByRole("button", { name: /Disponibilidad/ }));
-    fireEvent.click(within(mecanica).getByRole("button", { name: /Disponibilidad/ }));
-
-    expect(within(calculo).getByRole("button", { name: /Disponibilidad/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-    expect(within(calculo).queryByRole("tablist")).not.toBeInTheDocument();
-    expect(await within(mecanica).findByRole("tablist")).toBeInTheDocument();
-  });
-
-  it("scopes an earlier term's assignment to that term", async () => {
-    searchParams = new URLSearchParams("periodo=2026-1");
-    listMock.mockResolvedValue([{ ...MECANICA, term: "2026-1" }]);
-    render(<MyMonitoring />);
-    const mecanica = await screen.findByRole("article", { name: /Mecánica/ });
-    expect(mecanica).toHaveTextContent("Período 2026-1");
-
-    fireEvent.click(within(mecanica).getByRole("button", { name: /Disponibilidad/ }));
-
-    await waitFor(() =>
-      expect(listMySlots).toHaveBeenCalledWith(
-        1,
-        { term: "2026-1", subject: 2, status: null },
-        expect.any(AbortSignal),
-      ),
-    );
   });
 });

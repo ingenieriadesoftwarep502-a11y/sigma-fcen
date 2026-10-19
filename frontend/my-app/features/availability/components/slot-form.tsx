@@ -32,6 +32,8 @@ type SlotFormProps = {
   slot?: Slot;
   /** The assignment whose subject the slot is for; the subject is fixed. */
   assignment: MonitorOwnAssignment;
+  /** A new slot's Bogotá date and start, e.g. the free hour clicked on the calendar. */
+  initial?: { date: string; time: string };
   onSaved: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
 };
@@ -52,8 +54,14 @@ function initialSession(slot?: Slot): SessionValues {
  * Bogotá date and start on the hour or half hour, modality, classroom or link, and the
  * session type. The API derives the end (60 min) and the term, and checks overlaps (RN-003.3).
  */
-export default function SlotForm({ slot, assignment, onSaved, onBusyChange }: SlotFormProps) {
-  const start = slot ? bogotaDateTime(slot.starts_at) : null;
+export default function SlotForm({
+  slot,
+  assignment,
+  initial,
+  onSaved,
+  onBusyChange,
+}: SlotFormProps) {
+  const start = slot ? bogotaDateTime(slot.starts_at) : (initial ?? null);
   const subject = slot?.subject ?? assignment.subject;
   const [date, setDate] = useState(start?.date ?? "");
   const [time, setTime] = useState(start?.time ?? "");

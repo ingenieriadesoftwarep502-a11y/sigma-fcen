@@ -10,6 +10,7 @@ import {
   HALF_HOURS,
   isGroupSession,
   listMySlots,
+  listMySlotsBetween,
   listMyTemplates,
   NO_MY_SLOT_FILTERS,
   NO_SLOT_SEARCH_FILTERS,
@@ -77,6 +78,28 @@ describe("availability API (FASE-03)", () => {
       term: "2026-2",
       subject: "1",
       status: "AVAILABLE",
+    });
+  });
+
+  it("reads a whole week of the monitor's slots, page after page", async () => {
+    const first = { count: 2, next: "page-2", previous: null, results: [{ id: 1 }] };
+    const second = { count: 2, next: null, previous: "page-1", results: [{ id: 2 }] };
+    fetchMock.mockImplementation((url) => {
+      const page = new URL(String(url)).searchParams.get("page");
+      return Promise.resolve(jsonResponse(page === "1" ? first : second));
+    });
+
+    const slots = await listMySlotsBetween("2026-2", "2026-10-19", "2026-10-25");
+
+    expect(slots.map((slot) => slot.id)).toEqual([1, 2]);
+    const urls = fetchMock.mock.calls.map(([url]) => new URL(String(url)));
+    expect(urls).toHaveLength(2);
+    expect(Object.fromEntries(urls[0]!.searchParams)).toEqual({
+      page: "1",
+      page_size: "100",
+      term: "2026-2",
+      date_from: "2026-10-19",
+      date_to: "2026-10-25",
     });
   });
 

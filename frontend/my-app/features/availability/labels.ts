@@ -1,6 +1,6 @@
 /** How the availability screens name slots, sessions and times, in Spanish and Bogotá time. */
 
-import { isGroupSession, type Modality, type SlotStatus } from "@/lib/availability";
+import { bogotaDateTime, isGroupSession, type Modality, type SlotStatus } from "@/lib/availability";
 
 const numberFormat = new Intl.NumberFormat("es-CO");
 
@@ -75,4 +75,47 @@ export function templateTimeRange(startTime: string, minutes = 60): string {
   const end = hours * 60 + mins + minutes;
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${pad(hours)}:${pad(mins)}–${pad(Math.floor(end / 60) % 24)}:${pad(end % 60)}`;
+}
+
+/** e.g. "6 franjas disponibles". */
+export function availableSlotsLabel(count: number): string {
+  return `${slotsCountLabel(count)} ${count === 1 ? "disponible" : "disponibles"}`;
+}
+
+const shortDayParts = new Intl.DateTimeFormat("es-CO", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: "America/Bogota",
+});
+
+/** "Hoy" or "Mañana" when `iso` falls on today or tomorrow in Bogotá; null otherwise. */
+export function relativeDayLabel(iso: string, now: Date = new Date()): string | null {
+  const day = bogotaDateTime(iso).date;
+  const today = bogotaDateTime(now.toISOString()).date;
+  if (day === today) return "Hoy";
+  // Bogotá has no daylight saving: a day later is always 24 hours later.
+  const tomorrow = bogotaDateTime(new Date(now.getTime() + 86_400_000).toISOString()).date;
+  return day === tomorrow ? "Mañana" : null;
+}
+
+/** e.g. "Hoy, 14:00", "Mañana, 10:00" or "mié 22 oct, 10:00", Bogotá time. */
+export function nextSlotLabel(iso: string, now: Date = new Date()): string {
+  const time = timeFormat.format(new Date(iso));
+  const relative = relativeDayLabel(iso, now);
+  if (relative) return `${relative}, ${time}`;
+  const parts = Object.fromEntries(
+    shortDayParts.formatToParts(new Date(iso)).map((part) => [part.type, part.value]),
+  );
+  const strip = (value = "") => value.replace(".", "");
+  return `${strip(parts.weekday)} ${parts.day} ${strip(parts.month)}, ${time}`;
+}
+
+/** e.g. "1 h", "1 h 30 min" or "45 min": how long the session lasts. */
+export function durationLabel(startsAt: string, endsAt: string): string {
+  const minutes = Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest} min`;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }

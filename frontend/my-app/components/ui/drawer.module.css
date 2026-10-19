@@ -97,6 +97,10 @@
   padding: var(--space-5);
 }
 
+.grip {
+  display: none;
+}
+
 @keyframes slide {
   from {
     transform: translateX(100%);
@@ -106,6 +110,12 @@
 @keyframes fade {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(100%);
   }
 }
 
@@ -125,5 +135,31 @@
   .header,
   .body {
     padding-inline: var(--space-4);
+  }
+}
+
+@media (max-width: 599.98px) {
+  .drawer[data-sheet] {
+    inset: auto 0 0;
+    width: 100%;
+    max-height: 88dvh;
+    border-top: 1px solid var(--border);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation-name: rise;
+  }
+
+  .drawer[data-sheet] .grip {
+    display: block;
+    align-self: center;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 0.25rem;
+    margin-top: var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--border-strong);
+  }
+
+  .drawer[data-sheet] .header {
+    padding-top: var(--space-3);
   }
 }

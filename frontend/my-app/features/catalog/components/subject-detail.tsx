@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import Alert from "@/components/ui/alert";
 import Avatar from "@/components/ui/avatar";
 import Button, { ButtonLink } from "@/components/ui/button";
+import Drawer from "@/components/ui/drawer";
 import EmptyState from "@/components/ui/empty-state";
 import Icon from "@/components/ui/icon";
-import SlotSearch from "@/features/availability/components/slot-search";
+import SearchField from "@/components/ui/search-field";
+import MonitorSlots from "@/features/availability/components/monitor-slots";
+import { availableSlotsLabel, nextSlotLabel } from "@/features/availability/labels";
 import { useSession } from "@/features/auth/session/session-provider";
 import { ApiError, requestErrorMessage } from "@/lib/api-client";
 import { SUBJECTS_PATH } from "@/lib/auth";
@@ -63,18 +66,90 @@ function useSubjectData<T>(
 const loadSubject = (id: number, signal: AbortSignal) => getSubject(id, null, signal);
 const loadMonitors = listSubjectMonitors;
 
-function MonitorList({ subject, term }: { subject: Subject; term: string | null }) {
+/** Past this many monitors, the roster offers a search by name. */
+const SEARCHABLE_FROM = 6;
+
+function sortableName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+/** Soonest help first: monitors with slots by their next one, then the rest by name. */
+function bySoonest(a: SubjectMonitor, b: SubjectMonitor): number {
+  if (a.next_slot_at && b.next_slot_at) return a.next_slot_at.localeCompare(b.next_slot_at);
+  if (a.next_slot_at) return -1;
+  if (b.next_slot_at) return 1;
+  return 0;
+}
+
+type RosterProps = {
+  subject: Subject;
+  term: string | null;
+};
+
+/**
+ * The monitors of the subject in the term, soonest available first, each with how many
+ * slots it offers and when the next one is. Choosing one opens its slots in a side panel
+ * (a sheet on phones), so the page stays short however many slots there are.
+ */
+function MonitorRoster({ subject, term }: RosterProps) {
   const { state, retry } = useSubjectData<SubjectMonitor[]>(subject.id, loadMonitors);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState<SubjectMonitor | null>(null);
+  const openers = useRef(new Map<string, HTMLButtonElement>());
+
+  function close() {
+    const id = open?.id;
+    setOpen(null);
+    if (id) openers.current.get(id)?.focus();
+  }
+
+  const monitors = state.status === "ready" ? [...state.data].sort(bySoonest) : [];
+  const needle = sortableName(query.trim());
+  const shown = needle
+    ? monitors.filter((monitor) => sortableName(monitor.full_name).includes(needle))
+    : monitors;
+  const totalSlots = monitors.reduce((sum, monitor) => sum + monitor.upcoming_slots, 0);
 
   return (
-    <section className={styles.monitors} aria-labelledby="subject-monitors-title">
-      <h2 id="subject-monitors-title" className={styles.sectionTitle}>
-        {term ? `Monitores del período ${term}` : "Monitores del período"}
-      </h2>
+    <section className={styles.roster} aria-labelledby="subject-monitors-title">
+      <header className={styles.rosterHeader}>
+        <div className={styles.rosterHeading}>
+          <h2 id="subject-monitors-title" className={styles.sectionTitle}>
+            {term ? `Monitores del período ${term}` : "Monitores del período"}
+          </h2>
+          {state.status === "ready" && monitors.length > 0 && (
+            <p className={styles.summary}>
+              {`${monitors.length} ${monitors.length === 1 ? "monitor" : "monitores"} · ${availableSlotsLabel(totalSlots)}`}
+            </p>
+          )}
+        </div>
+        {monitors.length > SEARCHABLE_FROM && (
+          <SearchField
+            id="monitor-search"
+            label="Buscar monitor"
+            placeholder="Buscar monitor por nombre"
+            value={query}
+            onChange={setQuery}
+            onClear={() => setQuery("")}
+            className={styles.search}
+          />
+        )}
+      </header>
+
       {state.status === "loading" && (
-        <p role="status" className={styles.muted}>
-          Cargando monitores…
-        </p>
+        <>
+          <p role="status" className="sr-only">
+            Cargando monitores…
+          </p>
+          <div className={styles.grid} aria-hidden="true">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className={styles.tileSkeleton} />
+            ))}
+          </div>
+        </>
       )}
       {state.status === "error" && (
         <div className={styles.failure}>
@@ -85,27 +160,92 @@ function MonitorList({ subject, term }: { subject: Subject; term: string | null 
           </Button>
         </div>
       )}
-      {state.status === "ready" && state.data.length === 0 && (
-        <p className={styles.muted}>Esta asignatura no tiene monitores en el período.</p>
+      {state.status === "ready" && monitors.length === 0 && (
+        <div className={styles.empty}>
+          <EmptyState title="Esta asignatura no tiene monitores en el período.">
+            <p>Cuando se asigne un monitor, podrás ver aquí sus franjas.</p>
+          </EmptyState>
+        </div>
       )}
-      {state.status === "ready" && state.data.length > 0 && (
-        <ul className={styles.monitorList} aria-label={`Monitores de ${subject.name}`}>
-          {state.data.map((monitor) => (
-            <li key={monitor.id} className={styles.monitor}>
-              <Avatar initials={initialsOfFullName(monitor.full_name, "?")} size="sm" />
-              <span>{monitor.full_name || "Monitor sin nombre"}</span>
-            </li>
-          ))}
+      {state.status === "ready" && monitors.length > 0 && shown.length === 0 && (
+        <p className={styles.muted}>{`Ningún monitor coincide con «${query.trim()}».`}</p>
+      )}
+      {shown.length > 0 && (
+        <ul className={styles.grid} aria-label={`Monitores de ${subject.name}`}>
+          {shown.map((monitor, index) => {
+            const name = monitor.full_name || "Monitor sin nombre";
+            const free = monitor.upcoming_slots > 0;
+            return (
+              <li key={monitor.id} style={{ "--i": Math.min(index, 8) } as CSSProperties}>
+                <button
+                  type="button"
+                  ref={(element) => {
+                    if (element) openers.current.set(monitor.id, element);
+                    else openers.current.delete(monitor.id);
+                  }}
+                  className={styles.tile}
+                  data-free={free || undefined}
+                  data-open={open?.id === monitor.id || undefined}
+                  aria-haspopup="dialog"
+                  aria-label={`Ver las franjas de ${name}`}
+                  onClick={() => setOpen(monitor)}
+                >
+                  <span className={styles.face}>
+                    <Avatar initials={initialsOfFullName(monitor.full_name, "?")} />
+                  </span>
+                  <span className={styles.who}>
+                    <span className={styles.name}>{name}</span>
+                    <span className={styles.next}>
+                      {monitor.next_slot_at ? (
+                        <>
+                          <Icon name="clock" size={14} />
+                          {`Próxima: ${nextSlotLabel(monitor.next_slot_at)}`}
+                        </>
+                      ) : (
+                        "Sin franjas por ahora"
+                      )}
+                    </span>
+                  </span>
+                  <span className={styles.count} aria-hidden={!free || undefined}>
+                    <span className={styles.countValue}>{free ? monitor.upcoming_slots : "—"}</span>
+                    <span className={styles.countLabel}>
+                      {monitor.upcoming_slots === 1 ? "franja" : "franjas"}
+                    </span>
+                  </span>
+                  <Icon name="chevron" size={18} className={styles.arrow} />
+                </button>
+              </li>
+            );
+          })}
         </ul>
+      )}
+
+      {open && (
+        <Drawer
+          title={open.full_name || "Monitor sin nombre"}
+          subtitle={`${subject.code} · ${subject.name}`}
+          sheet
+          onClose={close}
+        >
+          <MonitorSlots
+            key={open.id}
+            subject={{ id: subject.id, code: subject.code, name: subject.name }}
+            monitor={{
+              id: open.id,
+              name: open.full_name || "Monitor sin nombre",
+            }}
+            term={term}
+          />
+        </Drawer>
       )}
     </section>
   );
 }
 
 /**
- * One subject as a student sees it: what it is, its monitors of the current term and their
- * upcoming slots, which take the place of the old standalone search. Read-only: booking
- * arrives in FASE-04. Container: owns the subject, its monitors and the current term.
+ * One subject as a student sees it: what it is and its monitors of the current term, each
+ * opening its upcoming slots on demand (they took the place of the old standalone search).
+ * Read-only: booking arrives in FASE-04. Container: owns the subject and the current term.
  */
 export default function SubjectDetail({ subjectId }: { subjectId: number }) {
   const { session } = useSession();
@@ -117,7 +257,7 @@ function Detail({ subjectId, userId }: { subjectId: number; userId: string }) {
   const { state, retry } = useSubjectData<Subject>(subjectId, loadSubject);
   const { terms, current, error: termsError } = useTerms();
   const pins = usePinnedSubjects(userId);
-  // The slots wait for the current term, so they never show another term's first.
+  // The roster waits for the current term, so its slots never show another term's first.
   const termKnown = terms !== null || termsError !== null;
   const term = current?.code ?? null;
 
@@ -194,15 +334,7 @@ function Detail({ subjectId, userId }: { subjectId: number; userId: string }) {
             </button>
           </header>
 
-          <MonitorList subject={state.data} term={term} />
-
-          {termKnown && (
-            <SlotSearch
-              key={term ?? "all"}
-              subject={{ id: state.data.id, code: state.data.code, name: state.data.name }}
-              term={term}
-            />
-          )}
+          {termKnown && <MonitorRoster key={term ?? "all"} subject={state.data} term={term} />}
         </>
       )}
     </article>

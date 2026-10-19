@@ -81,24 +81,53 @@ export type MySlotFilters = {
   subject: number | null;
   /** null lists every state. */
   status: SlotStatus | null;
+  /** Bogotá calendar dates, both included; absent or null leaves that end open. */
+  dateFrom?: string | null;
+  dateTo?: string | null;
 };
 
 export const NO_MY_SLOT_FILTERS: MySlotFilters = { term: null, subject: null, status: null };
+
+/** The API's largest page, for reading a whole week at once. */
+const MAX_PAGE_SIZE = 100;
 
 export function listMySlots(
   page: number,
   filters: MySlotFilters,
   signal?: AbortSignal,
+  pageSize?: number,
 ): Promise<SlotPage> {
   return apiRequest<SlotPage>(
     `/availability-slots/mine/${queryString({
       page,
+      page_size: pageSize,
       term: filters.term,
       subject: filters.subject,
       status: filters.status,
+      date_from: filters.dateFrom,
+      date_to: filters.dateTo,
     })}`,
     { signal },
   );
+}
+
+/**
+ * Every slot of the monitor in `term` between two Bogotá dates, of any subject and state:
+ * what a week of their calendar holds. Reads page after page until the last.
+ */
+export async function listMySlotsBetween(
+  term: string,
+  dateFrom: string,
+  dateTo: string,
+  signal?: AbortSignal,
+): Promise<Slot[]> {
+  const filters: MySlotFilters = { term, subject: null, status: null, dateFrom, dateTo };
+  const slots: Slot[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await listMySlots(page, filters, signal, MAX_PAGE_SIZE);
+    slots.push(...result.results);
+    if (!result.next) return slots;
+  }
 }
 
 export function createSlot(data: NewSlot): Promise<Slot> {

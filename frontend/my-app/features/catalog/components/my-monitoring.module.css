@@ -1,4 +1,4 @@
-/* Card, grid, skeleton and state styles are shared with my-courses.module.css. */
+/* Page, grid, skeleton and state styles are shared with my-courses.module.css. */
 
 .summary {
   display: flex;
@@ -16,82 +16,229 @@
   font-weight: 600;
 }
 
-.groupLabel {
-  flex-shrink: 0;
+/* --- Assignment card: the whole card is its title's link ------------------------------- */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+  transition:
+    border-color var(--duration) var(--ease-out-expo),
+    box-shadow var(--duration) var(--ease-out-expo),
+    transform var(--duration) var(--ease-out-expo);
+  animation: enter 520ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+.card:hover {
+  border-color: var(--accent-line);
+  box-shadow: 0 18px 36px -24px rgb(0 0 0 / 0.9);
+  transform: translateY(-2px);
+}
+
+.card:has(.link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
   font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--text-muted);
+  color: var(--text-subtle);
   font-variant-numeric: tabular-nums;
 }
 
-.card {
-  min-width: 0;
+.code {
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
-/* An open assignment takes the whole row: its tables need the width. */
-.card[data-expanded] {
-  grid-column: 1 / -1;
+.hours {
+  margin-left: auto;
+  padding: 0.0625rem var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.name {
+  margin-top: var(--space-1);
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 1.875rem;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+/* Stretches the link over the whole card. */
+.link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.department {
+  font-size: 0.875rem;
+  color: var(--text-muted);
 }
 
 .availability {
-  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin: 0 var(--space-5);
+  padding: var(--space-4) 0;
   border-top: 1px solid var(--border-subtle);
 }
 
-.toggle {
+.count {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.countValue {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 3rem;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.card[data-free] .countValue {
+  color: var(--accent);
+}
+
+.countLabel {
+  margin-top: var(--space-1);
+  font-size: 0.6875rem;
+  color: var(--text-subtle);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.facts li {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
+}
+
+.facts :global(svg) {
+  flex-shrink: 0;
+  color: var(--text-subtle);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-top: auto;
   padding: var(--space-3) var(--space-5);
-  border: 0;
+  border-top: 1px solid var(--border-subtle);
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  text-align: start;
-  cursor: pointer;
-  transition: background var(--duration-fast);
+  background: var(--surface-2);
 }
 
-.toggle:hover {
-  background: var(--surface-hover);
-}
-
-.toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.toggle[aria-expanded="true"] {
-  border-radius: 0;
-}
-
-.chevron {
-  margin-inline-start: auto;
-  transition: transform var(--duration-fast);
-}
-
-.toggle[aria-expanded="true"] .chevron {
-  transform: rotate(180deg);
-}
-
-.availabilityBody {
+.teachers {
   min-width: 0;
-  padding: var(--space-2) var(--space-5) var(--space-5);
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@media (max-width: 599.98px) {
-  .toggle,
-  .availabilityBody {
-    padding-inline: var(--space-4);
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.ctaIcon {
+  transform: rotate(-90deg);
+  transition: transform var(--duration) var(--ease-out-expo);
+}
+
+.card:hover .ctaIcon {
+  transform: rotate(-90deg) translateY(3px);
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chevron {
-    transition: none;
+  .card {
+    animation: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .cardHeader {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+
+  .name {
+    font-size: 1.625rem;
+  }
+
+  .availability {
+    margin: 0 var(--space-4);
+  }
+
+  .footer {
+    padding: var(--space-3) var(--space-4);
   }
 }

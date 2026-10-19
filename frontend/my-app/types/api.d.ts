@@ -810,6 +810,15 @@ export interface components {
             /** Horas comprometidas */
             readonly committed_hours: number;
             readonly teachers: components["schemas"]["SubjectTeacher"][];
+            /** @description Franjas disponibles y futuras de la monitoría. */
+            readonly upcoming_slots: number;
+            /**
+             * Format: date-time
+             * @description Inicio de la próxima; null si no hay.
+             */
+            readonly next_slot_at: string | null;
+            /** @description Plantillas semanales activas de la monitoría. */
+            readonly active_templates: number;
         };
         /** @description Only what a student needs to recognize the monitor; no email (RNF-SEC). */
         MonitorReference: {
@@ -1130,6 +1139,13 @@ export interface components {
             /** Format: uuid */
             id: string;
             readonly full_name: string;
+            /** @description Franjas disponibles y futuras del monitor en la asignatura y el período. */
+            upcoming_slots: number;
+            /**
+             * Format: date-time
+             * @description Inicio de la próxima de esas franjas; null si no hay.
+             */
+            next_slot_at: string | null;
         };
         SubjectReference: {
             readonly id: number;

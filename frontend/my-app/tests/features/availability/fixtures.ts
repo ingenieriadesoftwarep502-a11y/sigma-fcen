@@ -16,6 +16,9 @@ export const CALCULO_ASSIGNMENT: MonitorOwnAssignment = {
   term: "2026-2",
   committed_hours: 6,
   teachers: [],
+  upcoming_slots: 0,
+  next_slot_at: null,
+  active_templates: 0,
 };
 
 export const MECANICA_ASSIGNMENT: MonitorOwnAssignment = {
@@ -24,6 +27,9 @@ export const MECANICA_ASSIGNMENT: MonitorOwnAssignment = {
   term: "2026-2",
   committed_hours: 4,
   teachers: [],
+  upcoming_slots: 0,
+  next_slot_at: null,
+  active_templates: 0,
 };
 
 export const ANA = { id: "m-1", full_name: "Ana Pérez" };

@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { type CSSProperties, useEffect, useState } from "react";
 
 import Alert from "@/components/ui/alert";
-import Avatar from "@/components/ui/avatar";
 import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import Icon from "@/components/ui/icon";
 import PageHeader from "@/components/ui/page-header";
-import AssignmentAvailability from "@/features/availability/components/assignment-availability";
+import { nextSlotLabel } from "@/features/availability/labels";
 import { requestErrorMessage } from "@/lib/api-client";
+import { myAssignmentPath } from "@/lib/auth";
 import { isTermCode, listMyAssignments, type MonitorOwnAssignment } from "@/lib/catalog";
-import { initialsOfFullName } from "@/lib/people";
 import { useUrlQuery } from "@/lib/use-url-query";
 
 import { countLabel, creditsLabel, hoursLabel } from "../labels";
@@ -27,88 +27,94 @@ type AssignmentsState =
   | { status: "ready"; request: Request; assignments: MonitorOwnAssignment[] }
   | { status: "error"; request: Request; message: string };
 
-type AssignmentCardProps = {
+/**
+ * One assignment as a card that opens its availability workspace: the subject, the hours
+ * committed, how much availability it has published and who teaches its groups. The whole
+ * card is the link; its title names it.
+ */
+function AssignmentCard({
+  assignment,
+  index,
+}: {
   assignment: MonitorOwnAssignment;
-  /** Whether the card shows its availability (slots and weekly templates). */
-  expanded: boolean;
-  onToggle: () => void;
-};
-
-function AssignmentCard({ assignment, expanded, onToggle }: AssignmentCardProps) {
+  index: number;
+}) {
   const { subject, teachers } = assignment;
   const titleId = `assignment-${assignment.id}-title`;
-  const availabilityId = `assignment-${assignment.id}-availability`;
+  const free = assignment.upcoming_slots > 0;
 
   return (
     <article
-      className={`${cards.card} ${styles.card}`}
+      className={styles.card}
       aria-labelledby={titleId}
-      data-expanded={expanded || undefined}
+      data-free={free || undefined}
+      style={{ "--i": Math.min(index, 8) } as CSSProperties}
     >
-      <header className={cards.cardHeader}>
-        <p className={cards.meta}>
-          <span className={cards.code}>{subject.code}</span>
+      <header className={styles.cardHeader}>
+        <p className={styles.meta}>
+          <span className={styles.code}>{subject.code}</span>
           <span aria-hidden="true">·</span>
           <span>{creditsLabel(subject.credits)}</span>
-        </p>
-        <h2 id={titleId} className={cards.name}>
-          {subject.name}
-        </h2>
-        <p className={cards.context}>
-          <span className={cards.group} title="Horas comprometidas">
+          <span className={styles.hours} title="Horas comprometidas">
             {hoursLabel(assignment.committed_hours)}
           </span>
-          <span>{`Período ${assignment.term}`}</span>
-          <span>{subject.department.name}</span>
         </p>
+        <h2 id={titleId} className={styles.name}>
+          <Link
+            href={myAssignmentPath(assignment.id, assignment.term)}
+            className={styles.link}
+            aria-describedby={`${titleId}-cta`}
+          >
+            {subject.name}
+          </Link>
+        </h2>
+        <p className={styles.department}>{subject.department.name}</p>
       </header>
 
-      {teachers.length === 0 ? (
-        <p className={cards.noMonitors}>
-          Aún no hay docentes asignados a los grupos de esta asignatura en el período.
-        </p>
-      ) : (
-        <ul className={cards.monitors} aria-label={`Docentes de ${subject.name}`}>
-          {teachers.map((teacher) => (
-            <li key={`${teacher.id}-${teacher.group}`} className={cards.monitor}>
-              <Avatar initials={initialsOfFullName(teacher.full_name, teacher.email)} size="sm" />
-              <span className={cards.person}>
-                <span className={cards.personName}>{teacher.full_name || teacher.email}</span>
-                <a className={cards.email} href={`mailto:${teacher.email}`}>
-                  {teacher.email}
-                </a>
-              </span>
-              <span className={styles.groupLabel}>Grupo {teacher.group}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
       <div className={styles.availability}>
-        <button
-          type="button"
-          className={styles.toggle}
-          aria-expanded={expanded}
-          aria-controls={availabilityId}
-          onClick={onToggle}
-        >
-          <Icon name="calendar" />
-          Disponibilidad
-          <Icon name="chevron" className={styles.chevron} />
-        </button>
-        {/* Mounted only while open: its lists load when the monitor asks for them. */}
-        <div id={availabilityId} className={styles.availabilityBody} hidden={!expanded}>
-          {expanded && <AssignmentAvailability assignment={assignment} />}
-        </div>
+        <p className={styles.count}>
+          <span className={styles.countValue}>{assignment.upcoming_slots}</span>
+          <span className={styles.countLabel}>
+            {assignment.upcoming_slots === 1 ? "franja disponible" : "franjas disponibles"}
+          </span>
+        </p>
+        <ul className={styles.facts}>
+          <li>
+            <Icon name="clock" size={14} />
+            {assignment.next_slot_at
+              ? `Próxima: ${nextSlotLabel(assignment.next_slot_at)}`
+              : "Sin franjas próximas"}
+          </li>
+          <li>
+            <Icon name="repeat" size={14} />
+            {assignment.active_templates === 0
+              ? "Sin plantillas semanales"
+              : `${assignment.active_templates} ${assignment.active_templates === 1 ? "plantilla activa" : "plantillas activas"}`}
+          </li>
+        </ul>
       </div>
+
+      <footer className={styles.footer}>
+        <p className={styles.teachers}>
+          {teachers.length === 0
+            ? "Sin docentes asignados en el período"
+            : teachers
+                .map((teacher) => `${teacher.full_name || teacher.email} · G${teacher.group}`)
+                .join(", ")}
+        </p>
+        <span id={`${titleId}-cta`} className={styles.cta}>
+          {free ? "Organizar disponibilidad" : "Publicar disponibilidad"}
+          <Icon name="chevron" size={16} className={styles.ctaIcon} />
+        </span>
+      </footer>
     </article>
   );
 }
 
 /**
  * A monitor's own subjects in a term, the hours committed to each and the teachers of their
- * groups (RN-009.1): never the whole catalog. Each assignment opens its own availability,
- * scoped to its subject and term (T-03.16). The term follows the current one unless the
+ * groups (RN-009.1): never the whole catalog. Each card summarizes the assignment's
+ * availability and opens its workspace, scoped to its subject and term (T-03.16). The term follows the current one unless the
  * person picks another.
  */
 export default function MyMonitoring() {
@@ -118,8 +124,6 @@ export default function MyMonitoring() {
     return { term: term && isTermCode(term) ? term : null, attempt: 0 };
   });
   const [state, setState] = useState<AssignmentsState>({ status: "loading" });
-  // One assignment open at a time keeps the page short and its form ids unique.
-  const [open, setOpen] = useState<number | null>(null);
   const { terms, current } = useTerms();
 
   useEffect(() => {
@@ -154,7 +158,7 @@ export default function MyMonitoring() {
       <PageHeader
         title="Mis monitorías"
         titleId="my-monitoring-title"
-        lead="Las asignaturas que acompañas en el período, tus horas, sus docentes y tu disponibilidad."
+        lead="Elige una asignatura para organizar tu disponibilidad: franjas, plantillas semanales y horario."
       >
         <TermSelect
           id="my-monitoring-term"
@@ -207,18 +211,15 @@ export default function MyMonitoring() {
       {assignments && assignments.length > 0 && (
         <>
           <p className={styles.summary}>
-            <span className={styles.total}>{`${hoursLabel(totalHours)} comprometidas en el período`}</span>
+            <span
+              className={styles.total}
+            >{`${hoursLabel(totalHours)} comprometidas en el período`}</span>
             <span aria-hidden="true">·</span>
             <span>{countLabel(assignments.length, "asignatura", "asignaturas")}</span>
           </p>
           <div className={cards.grid}>
-            {assignments.map((assignment) => (
-              <AssignmentCard
-                key={assignment.id}
-                assignment={assignment}
-                expanded={open === assignment.id}
-                onToggle={() => setOpen(open === assignment.id ? null : assignment.id)}
-              />
+            {assignments.map((assignment, index) => (
+              <AssignmentCard key={assignment.id} assignment={assignment} index={index} />
             ))}
           </div>
         </>

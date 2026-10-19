@@ -33,6 +33,10 @@ export function subjectPath(id: number): string {
 export const MY_COURSES_PATH = "/mis-cursos";
 /** A monitor's own assigned subjects and their teachers (RN-009.1). */
 export const MY_MONITORING_PATH = "/mis-monitorias";
+/** One assignment's workspace, where the monitor organizes its availability. */
+export function myAssignmentPath(id: number, term: string): string {
+  return `${MY_MONITORING_PATH}/${id}?periodo=${encodeURIComponent(term)}`;
+}
 /** Catalog administration, for the ADMIN role only (FASE-02). */
 export const CATALOG_ADMIN_PATH = "/admin/catalogo";
 
