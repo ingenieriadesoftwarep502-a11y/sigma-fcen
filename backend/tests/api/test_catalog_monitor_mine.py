@@ -1,12 +1,16 @@
 """The requesting monitor's own assignments and their teachers (RN-002, RN-009.1)."""
 
+from datetime import time, timedelta
 from typing import Any
 
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from django.utils.dateparse import parse_datetime
 
 from apps.accounts.models import Role
+from apps.availability.models import SlotTemplate
+from tests.availability_data import SLOT_START, make_slot
 from tests.catalog_data import (
     client_for,
     make_assignment,
@@ -97,6 +101,9 @@ def test_monitor_sees_only_their_assignments_with_the_subject_teachers(
                     "group": "2",
                 },
             ],
+            "upcoming_slots": 0,
+            "next_slot_at": None,
+            "active_templates": 0,
         }
     ]
 
@@ -148,6 +155,51 @@ def test_monitor_without_assignments_gets_an_empty_page(catalog: dict[str, Any])
 
 def test_monitor_assignments_reject_unknown_term(catalog: dict[str, Any]) -> None:
     assert client_for(catalog["sofia"]).get(MINE_URL, {"term": "2030-2"}).status_code == 400
+
+
+def test_monitor_assignments_summarize_their_own_availability(catalog: dict[str, Any]) -> None:
+    sofia, calculo, mecanica, current = (
+        catalog["sofia"],
+        catalog["calculo"],
+        catalog["mecanica"],
+        catalog["current"],
+    )
+    make_slot(sofia, calculo, current, SLOT_START + timedelta(days=1))
+    make_slot(sofia, calculo, current, SLOT_START)
+    make_slot(sofia, calculo, current, SLOT_START + timedelta(days=2), status="CANCELLED")
+    make_slot(sofia, calculo, current, SLOT_START - timedelta(days=14))
+    # Another monitor's slot of the same subject is not Sofía's.
+    make_slot(catalog["andres"], calculo, current, SLOT_START)
+    place = {"modality": "IN_PERSON", "location": "Bloque 14-203", "capacity": 1}
+    SlotTemplate.objects.create(
+        monitor=sofia, subject=calculo, term=current, weekday=1, start_time=time(10), **place
+    )
+    SlotTemplate.objects.create(
+        monitor=sofia, subject=calculo, term=current, weekday=3, start_time=time(8), **place
+    )
+    SlotTemplate.objects.create(
+        monitor=sofia,
+        subject=calculo,
+        term=current,
+        weekday=4,
+        start_time=time(8),
+        is_active=False,
+        **place,
+    )
+    SlotTemplate.objects.create(
+        monitor=catalog["andres"],
+        subject=mecanica,
+        term=current,
+        weekday=1,
+        start_time=time(10),
+        **place,
+    )
+
+    [mine] = client_for(sofia).get(MINE_URL).json()["results"]
+
+    assert mine["upcoming_slots"] == 2
+    assert parse_datetime(mine["next_slot_at"]) == SLOT_START
+    assert mine["active_templates"] == 2
 
 
 def test_monitor_assignments_are_empty_without_terms() -> None:

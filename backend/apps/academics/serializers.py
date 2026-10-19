@@ -169,6 +169,12 @@ class SubjectMonitorSerializer(serializers.Serializer[User]):
 
     id = serializers.UUIDField()
     full_name = serializers.SerializerMethodField()
+    upcoming_slots = serializers.IntegerField(
+        help_text="Franjas disponibles y futuras del monitor en la asignatura y el período."
+    )
+    next_slot_at = serializers.DateTimeField(
+        allow_null=True, help_text="Inicio de la próxima de esas franjas; null si no hay."
+    )
 
     def get_full_name(self, user: User) -> str:
         return f"{user.first_name} {user.last_name}".strip()
@@ -375,10 +381,28 @@ class MonitorOwnAssignmentSerializer(serializers.ModelSerializer[MonitorAssignme
         slug_field="code", read_only=True
     )
     teachers = serializers.SerializerMethodField()
+    upcoming_slots = serializers.IntegerField(
+        read_only=True, help_text="Franjas disponibles y futuras de la monitoría."
+    )
+    next_slot_at = serializers.DateTimeField(
+        read_only=True, allow_null=True, help_text="Inicio de la próxima; null si no hay."
+    )
+    active_templates = serializers.IntegerField(
+        read_only=True, help_text="Plantillas semanales activas de la monitoría."
+    )
 
     class Meta:
         model = MonitorAssignment
-        fields: ClassVar[list[str]] = ["id", "subject", "term", "committed_hours", "teachers"]
+        fields: ClassVar[list[str]] = [
+            "id",
+            "subject",
+            "term",
+            "committed_hours",
+            "teachers",
+            "upcoming_slots",
+            "next_slot_at",
+            "active_templates",
+        ]
         read_only_fields = fields
 
     @extend_schema_field(SubjectTeacherSerializer(many=True))

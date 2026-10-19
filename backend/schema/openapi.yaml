@@ -1928,12 +1928,29 @@ components:
           items:
             $ref: '#/components/schemas/SubjectTeacher'
           readOnly: true
+        upcoming_slots:
+          type: integer
+          readOnly: true
+          description: Franjas disponibles y futuras de la monitoría.
+        next_slot_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Inicio de la próxima; null si no hay.
+        active_templates:
+          type: integer
+          readOnly: true
+          description: Plantillas semanales activas de la monitoría.
       required:
+      - active_templates
       - committed_hours
       - id
+      - next_slot_at
       - subject
       - teachers
       - term
+      - upcoming_slots
     MonitorReference:
       type: object
       description: Only what a student needs to recognize the monitor; no email (RNF-SEC).
@@ -2507,9 +2524,20 @@ components:
         full_name:
           type: string
           readOnly: true
+        upcoming_slots:
+          type: integer
+          description: Franjas disponibles y futuras del monitor en la asignatura
+            y el período.
+        next_slot_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Inicio de la próxima de esas franjas; null si no hay.
       required:
       - full_name
       - id
+      - next_slot_at
+      - upcoming_slots
     SubjectReference:
       type: object
       properties:

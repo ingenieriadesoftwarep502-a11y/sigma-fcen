@@ -1,14 +1,17 @@
 """Departments and subjects: administration and catalog queries (T-02.0, T-02.1, T-02.6, RF-022)."""
 
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from django.utils.dateparse import parse_datetime
 from rest_framework.test import APIClient
 
 from apps.academics.models import Department, Subject
 from apps.accounts.models import Role
+from tests.availability_data import SLOT_START, make_slot
 from tests.catalog_data import (
     client_for,
     make_assignment,
@@ -341,10 +344,38 @@ def test_subject_monitors_lists_the_current_term_monitors_by_name(
 
     assert response.status_code == 200
     # Only what a student needs to recognize a monitor; no email (RNF-SEC).
+    no_slots = {"upcoming_slots": 0, "next_slot_at": None}
     assert response.json() == [
-        {"id": str(andres.pk), "full_name": "Andrés Mora"},
-        {"id": str(sofia.pk), "full_name": "Sofía Díaz"},
+        {"id": str(andres.pk), "full_name": "Andrés Mora", **no_slots},
+        {"id": str(sofia.pk), "full_name": "Sofía Díaz", **no_slots},
     ]
+
+
+def test_subject_monitors_count_their_bookable_slots_of_the_subject_and_term(
+    student_client: APIClient,
+) -> None:
+    current, _ = make_current_and_previous_terms()
+    calculo = make_subject("MAT-101", "Cálculo Diferencial")
+    algebra = make_subject("MAT-102", "Álgebra Lineal")
+    sofia = make_user("sofia@unal.edu.co", Role.Code.MONITOR, first_name="Sofía", last_name="Díaz")
+    make_assignment(sofia, calculo, current)
+    make_assignment(sofia, algebra, current)
+    make_slot(sofia, calculo, current, SLOT_START + timedelta(days=1))
+    make_slot(sofia, calculo, current, SLOT_START)
+    # Not bookable, or not this subject: none of these count.
+    make_slot(sofia, calculo, current, SLOT_START + timedelta(days=2), status="CANCELLED")
+    make_slot(sofia, calculo, current, SLOT_START + timedelta(days=3), status="RESERVED")
+    make_slot(sofia, calculo, current, SLOT_START - timedelta(days=14))
+    make_slot(sofia, algebra, current, SLOT_START - timedelta(hours=2))
+
+    with CaptureQueriesContext(connection) as queries:
+        response = student_client.get(_monitors_url(calculo))
+
+    [monitor] = response.json()
+    assert monitor["upcoming_slots"] == 2
+    assert parse_datetime(monitor["next_slot_at"]) == SLOT_START
+    # The counts ride on the monitors' query: no query per monitor.
+    assert sum("availabilityslot" in query["sql"] for query in queries.captured_queries) == 1
 
 
 def test_subject_monitors_follow_the_requested_term(student_client: APIClient) -> None:

@@ -9,8 +9,11 @@ from uuid import UUID
 from django.db.models import (
     CharField,
     Count,
+    DateTimeField,
     Exists,
+    F,
     IntegerField,
+    Min,
     OuterRef,
     Prefetch,
     Q,
@@ -20,9 +23,11 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Coalesce, Concat
+from django.utils import timezone
 
 from apps.academics.models import AcademicTerm, Course, Department, MonitorAssignment, Subject
 from apps.accounts.models import User
+from apps.availability.domain.rules import SlotStatus
 
 SUBJECT_ORDERINGS: dict[str, tuple[str, ...]] = {
     "name": ("name", "code"),
@@ -124,14 +129,33 @@ def subject_listing(
 
 
 def subject_monitors(subject: Subject, term: AcademicTerm | None) -> QuerySet[User]:
-    """Active accounts assigned to monitor `subject` in `term`, by name."""
+    """Active accounts assigned to monitor `subject` in `term`, by name.
+
+    Each carries `upcoming_slots` and `next_slot_at`: its bookable slots of the subject in
+    the term, as the slot search counts them (AVAILABLE and in the future).
+    """
     if term is None:
         return User.objects.none()
-    return User.objects.filter(
-        is_active=True,
-        monitor_assignments__subject=subject,
-        monitor_assignments__term=term,
-    ).order_by("first_name", "last_name", "email")
+    upcoming = Q(
+        availability_slots__subject=subject,
+        availability_slots__term=term,
+        availability_slots__status=SlotStatus.AVAILABLE.value,
+        availability_slots__starts_at__gt=timezone.now(),
+    )
+    return (
+        User.objects.filter(
+            is_active=True,
+            monitor_assignments__subject=subject,
+            monitor_assignments__term=term,
+        )
+        .annotate(
+            upcoming_slots=Count("availability_slots", filter=upcoming),
+            next_slot_at=Min(
+                "availability_slots__starts_at", filter=upcoming, output_field=DateTimeField()
+            ),
+        )
+        .order_by("first_name", "last_name", "email")
+    )
 
 
 # --- Courses -------------------------------------------------------------------------------
@@ -240,6 +264,9 @@ def assignment_listing(
 def monitor_assignments(monitor: User, term: AcademicTerm | None) -> QuerySet[MonitorAssignment]:
     """Only the monitor's own assignments in `term`, with the teachers of each subject.
 
+    Each carries a summary of its availability: `upcoming_slots` and `next_slot_at` (bookable
+    slots, as the search counts them) and `active_templates`.
+
     The subject's courses in `term` that have a teacher land in `assignment.subject.term_courses`.
     """
     if term is None:
@@ -249,10 +276,34 @@ def monitor_assignments(monitor: User, term: AcademicTerm | None) -> QuerySet[Mo
         .select_related("teacher")
         .order_by("group", "teacher__email")
     )
+    # The assignment's own slots and templates: its monitor, subject and term.
+    upcoming = Q(
+        subject__availability_slots__monitor=F("monitor"),
+        subject__availability_slots__term=F("term"),
+        subject__availability_slots__status=SlotStatus.AVAILABLE.value,
+        subject__availability_slots__starts_at__gt=timezone.now(),
+    )
+    active_templates = Q(
+        subject__slot_templates__monitor=F("monitor"),
+        subject__slot_templates__term=F("term"),
+        subject__slot_templates__is_active=True,
+    )
     return (
         MonitorAssignment.objects.filter(monitor=monitor, term=term)
         .select_related("subject__department", "term")
         .prefetch_related(Prefetch("subject__courses", queryset=courses, to_attr="term_courses"))
+        # distinct: the slot and template joins multiply each other's rows.
+        .annotate(
+            upcoming_slots=Count("subject__availability_slots", filter=upcoming, distinct=True),
+            next_slot_at=Min(
+                "subject__availability_slots__starts_at",
+                filter=upcoming,
+                output_field=DateTimeField(),
+            ),
+            active_templates=Count(
+                "subject__slot_templates", filter=active_templates, distinct=True
+            ),
+        )
         .order_by("subject__name", "subject__code")
     )
 
