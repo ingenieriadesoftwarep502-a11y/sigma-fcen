@@ -314,3 +314,73 @@ def test_subjects_without_any_term_report_zero_monitors(student_client: APIClien
     response = student_client.get(SUBJECTS_URL)
 
     assert response.json()["results"][0]["monitor_count"] == 0
+
+
+# --- Monitors of a subject -----------------------------------------------------------------
+
+
+def _monitors_url(subject: Subject) -> str:
+    return f"{SUBJECTS_URL}{subject.pk}/monitors/"
+
+
+def test_subject_monitors_lists_the_current_term_monitors_by_name(
+    student_client: APIClient,
+) -> None:
+    current, previous = make_current_and_previous_terms()
+    calculo = make_subject("MAT-101", "Cálculo Diferencial")
+    sofia = make_user("sofia@unal.edu.co", Role.Code.MONITOR, first_name="Sofía", last_name="Díaz")
+    andres = make_user(
+        "andres@unal.edu.co", Role.Code.MONITOR, first_name="Andrés", last_name="Mora"
+    )
+    former = make_user("old@unal.edu.co", Role.Code.MONITOR, first_name="Olga", last_name="Ruiz")
+    make_assignment(sofia, calculo, current)
+    make_assignment(andres, calculo, current)
+    make_assignment(former, calculo, previous)
+
+    response = student_client.get(_monitors_url(calculo))
+
+    assert response.status_code == 200
+    # Only what a student needs to recognize a monitor; no email (RNF-SEC).
+    assert response.json() == [
+        {"id": str(andres.pk), "full_name": "Andrés Mora"},
+        {"id": str(sofia.pk), "full_name": "Sofía Díaz"},
+    ]
+
+
+def test_subject_monitors_follow_the_requested_term(student_client: APIClient) -> None:
+    _, previous = make_current_and_previous_terms()
+    calculo = make_subject("MAT-101", "Cálculo Diferencial")
+    former = make_user("old@unal.edu.co", Role.Code.MONITOR, first_name="Olga", last_name="Ruiz")
+    make_assignment(former, calculo, previous)
+
+    response = student_client.get(_monitors_url(calculo), {"term": previous.code})
+
+    assert [monitor["full_name"] for monitor in response.json()] == ["Olga Ruiz"]
+    assert student_client.get(_monitors_url(calculo), {"term": "2030-1"}).status_code == 400
+
+
+def test_subject_monitors_hide_deactivated_accounts(student_client: APIClient) -> None:
+    current, _ = make_current_and_previous_terms()
+    calculo = make_subject("MAT-101", "Cálculo Diferencial")
+    gone = make_user("gone@unal.edu.co", Role.Code.MONITOR)
+    gone.is_active = False
+    gone.save()
+    make_assignment(gone, calculo, current)
+
+    assert student_client.get(_monitors_url(calculo)).json() == []
+
+
+def test_subject_monitors_of_an_inactive_or_unknown_subject_are_a_404(
+    student_client: APIClient,
+) -> None:
+    make_current_and_previous_terms()
+    hidden = make_subject("MAT-900", "Topología", is_active=False)
+
+    assert student_client.get(_monitors_url(hidden)).status_code == 404
+    assert student_client.get(f"{SUBJECTS_URL}999999/monitors/").status_code == 404
+
+
+def test_subject_monitors_require_a_session(api_client: APIClient) -> None:
+    subject = make_subject()
+
+    assert api_client.get(_monitors_url(subject)).status_code in (401, 403)

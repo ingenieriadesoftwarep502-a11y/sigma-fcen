@@ -21,6 +21,7 @@ from apps.academics.selectors import (
     department_listing,
     monitor_assignments,
     subject_listing,
+    subject_monitors,
     subjects_with_monitor_count,
     teacher_courses,
 )
@@ -38,6 +39,7 @@ from apps.academics.serializers import (
     MonitorAssignmentSerializer,
     MonitorOwnAssignmentSerializer,
     SubjectFilterSerializer,
+    SubjectMonitorSerializer,
     SubjectSerializer,
     SubjectWriteSerializer,
     TeacherCourseSerializer,
@@ -48,6 +50,7 @@ from apps.academics.services import (
     create_course,
     create_monitor_assignment,
     update_course,
+    update_term,
 )
 from apps.accounts.models import Role, User
 from shared.permissions import IsAdmin, IsAdminOrReadOnly, IsMonitor, IsTeacher
@@ -169,6 +172,25 @@ class SubjectDetailView(generics.RetrieveAPIView[Subject]):
         return Response(SubjectSerializer(self.get_object()).data)
 
 
+@extend_schema_view(get=extend_schema(parameters=[TermFilterSerializer]))
+class SubjectMonitorListView(generics.ListAPIView[User]):
+    """The monitors of one subject in a term (the current one by default), for students."""
+
+    serializer_class = SubjectMonitorSerializer
+    # A subject has a handful of monitors: one plain list, no pages.
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[User]:
+        term = _pop_term(_query(self.request, TermFilterSerializer))
+        subjects = (
+            Subject.objects.all()
+            if _is_admin(self.request)
+            else Subject.objects.filter(is_active=True)
+        )
+        subject = generics.get_object_or_404(subjects, pk=self.kwargs["pk"])
+        return subject_monitors(subject, term)
+
+
 # --- Terms ---------------------------------------------------------------------------------
 
 
@@ -181,6 +203,22 @@ class AcademicTermListCreateView(generics.ListCreateAPIView[AcademicTerm]):
 
     def perform_create(self, serializer: serializers.BaseSerializer[AcademicTerm]) -> None:
         _write(serializer.save)
+
+
+class AcademicTermDetailView(generics.RetrieveAPIView[AcademicTerm]):
+    """Read one term; administrators correct its code or dates. Neither PUT nor DELETE."""
+
+    permission_classes = (IsAdminOrReadOnly,)
+    serializer_class = AcademicTermSerializer
+    queryset = AcademicTerm.objects.all()
+
+    @extend_schema(request=AcademicTermSerializer, responses={200: AcademicTermSerializer})
+    def patch(self, request: Request, pk: int) -> Response:
+        term = self.get_object()
+        serializer = AcademicTermSerializer(term, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated = _write(lambda: update_term(term, dict(serializer.validated_data)))
+        return Response(AcademicTermSerializer(updated).data)
 
 
 class CurrentTermView(APIView):

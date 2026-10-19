@@ -310,6 +310,12 @@ paths:
           type: integer
           minimum: 1
         description: Id de asignatura.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, todos.
       tags:
       - availability-slots
       security:
@@ -864,6 +870,12 @@ paths:
         schema:
           type: integer
       - in: query
+        name: subject
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de asignatura.
+      - in: query
         name: term
         schema:
           type: string
@@ -1043,6 +1055,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/Subject'
           description: ''
+  /api/v1/subjects/{id}/monitors/:
+    get:
+      operationId: subjects_monitors_list
+      description: The monitors of one subject in a term (the current one by default),
+        for students.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - subjects
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubjectMonitor'
+          description: ''
   /api/v1/terms/:
     get:
       operationId: terms_list
@@ -1094,6 +1136,60 @@ paths:
       - cookieJWT: []
       responses:
         '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicTerm'
+          description: ''
+  /api/v1/terms/{id}/:
+    get:
+      operationId: terms_retrieve
+      description: Read one term; administrators correct its code or dates. Neither
+        PUT nor DELETE.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - terms
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicTerm'
+          description: ''
+    patch:
+      operationId: terms_partial_update
+      description: Read one term; administrators correct its code or dates. Neither
+        PUT nor DELETE.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - terms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAcademicTerm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAcademicTerm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAcademicTerm'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
           content:
             application/json:
               schema:
@@ -2081,6 +2177,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TeacherCourse'
+    PatchedAcademicTerm:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          description: Formato AAAA-S, por ejemplo 2026-1.
+          maxLength: 6
+        start_date:
+          type: string
+          format: date
+          title: Fecha de inicio
+        end_date:
+          type: string
+          format: date
+          title: Fecha de fin
     PatchedCourseUpdate:
       type: object
       properties:
@@ -2383,6 +2497,19 @@ components:
       - is_active
       - monitor_count
       - name
+    SubjectMonitor:
+      type: object
+      description: 'A monitor of a subject as students see it: no email (RNF-SEC).'
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+          readOnly: true
+      required:
+      - full_name
+      - id
     SubjectReference:
       type: object
       properties:

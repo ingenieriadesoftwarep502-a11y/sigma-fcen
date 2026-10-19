@@ -110,6 +110,7 @@ class MineFilterSerializer(_DateRangeSerializer):
 
 
 class SearchFilterSerializer(_DateRangeSerializer):
+    term = _term_field(required=False, help_text="Código del período; por defecto, todos.")
     subject = serializers.IntegerField(required=False, min_value=1, help_text="Id de asignatura.")
     monitor = serializers.UUIDField(required=False, help_text="Id del monitor.")
     modality = serializers.ChoiceField(required=False, choices=Modality.choices)
@@ -117,6 +118,10 @@ class SearchFilterSerializer(_DateRangeSerializer):
 
 class TermFilterSerializer(serializers.Serializer[dict[str, Any]]):
     term = _term_field(required=False, help_text="Código del período; por defecto, el actual.")
+
+
+class TemplateMineFilterSerializer(TermFilterSerializer):
+    subject = serializers.IntegerField(required=False, min_value=1, help_text="Id de asignatura.")
 
 
 class SlotTemplateSerializer(serializers.ModelSerializer[SlotTemplate]):

@@ -1,19 +1,37 @@
 """Catalog use cases that carry business rules beyond plain field validation.
 
-Departments, subjects and terms are plain CRUD validated by their serializers; courses and
-monitor assignments also check the role of the person they reference (RN-002, RF-023, RF-024).
+Departments, subjects and new terms are plain CRUD validated by their serializers; courses and
+monitor assignments also check the role of the person they reference (RN-002, RF-023, RF-024),
+and editing a term's dates must keep its availability slots inside them.
 """
 
+from datetime import date
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Max, Min
 
 from apps.academics.models import AcademicTerm, Course, MonitorAssignment, Subject
 from apps.accounts.models import Role, User
+from apps.availability.domain.rules import LOCAL_TZ
 
 TEACHER_ROLE_MESSAGE = "El usuario no tiene el rol Docente."
 MONITOR_ROLE_MESSAGE = "El usuario no tiene el rol Monitor."
 NOT_ASSIGNED_MESSAGE = "No tienes asignada esta asignatura como monitor en el período."
+
+
+def slots_before_start_message(first_day: date) -> str:
+    return (
+        f"Hay franjas de disponibilidad del período desde el {first_day:%Y-%m-%d}; "
+        "la fecha de inicio no puede ser posterior."
+    )
+
+
+def slots_after_end_message(last_day: date) -> str:
+    return (
+        f"Hay franjas de disponibilidad del período hasta el {last_day:%Y-%m-%d}; "
+        "la fecha de fin no puede ser anterior."
+    )
 
 
 class CatalogRuleError(Exception):
@@ -54,6 +72,38 @@ def update_course(course: Course, data: dict[str, Any]) -> Course:
     if data:
         course.save(update_fields=list(data))
     return course
+
+
+def _ensure_slots_inside(term: AcademicTerm, start_date: date, end_date: date) -> None:
+    """Existing slots of the term must keep falling inside its new dates.
+
+    A slot belongs to the term containing its local (Bogotá) start day, as when it was created.
+    """
+    span = term.availability_slots.aggregate(first=Min("starts_at"), last=Max("starts_at"))
+    if span["first"] is None:
+        return
+    first_day = span["first"].astimezone(LOCAL_TZ).date()
+    last_day = span["last"].astimezone(LOCAL_TZ).date()
+    if start_date > first_day:
+        raise CatalogRuleError("start_date", slots_before_start_message(first_day))
+    if end_date < last_day:
+        raise CatalogRuleError("end_date", slots_after_end_message(last_day))
+
+
+@transaction.atomic
+def update_term(term: AcademicTerm, data: dict[str, Any]) -> AcademicTerm:
+    """Corrects a term's code or dates, e.g. extending one whose end date already passed."""
+    term = AcademicTerm.objects.select_for_update().get(pk=term.pk)
+    _ensure_slots_inside(
+        term,
+        data.get("start_date", term.start_date),
+        data.get("end_date", term.end_date),
+    )
+    for field, value in data.items():
+        setattr(term, field, value)
+    if data:
+        term.save(update_fields=list(data))
+    return term
 
 
 @transaction.atomic

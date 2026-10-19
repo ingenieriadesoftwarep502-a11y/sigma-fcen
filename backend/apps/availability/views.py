@@ -30,7 +30,7 @@ from apps.availability.serializers import (
     SlotTemplateCreateSerializer,
     SlotTemplateSerializer,
     SlotUpdateSerializer,
-    TermFilterSerializer,
+    TemplateMineFilterSerializer,
 )
 from apps.availability.services import (
     SlotConflictError,
@@ -175,7 +175,7 @@ class SlotTemplateCreateView(APIView):
         return Response(SlotTemplateSerializer(created).data, status=status.HTTP_201_CREATED)
 
 
-@extend_schema_view(get=extend_schema(parameters=[TermFilterSerializer]))
+@extend_schema_view(get=extend_schema(parameters=[TemplateMineFilterSerializer]))
 class MonitorTemplateListView(generics.ListAPIView[SlotTemplate]):
     """The requesting monitor's templates of one term (the current one by default)."""
 
@@ -183,8 +183,9 @@ class MonitorTemplateListView(generics.ListAPIView[SlotTemplate]):
     serializer_class = SlotTemplateSerializer
 
     def get_queryset(self) -> QuerySet[SlotTemplate]:
-        term = _query(self.request, TermFilterSerializer).get("term") or current_term()
-        return monitor_templates(_monitor(self.request), term)
+        params = _query(self.request, TemplateMineFilterSerializer)
+        term = params.get("term") or current_term()
+        return monitor_templates(_monitor(self.request), term, params.get("subject"))
 
 
 class SlotTemplateDetailView(APIView):

@@ -1,6 +1,6 @@
 """Catalog use cases that enforce role rules on assignments (T-02.5, RN-002, RF-023, RF-024)."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -12,8 +12,10 @@ from apps.academics.services import (
     ensure_monitor_assigned,
     is_monitor_assigned,
     update_course,
+    update_term,
 )
 from apps.accounts.models import Role, UserRole
+from tests.availability_data import SLOT_START, make_assigned_monitor, make_slot
 from tests.catalog_data import make_assignment, make_subject, make_term, make_user
 
 pytestmark = pytest.mark.django_db
@@ -123,3 +125,27 @@ def test_rn_002_assignment_stops_authorizing_once_the_monitor_role_is_revoked() 
     UserRole.objects.filter(user=monitor, role__code=Role.Code.MONITOR).delete()
 
     assert not is_monitor_assigned(monitor, subject, term)
+
+
+def test_update_term_rejects_dates_that_leave_slots_outside() -> None:
+    monitor, subject, term = make_assigned_monitor()
+    make_slot(monitor, subject, term)
+    original = (term.start_date, term.end_date)
+
+    with pytest.raises(CatalogRuleError) as error:
+        update_term(term, {"end_date": SLOT_START.date() - timedelta(days=1)})
+
+    assert error.value.field == "end_date"
+    term.refresh_from_db()
+    assert (term.start_date, term.end_date) == original
+
+
+def test_update_term_ignores_slots_of_other_terms() -> None:
+    monitor, subject, term = make_assigned_monitor()
+    make_slot(monitor, subject, term)
+    other = make_term("2025-1", date(2025, 2, 3), date(2025, 6, 6))
+
+    update_term(other, {"end_date": date(2025, 7, 4)})
+
+    other.refresh_from_db()
+    assert other.end_date == date(2025, 7, 4)

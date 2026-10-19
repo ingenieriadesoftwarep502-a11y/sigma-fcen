@@ -123,6 +123,17 @@ def subject_listing(
     return subjects.order_by(*SUBJECT_ORDERINGS[ordering])
 
 
+def subject_monitors(subject: Subject, term: AcademicTerm | None) -> QuerySet[User]:
+    """Active accounts assigned to monitor `subject` in `term`, by name."""
+    if term is None:
+        return User.objects.none()
+    return User.objects.filter(
+        is_active=True,
+        monitor_assignments__subject=subject,
+        monitor_assignments__term=term,
+    ).order_by("first_name", "last_name", "email")
+
+
 # --- Courses -------------------------------------------------------------------------------
 
 

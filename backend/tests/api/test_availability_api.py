@@ -24,7 +24,7 @@ from tests.availability_data import (
     make_slot,
     next_weekday,
 )
-from tests.catalog_data import client_for, make_subject, make_user
+from tests.catalog_data import client_for, make_assignment, make_subject, make_term, make_user
 
 pytestmark = pytest.mark.django_db
 
@@ -391,6 +391,14 @@ def test_filter_by_modality(listed: dict[str, Any]) -> None:
     assert search(listed["student"], modality="VIRTUAL") == [listed["calculo_thursday"].pk]
 
 
+def test_filter_by_term(listed: dict[str, Any]) -> None:
+    later = make_term("2027-1", SLOT_START.date(), SLOT_START.date() + timedelta(days=120))
+    next_term = make_slot(listed["sofia"], listed["calculo"], later, SLOT_START + 4 * HOUR)
+
+    assert next_term.pk not in search(listed["student"], term=listed["term"].code)
+    assert search(listed["student"], term=later.code) == [next_term.pk]
+
+
 def test_t_03_12_ca_hu02_5_no_results_is_an_empty_200(listed: dict[str, Any]) -> None:
     other = make_subject("QUI-101", "Química General")
 
@@ -411,6 +419,7 @@ def test_deactivated_monitors_slots_are_hidden(listed: dict[str, Any]) -> None:
         {"date_from": "2026-10-20", "date_to": "2026-10-19"},
         {"modality": "HYBRID"},
         {"monitor": "no-es-un-uuid"},
+        {"term": "2030-1"},
     ],
 )
 def test_invalid_search_filters_are_a_400(world: dict[str, Any], params: dict[str, str]) -> None:
@@ -476,6 +485,22 @@ def test_adr_010_monitor_creates_a_group_template(world: dict[str, Any]) -> None
     assert capacities == {4}
     listed = client_for(world["sofia"]).get(TEMPLATES_MINE_URL).json()["results"]
     assert [(t["id"], t["capacity"]) for t in listed] == [(data["id"], 4)]
+
+
+def test_mine_templates_filter_by_subject(world: dict[str, Any]) -> None:
+    fisica = make_subject("FIS-101", "Física I")
+    make_assignment(world["sofia"], fisica, world["term"])
+    common = {"monitor": world["sofia"], "term": world["term"], "weekday": 1}
+    calculo = SlotTemplate.objects.create(
+        **common, subject=world["calculo"], start_time=time(10), location="A"
+    )
+    SlotTemplate.objects.create(**common, subject=fisica, start_time=time(12), location="B")
+    client = client_for(world["sofia"])
+
+    listed = client.get(TEMPLATES_MINE_URL, {"subject": world["calculo"].pk}).json()["results"]
+
+    assert [template["id"] for template in listed] == [calculo.pk]
+    assert len(client.get(TEMPLATES_MINE_URL).json()["results"]) == 2
 
 
 def test_template_with_capacity_over_the_limit_is_a_400(world: dict[str, Any]) -> None:

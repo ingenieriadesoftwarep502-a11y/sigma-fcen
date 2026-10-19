@@ -59,6 +59,7 @@ def monitor_slots(
 
 def search_slots(
     *,
+    term: AcademicTerm | None = None,
     subject: int | None = None,
     monitor: UUID | None = None,
     modality: str | None = None,
@@ -74,6 +75,8 @@ def search_slots(
         starts_at__gt=timezone.now(),
         monitor__is_active=True,
     )
+    if term is not None:
+        slots = slots.filter(term=term)
     if subject is not None:
         slots = slots.filter(subject_id=subject)
     if monitor is not None:
@@ -92,6 +95,12 @@ def templates_with_details() -> QuerySet[SlotTemplate]:
     )
 
 
-def monitor_templates(monitor: User, term: AcademicTerm | None) -> QuerySet[SlotTemplate]:
+def monitor_templates(
+    monitor: User, term: AcademicTerm | None, subject: int | None = None
+) -> QuerySet[SlotTemplate]:
     templates = templates_with_details().filter(monitor=monitor)
-    return templates.filter(term=term) if term is not None else templates
+    if term is not None:
+        templates = templates.filter(term=term)
+    if subject is not None:
+        templates = templates.filter(subject_id=subject)
+    return templates

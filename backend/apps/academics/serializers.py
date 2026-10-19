@@ -164,6 +164,16 @@ class SubjectReferenceSerializer(serializers.ModelSerializer[Subject]):
         read_only_fields = fields
 
 
+class SubjectMonitorSerializer(serializers.Serializer[User]):
+    """A monitor of a subject as students see it: no email (RNF-SEC)."""
+
+    id = serializers.UUIDField()
+    full_name = serializers.SerializerMethodField()
+
+    def get_full_name(self, user: User) -> str:
+        return f"{user.first_name} {user.last_name}".strip()
+
+
 class TermFilterSerializer(serializers.Serializer[dict[str, Any]]):
     term = _term_field(required=False, help_text="Código del período; por defecto, el actual.")
 
@@ -202,7 +212,14 @@ class AcademicTermSerializer(serializers.ModelSerializer[AcademicTerm]):
         )
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
-        if attrs["end_date"] <= attrs["start_date"]:
+        # A partial update compares the new dates with the stored ones it does not change.
+        stored = self.instance
+        if stored is None:
+            start_date, end_date = attrs["start_date"], attrs["end_date"]
+        else:
+            start_date = attrs.get("start_date", stored.start_date)
+            end_date = attrs.get("end_date", stored.end_date)
+        if end_date <= start_date:
             raise serializers.ValidationError({"end_date": [TERM_DATES_MESSAGE]})
         return attrs
 

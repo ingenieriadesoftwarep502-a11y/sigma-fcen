@@ -33,6 +33,7 @@ def urls() -> dict[str, str]:
         "subjects": f"{API}/subjects/",
         "subject": f"{API}/subjects/{subject.pk}/",
         "terms": f"{API}/terms/",
+        "term": f"{API}/terms/{term.pk}/",
         "current_term": f"{API}/terms/current/",
         "courses": f"{API}/courses/",
         "course": f"{API}/courses/{course.pk}/",
@@ -50,6 +51,7 @@ READ_FOR_ANYONE = [
     ("get", "subjects"),
     ("get", "subject"),
     ("get", "terms"),
+    ("get", "term"),
     ("get", "current_term"),
 ]
 ADMIN_ONLY = [
@@ -58,6 +60,7 @@ ADMIN_ONLY = [
     ("post", "subjects"),
     ("patch", "subject"),
     ("post", "terms"),
+    ("patch", "term"),
     ("get", "courses"),
     ("post", "courses"),
     ("get", "course"),

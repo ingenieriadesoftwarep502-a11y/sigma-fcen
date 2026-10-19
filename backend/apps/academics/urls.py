@@ -3,6 +3,7 @@
 from django.urls import path
 
 from apps.academics.views import (
+    AcademicTermDetailView,
     AcademicTermListCreateView,
     CatalogSummaryView,
     CourseDetailView,
@@ -15,6 +16,7 @@ from apps.academics.views import (
     MonitorOwnAssignmentListView,
     SubjectDetailView,
     SubjectListCreateView,
+    SubjectMonitorListView,
     TeacherCourseListView,
 )
 
@@ -23,8 +25,14 @@ urlpatterns = [
     path("departments/<int:pk>/", DepartmentDetailView.as_view(), name="department-detail"),
     path("subjects/", SubjectListCreateView.as_view(), name="subject-list"),
     path("subjects/<int:pk>/", SubjectDetailView.as_view(), name="subject-detail"),
+    path(
+        "subjects/<int:pk>/monitors/",
+        SubjectMonitorListView.as_view(),
+        name="subject-monitors",
+    ),
     path("terms/", AcademicTermListCreateView.as_view(), name="term-list"),
     path("terms/current/", CurrentTermView.as_view(), name="term-current"),
+    path("terms/<int:pk>/", AcademicTermDetailView.as_view(), name="term-detail"),
     path("courses/", CourseListCreateView.as_view(), name="course-list"),
     path("courses/mine/", TeacherCourseListView.as_view(), name="course-mine"),
     path("courses/<int:pk>/", CourseDetailView.as_view(), name="course-detail"),
