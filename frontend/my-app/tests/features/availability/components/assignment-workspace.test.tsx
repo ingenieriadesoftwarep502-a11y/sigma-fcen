@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AssignmentWorkspace from "@/features/availability/components/assignment-workspace";
@@ -65,11 +65,14 @@ describe("AssignmentWorkspace (T-03.16, HU-05)", () => {
     expect(screen.getByText("1 franja disponible")).toBeInTheDocument();
     expect(screen.getByText("19 – 25 de octubre")).toBeInTheDocument();
     expect(listMyAssignments).toHaveBeenCalledWith("2026-2", expect.any(AbortSignal));
-    expect(weekMock).toHaveBeenCalledWith(
-      "2026-2",
-      "2026-10-19",
-      "2026-10-25",
-      expect.any(AbortSignal),
+    // The week is read by an effect of the inner view, which may run after the heading shows.
+    await waitFor(() =>
+      expect(weekMock).toHaveBeenCalledWith(
+        "2026-2",
+        "2026-10-19",
+        "2026-10-25",
+        expect.any(AbortSignal),
+      ),
     );
   });
 
@@ -103,8 +106,10 @@ describe("AssignmentWorkspace (T-03.16, HU-05)", () => {
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     // The week, the templates and the summary are read again.
-    expect(weekMock).toHaveBeenCalledTimes(2);
-    expect(listMyAssignments).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(weekMock).toHaveBeenCalledTimes(2);
+      expect(listMyAssignments).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("moves between weeks", async () => {
