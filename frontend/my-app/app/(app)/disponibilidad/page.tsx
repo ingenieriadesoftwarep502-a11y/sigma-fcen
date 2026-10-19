@@ -1,19 +1,8 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import AvailabilityManager from "@/features/availability/components/availability-manager";
-import RequireSession from "@/features/auth/session/require-session";
+import { MY_MONITORING_PATH } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Mi disponibilidad · SIGMA-FCEN" };
-
-/** Monitors only: anyone else is sent home. The API enforces the role too (RN-003.5). */
+/** Availability is managed inside each assignment of /mis-monitorias; old links land there. */
 export default function AvailabilityPage() {
-  return (
-    <RequireSession roles={["MONITOR"]}>
-      {/* The tab and the term are read from the URL, which is only known in the browser. */}
-      <Suspense fallback={null}>
-        <AvailabilityManager />
-      </Suspense>
-    </RequireSession>
-  );
+  redirect(MY_MONITORING_PATH);
 }

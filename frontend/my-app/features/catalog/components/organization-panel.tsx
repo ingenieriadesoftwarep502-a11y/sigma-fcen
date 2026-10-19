@@ -17,7 +17,8 @@ import { DepartmentForm, TermForm } from "./organization-forms";
 type Panel =
   | { mode: "new-department" }
   | { mode: "edit-department"; department: Department }
-  | { mode: "new-term" };
+  | { mode: "new-term" }
+  | { mode: "edit-term"; term: Term };
 
 type OrganizationPanelProps = {
   departments: Department[] | null;
@@ -160,6 +161,19 @@ export default function OrganizationPanel({
                   ) : (
                     <span />
                   )}
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    aria-label={`Editar período ${term.code}`}
+                    aria-haspopup="dialog"
+                    disabled={drawer.busy}
+                    onClick={(event) => {
+                      setNotice(null);
+                      drawer.open({ mode: "edit-term", term }, event);
+                    }}
+                  >
+                    <Icon name="edit" size={18} />
+                  </button>
                 </li>
               ))}
             </ul>
@@ -193,6 +207,21 @@ export default function OrganizationPanel({
       {panel?.mode === "new-term" && (
         <Drawer key="new-term" title="Nuevo período" locked={drawer.busy} onClose={drawer.close}>
           <TermForm
+            onSaved={(message) => saved(message, onTermsChange)}
+            onBusyChange={drawer.setBusy}
+          />
+        </Drawer>
+      )}
+      {panel?.mode === "edit-term" && (
+        <Drawer
+          key={`term-${panel.term.id}`}
+          title="Editar período"
+          subtitle={panel.term.code}
+          locked={drawer.busy}
+          onClose={drawer.close}
+        >
+          <TermForm
+            term={panel.term}
             onSaved={(message) => saved(message, onTermsChange)}
             onBusyChange={drawer.setBusy}
           />

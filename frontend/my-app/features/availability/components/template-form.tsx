@@ -12,7 +12,6 @@ import { availabilityFormErrors } from "../form-errors";
 import { slotsCountLabel, WEEKDAY_LABELS } from "../labels";
 import styles from "./availability.module.css";
 import SessionFields, { capacityOf, sessionErrors, type SessionValues } from "./session-fields";
-import SubjectSelect from "./subject-select";
 
 const FIELDS = [
   "subject",
@@ -26,9 +25,8 @@ const FIELDS = [
 type Errors = Partial<Record<(typeof FIELDS)[number], string[]>>;
 
 type TemplateFormProps = {
-  /** Code of the term the template fills; null while the current term is unknown. */
-  term: string | null;
-  assignments: MonitorOwnAssignment[] | null;
+  /** The assignment whose subject and term the template fills; both are fixed. */
+  assignment: MonitorOwnAssignment;
   onSaved: (message: string) => void;
   onBusyChange: (busy: boolean) => void;
 };
@@ -38,8 +36,8 @@ type TemplateFormProps = {
  * that weekday and hour for every remaining week of the term, all or nothing. When some week
  * collides with another slot, nothing is created and the colliding weeks are listed.
  */
-export default function TemplateForm({ term, assignments, onSaved, onBusyChange }: TemplateFormProps) {
-  const [subject, setSubject] = useState("");
+export default function TemplateForm({ assignment, onSaved, onBusyChange }: TemplateFormProps) {
+  const { subject, term } = assignment;
   const [weekday, setWeekday] = useState("");
   const [time, setTime] = useState("");
   const [session, setSession] = useState<SessionValues>({
@@ -51,26 +49,23 @@ export default function TemplateForm({ term, assignments, onSaved, onBusyChange 
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const noSubjects = assignments !== null && assignments.length === 0;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting || noSubjects) return;
+    if (submitting) return;
     const missing: Errors = sessionErrors(session);
-    if (!subject) missing.subject = ["Elige una de tus asignaturas."];
     if (!/^[0-6]$/.test(weekday)) missing.weekday = ["Elige el día de la semana."];
     if (!HALF_HOURS.includes(time)) missing.start_time = ["Elige la hora de inicio."];
-    if (!term) missing.term = ["Aún no se conoce el período; inténtalo de nuevo en un momento."];
     setErrors(missing);
     setFormError(null);
     const capacity = capacityOf(session);
-    if (Object.keys(missing).length > 0 || capacity === null || !term) return;
+    if (Object.keys(missing).length > 0 || capacity === null) return;
 
     setSubmitting(true);
     onBusyChange(true);
     try {
       const created = await createTemplate({
-        subject: Number(subject),
+        subject: subject.id,
         term,
         weekday: Number(weekday),
         start_time: time,
@@ -83,8 +78,10 @@ export default function TemplateForm({ term, assignments, onSaved, onBusyChange 
       );
     } catch (error) {
       const { byField, message } = availabilityFormErrors(error, FIELDS);
-      setErrors(byField);
-      setFormError(message);
+      // Subject and term are fixed text, so their errors go to the form alert.
+      const { subject: subjectErrors = [], term: termErrors = [], ...rest } = byField;
+      setErrors(rest);
+      setFormError([...subjectErrors, ...termErrors, message].filter(Boolean).join(" ") || null);
       setSubmitting(false);
       onBusyChange(false);
     }
@@ -93,21 +90,13 @@ export default function TemplateForm({ term, assignments, onSaved, onBusyChange 
   return (
     <form onSubmit={handleSubmit} noValidate className={styles.form}>
       {formError && <Alert tone="error">{formError}</Alert>}
-      {noSubjects && (
-        <Alert tone="error">
-          No tienes asignaturas asignadas en este período. Pide a la coordinación que registre tu
-          monitoría para crear plantillas.
-        </Alert>
-      )}
-      {errors.term && <Alert tone="error">{errors.term.join(" ")}</Alert>}
 
-      <SubjectSelect
-        id="template-subject"
-        value={subject}
-        assignments={assignments}
-        onChange={setSubject}
-        errors={errors.subject}
-      />
+      <dl className={styles.fixed}>
+        <dt>Asignatura</dt>
+        <dd>{`${subject.code} · ${subject.name}`}</dd>
+        <dt>Período</dt>
+        <dd>{term}</dd>
+      </dl>
 
       <div className={styles.pair}>
         <SelectField
@@ -142,14 +131,12 @@ export default function TemplateForm({ term, assignments, onSaved, onBusyChange 
         </SelectField>
       </div>
       <p className={styles.hint}>
-        {term
-          ? `Se publicará una franja de 60 minutos cada semana, desde hoy hasta el fin del período ${term}. Hora de Bogotá.`
-          : "Se publicará una franja de 60 minutos cada semana, desde hoy hasta el fin del período. Hora de Bogotá."}
+        {`Se publicará una franja de 60 minutos cada semana, desde hoy hasta el fin del período ${term}. Hora de Bogotá.`}
       </p>
 
       <SessionFields idPrefix="template" values={session} onChange={setSession} errors={errors} />
 
-      <Button type="submit" softDisabled={submitting || noSubjects} className={styles.submit}>
+      <Button type="submit" softDisabled={submitting} className={styles.submit}>
         {submitting ? "Creando…" : "Crear plantilla"}
       </Button>
     </form>

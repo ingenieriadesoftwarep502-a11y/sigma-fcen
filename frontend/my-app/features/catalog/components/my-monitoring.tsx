@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import Icon from "@/components/ui/icon";
 import PageHeader from "@/components/ui/page-header";
+import AssignmentAvailability from "@/features/availability/components/assignment-availability";
 import { requestErrorMessage } from "@/lib/api-client";
 import { isTermCode, listMyAssignments, type MonitorOwnAssignment } from "@/lib/catalog";
 import { initialsOfFullName } from "@/lib/people";
@@ -26,12 +27,24 @@ type AssignmentsState =
   | { status: "ready"; request: Request; assignments: MonitorOwnAssignment[] }
   | { status: "error"; request: Request; message: string };
 
-function AssignmentCard({ assignment }: { assignment: MonitorOwnAssignment }) {
+type AssignmentCardProps = {
+  assignment: MonitorOwnAssignment;
+  /** Whether the card shows its availability (slots and weekly templates). */
+  expanded: boolean;
+  onToggle: () => void;
+};
+
+function AssignmentCard({ assignment, expanded, onToggle }: AssignmentCardProps) {
   const { subject, teachers } = assignment;
   const titleId = `assignment-${assignment.id}-title`;
+  const availabilityId = `assignment-${assignment.id}-availability`;
 
   return (
-    <article className={cards.card} aria-labelledby={titleId}>
+    <article
+      className={`${cards.card} ${styles.card}`}
+      aria-labelledby={titleId}
+      data-expanded={expanded || undefined}
+    >
       <header className={cards.cardHeader}>
         <p className={cards.meta}>
           <span className={cards.code}>{subject.code}</span>
@@ -45,6 +58,7 @@ function AssignmentCard({ assignment }: { assignment: MonitorOwnAssignment }) {
           <span className={cards.group} title="Horas comprometidas">
             {hoursLabel(assignment.committed_hours)}
           </span>
+          <span>{`Período ${assignment.term}`}</span>
           <span>{subject.department.name}</span>
         </p>
       </header>
@@ -69,13 +83,32 @@ function AssignmentCard({ assignment }: { assignment: MonitorOwnAssignment }) {
           ))}
         </ul>
       )}
+
+      <div className={styles.availability}>
+        <button
+          type="button"
+          className={styles.toggle}
+          aria-expanded={expanded}
+          aria-controls={availabilityId}
+          onClick={onToggle}
+        >
+          <Icon name="calendar" />
+          Disponibilidad
+          <Icon name="chevron" className={styles.chevron} />
+        </button>
+        {/* Mounted only while open: its lists load when the monitor asks for them. */}
+        <div id={availabilityId} className={styles.availabilityBody} hidden={!expanded}>
+          {expanded && <AssignmentAvailability assignment={assignment} />}
+        </div>
+      </div>
     </article>
   );
 }
 
 /**
  * A monitor's own subjects in a term, the hours committed to each and the teachers of their
- * groups (RN-009.1): never the whole catalog. The term follows the current one unless the
+ * groups (RN-009.1): never the whole catalog. Each assignment opens its own availability,
+ * scoped to its subject and term (T-03.16). The term follows the current one unless the
  * person picks another.
  */
 export default function MyMonitoring() {
@@ -85,6 +118,8 @@ export default function MyMonitoring() {
     return { term: term && isTermCode(term) ? term : null, attempt: 0 };
   });
   const [state, setState] = useState<AssignmentsState>({ status: "loading" });
+  // One assignment open at a time keeps the page short and its form ids unique.
+  const [open, setOpen] = useState<number | null>(null);
   const { terms, current } = useTerms();
 
   useEffect(() => {
@@ -119,7 +154,7 @@ export default function MyMonitoring() {
       <PageHeader
         title="Mis monitorías"
         titleId="my-monitoring-title"
-        lead="Las asignaturas que acompañas en el período, tus horas y sus docentes."
+        lead="Las asignaturas que acompañas en el período, tus horas, sus docentes y tu disponibilidad."
       >
         <TermSelect
           id="my-monitoring-term"
@@ -178,7 +213,12 @@ export default function MyMonitoring() {
           </p>
           <div className={cards.grid}>
             {assignments.map((assignment) => (
-              <AssignmentCard key={assignment.id} assignment={assignment} />
+              <AssignmentCard
+                key={assignment.id}
+                assignment={assignment}
+                expanded={open === assignment.id}
+                onToggle={() => setOpen(open === assignment.id ? null : assignment.id)}
+              />
             ))}
           </div>
         </>

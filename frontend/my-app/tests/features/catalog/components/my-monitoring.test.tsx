@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import MyMonitoring from "@/features/catalog/components/my-monitoring";
 import { ApiError } from "@/lib/api-client";
+import { listMySlots, listMyTemplates } from "@/lib/availability";
 import {
   getCurrentTerm,
   listAllTerms,
@@ -23,6 +24,11 @@ vi.mock("@/lib/catalog", async (importOriginal) => ({
   listMyAssignments: vi.fn(),
   listAllTerms: vi.fn(),
   getCurrentTerm: vi.fn(),
+}));
+vi.mock("@/lib/availability", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/availability")>()),
+  listMySlots: vi.fn(),
+  listMyTemplates: vi.fn(),
 }));
 
 const TERM_2 = { id: 2, code: "2026-2", start_date: "2026-08-01", end_date: "2026-12-10" };
@@ -49,12 +55,15 @@ const MECANICA: MonitorOwnAssignment = {
 };
 
 const listMock = vi.mocked(listMyAssignments);
+const EMPTY_PAGE = { count: 0, next: null, previous: null, results: [] };
 
 describe("MyMonitoring", () => {
   beforeEach(() => {
     searchParams = new URLSearchParams();
     vi.mocked(listAllTerms).mockResolvedValue([TERM_2, TERM_1]);
     vi.mocked(getCurrentTerm).mockResolvedValue(TERM_2);
+    vi.mocked(listMySlots).mockResolvedValue(EMPTY_PAGE);
+    vi.mocked(listMyTemplates).mockResolvedValue(EMPTY_PAGE);
   });
 
   afterEach(() => {
@@ -70,6 +79,7 @@ describe("MyMonitoring", () => {
     expect(calculo).toHaveTextContent("4 créditos");
     expect(calculo).toHaveTextContent("Matemáticas");
     expect(calculo).toHaveTextContent("6 h");
+    expect(calculo).toHaveTextContent("Período 2026-2");
     const teachers = within(calculo).getByRole("list", { name: "Docentes de Cálculo diferencial" });
     expect(within(teachers).getAllByRole("listitem")).toHaveLength(2);
     expect(teachers).toHaveTextContent("Laura Gómez");
@@ -124,5 +134,72 @@ describe("MyMonitoring", () => {
     fireEvent.click(screen.getByRole("button", { name: "Intentar de nuevo" }));
 
     expect(await screen.findByRole("article", { name: /Mecánica/ })).toBeInTheDocument();
+  });
+
+  it("opens the availability of one assignment, scoped to its subject and term", async () => {
+    listMock.mockResolvedValue([CALCULO, MECANICA]);
+    render(<MyMonitoring />);
+    const calculo = await screen.findByRole("article", { name: /Cálculo diferencial/ });
+    const toggle = within(calculo).getByRole("button", { name: /Disponibilidad/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(listMySlots).not.toHaveBeenCalled();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(
+      await within(calculo).findByRole("tab", { name: "Franjas", selected: true }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(listMySlots).toHaveBeenCalledWith(
+        1,
+        { term: "2026-2", subject: 1, status: null },
+        expect.any(AbortSignal),
+      ),
+    );
+
+    fireEvent.click(within(calculo).getByRole("tab", { name: "Plantillas semanales" }));
+    await waitFor(() =>
+      expect(listMyTemplates).toHaveBeenCalledWith(
+        1,
+        { term: "2026-2", subject: 1 },
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+
+  it("keeps one assignment open at a time", async () => {
+    listMock.mockResolvedValue([CALCULO, MECANICA]);
+    render(<MyMonitoring />);
+    const calculo = await screen.findByRole("article", { name: /Cálculo diferencial/ });
+    const mecanica = screen.getByRole("article", { name: /Mecánica/ });
+
+    fireEvent.click(within(calculo).getByRole("button", { name: /Disponibilidad/ }));
+    fireEvent.click(within(mecanica).getByRole("button", { name: /Disponibilidad/ }));
+
+    expect(within(calculo).getByRole("button", { name: /Disponibilidad/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(within(calculo).queryByRole("tablist")).not.toBeInTheDocument();
+    expect(await within(mecanica).findByRole("tablist")).toBeInTheDocument();
+  });
+
+  it("scopes an earlier term's assignment to that term", async () => {
+    searchParams = new URLSearchParams("periodo=2026-1");
+    listMock.mockResolvedValue([{ ...MECANICA, term: "2026-1" }]);
+    render(<MyMonitoring />);
+    const mecanica = await screen.findByRole("article", { name: /Mecánica/ });
+    expect(mecanica).toHaveTextContent("Período 2026-1");
+
+    fireEvent.click(within(mecanica).getByRole("button", { name: /Disponibilidad/ }));
+
+    await waitFor(() =>
+      expect(listMySlots).toHaveBeenCalledWith(
+        1,
+        { term: "2026-1", subject: 2, status: null },
+        expect.any(AbortSignal),
+      ),
+    );
   });
 });

@@ -271,7 +271,7 @@
 }
 
 .row:has(.termCode) {
-  grid-template-columns: 5rem minmax(0, 1fr) auto;
+  grid-template-columns: 5rem minmax(0, 1fr) auto 2.5rem;
 }
 
 .listSkeleton {
@@ -307,7 +307,7 @@
 
 @media (max-width: 599.98px) {
   .row:has(.termCode) {
-    grid-template-columns: 4.5rem minmax(0, 1fr);
+    grid-template-columns: 4.5rem minmax(0, 1fr) 2.5rem;
   }
 
   .row:has(.termCode) .dates {

@@ -20,6 +20,7 @@ export type SubjectData = Schemas["SubjectWrite"];
 export type SubjectChanges = Schemas["PatchedSubjectWrite"];
 export type Term = Schemas["AcademicTerm"];
 export type NewTerm = Omit<Term, "id">;
+export type TermChanges = Schemas["PatchedAcademicTerm"];
 export type Course = Schemas["Course"];
 export type CoursePage = Schemas["PaginatedCourseList"];
 export type NewCourse = Schemas["CourseCreate"];
@@ -31,6 +32,7 @@ export type AssignmentPage = Schemas["PaginatedMonitorAssignmentList"];
 export type NewAssignment = Schemas["MonitorAssignmentCreate"];
 export type MonitorOwnAssignment = Schemas["MonitorOwnAssignment"];
 export type SubjectTeacher = Schemas["SubjectTeacher"];
+export type SubjectMonitor = Schemas["SubjectMonitor"];
 export type CatalogSummary = Schemas["CatalogSummary"];
 
 /** The API's DefaultPagination page size. */
@@ -144,6 +146,11 @@ export function getSubject(id: number, term: string | null, signal?: AbortSignal
   return apiRequest<Subject>(`/subjects/${id}/${query({ term })}`, { signal });
 }
 
+/** The monitors of a subject in the current term, by name: what a student may see of them. */
+export function listSubjectMonitors(id: number, signal?: AbortSignal): Promise<SubjectMonitor[]> {
+  return apiRequest<SubjectMonitor[]>(`/subjects/${id}/monitors/`, { signal });
+}
+
 export function createSubject(data: SubjectData): Promise<Subject> {
   return apiRequest<Subject>("/subjects/", { method: "POST", body: data });
 }
@@ -175,6 +182,11 @@ export async function getCurrentTerm(signal?: AbortSignal): Promise<Term | null>
 
 export function createTerm(data: NewTerm): Promise<Term> {
   return apiRequest<Term>("/terms/", { method: "POST", body: data });
+}
+
+/** Corrects a term's code or dates; the API rejects dates that would leave slots outside. */
+export function updateTerm(id: number, changes: TermChanges): Promise<Term> {
+  return apiRequest<Term>(`/terms/${id}/`, { method: "PATCH", body: changes });
 }
 
 // --- Courses ---------------------------------------------------------------------------------

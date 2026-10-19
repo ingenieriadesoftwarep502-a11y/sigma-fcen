@@ -23,3 +23,75 @@
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
+
+.card {
+  min-width: 0;
+}
+
+/* An open assignment takes the whole row: its tables need the width. */
+.card[data-expanded] {
+  grid-column: 1 / -1;
+}
+
+.availability {
+  margin-top: auto;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  border: 0;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.toggle:hover {
+  background: var(--surface-hover);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.toggle[aria-expanded="true"] {
+  border-radius: 0;
+}
+
+.chevron {
+  margin-inline-start: auto;
+  transition: transform var(--duration-fast);
+}
+
+.toggle[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+.availabilityBody {
+  min-width: 0;
+  padding: var(--space-2) var(--space-5) var(--space-5);
+}
+
+@media (max-width: 599.98px) {
+  .toggle,
+  .availabilityBody {
+    padding-inline: var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

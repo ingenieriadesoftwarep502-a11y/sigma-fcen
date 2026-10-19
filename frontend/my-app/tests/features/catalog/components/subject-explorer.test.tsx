@@ -244,4 +244,18 @@ describe("SubjectExplorer", () => {
     expect(screen.queryByRole("region", { name: "Mis asignaturas" })).not.toBeInTheDocument();
     expect(localStorage.getItem(pinnedKey(USER_ID))).toBe("[]");
   });
+
+  it("opens each subject from its card", async () => {
+    await renderExplorer();
+    const results = await screen.findByRole("list", { name: "Resultados" });
+
+    expect(within(results).getByRole("link", { name: "Cálculo diferencial" })).toHaveAttribute(
+      "href",
+      "/asignaturas/1",
+    );
+    expect(within(results).getByRole("link", { name: "Álgebra lineal" })).toHaveAttribute(
+      "href",
+      "/asignaturas/2",
+    );
+  });
 });

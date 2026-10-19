@@ -429,6 +429,23 @@ export interface paths {
         patch: operations["subjects_partial_update"];
         trace?: never;
     };
+    "/api/v1/subjects/{id}/monitors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The monitors of one subject in a term (the current one by default), for students. */
+        get: operations["subjects_monitors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/terms/": {
         parameters: {
             query?: never;
@@ -445,6 +462,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/terms/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read one term; administrators correct its code or dates. Neither PUT nor DELETE. */
+        get: operations["terms_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Read one term; administrators correct its code or dates. Neither PUT nor DELETE. */
+        patch: operations["terms_partial_update"];
         trace?: never;
     };
     "/api/v1/terms/current/": {
@@ -932,6 +967,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["TeacherCourse"][];
         };
+        PatchedAcademicTerm: {
+            readonly id?: number;
+            /** @description Formato AAAA-S, por ejemplo 2026-1. */
+            code?: string;
+            /**
+             * Fecha de inicio
+             * Format: date
+             */
+            start_date?: string;
+            /**
+             * Fecha de fin
+             * Format: date
+             */
+            end_date?: string;
+        };
         PatchedCourseUpdate: {
             group?: string;
             /**
@@ -1074,6 +1124,12 @@ export interface components {
             readonly department: components["schemas"]["DepartmentReference"];
             /** @description Asignaciones de monitoría de la asignatura en el período. */
             readonly monitor_count: number;
+        };
+        /** @description A monitor of a subject as students see it: no email (RNF-SEC). */
+        SubjectMonitor: {
+            /** Format: uuid */
+            id: string;
+            readonly full_name: string;
         };
         SubjectReference: {
             readonly id: number;
@@ -1430,6 +1486,8 @@ export interface operations {
                 page_size?: number;
                 /** @description Id de asignatura. */
                 subject?: number;
+                /** @description Código del período; por defecto, todos. */
+                term?: string;
             };
             header?: never;
             path?: never;
@@ -1887,6 +1945,8 @@ export interface operations {
                 page?: number;
                 /** @description Número de resultados a devolver por página. */
                 page_size?: number;
+                /** @description Id de asignatura. */
+                subject?: number;
                 /** @description Código del período; por defecto, el actual. */
                 term?: string;
             };
@@ -2022,6 +2082,30 @@ export interface operations {
             };
         };
     };
+    subjects_monitors_list: {
+        parameters: {
+            query?: {
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectMonitor"][];
+                };
+            };
+        };
+    };
     terms_list: {
         parameters: {
             query?: {
@@ -2062,6 +2146,54 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcademicTerm"];
+                };
+            };
+        };
+    };
+    terms_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcademicTerm"];
+                };
+            };
+        };
+    };
+    terms_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAcademicTerm"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAcademicTerm"];
+                "multipart/form-data": components["schemas"]["PatchedAcademicTerm"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

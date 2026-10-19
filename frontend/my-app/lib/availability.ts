@@ -77,11 +77,13 @@ export function isGroupSession(capacity: number): boolean {
 export type MySlotFilters = {
   /** Term code; null is the current term. */
   term: string | null;
+  /** Subject id; null lists every subject. */
+  subject: number | null;
   /** null lists every state. */
   status: SlotStatus | null;
 };
 
-export const NO_MY_SLOT_FILTERS: MySlotFilters = { term: null, status: null };
+export const NO_MY_SLOT_FILTERS: MySlotFilters = { term: null, subject: null, status: null };
 
 export function listMySlots(
   page: number,
@@ -89,7 +91,12 @@ export function listMySlots(
   signal?: AbortSignal,
 ): Promise<SlotPage> {
   return apiRequest<SlotPage>(
-    `/availability-slots/mine/${queryString({ page, term: filters.term, status: filters.status })}`,
+    `/availability-slots/mine/${queryString({
+      page,
+      term: filters.term,
+      subject: filters.subject,
+      status: filters.status,
+    })}`,
     { signal },
   );
 }
@@ -113,6 +120,8 @@ export function cancelSlot(id: number): Promise<void> {
 export type TemplateFilters = {
   /** Term code; null is the current term. */
   term: string | null;
+  /** Subject id; null lists every subject. */
+  subject: number | null;
 };
 
 export function listMyTemplates(
@@ -121,7 +130,7 @@ export function listMyTemplates(
   signal?: AbortSignal,
 ): Promise<SlotTemplatePage> {
   return apiRequest<SlotTemplatePage>(
-    `/slot-templates/mine/${queryString({ page, term: filters.term })}`,
+    `/slot-templates/mine/${queryString({ page, term: filters.term, subject: filters.subject })}`,
     { signal },
   );
 }
@@ -139,6 +148,8 @@ export function deactivateTemplate(id: number): Promise<void> {
 // --- Search ----------------------------------------------------------------------------------
 
 export type SlotSearchFilters = {
+  /** Term code; null searches every term. */
+  term: string | null;
   subject: { id: number; code: string; name: string } | null;
   monitor: { id: string; name: string } | null;
   modality: Modality | null;
@@ -148,6 +159,7 @@ export type SlotSearchFilters = {
 };
 
 export const NO_SLOT_SEARCH_FILTERS: SlotSearchFilters = {
+  term: null,
   subject: null,
   monitor: null,
   modality: null,
@@ -164,6 +176,7 @@ export function searchSlots(
   return apiRequest<SlotPage>(
     `/availability-slots/search/${queryString({
       page,
+      term: filters.term,
       subject: filters.subject?.id,
       monitor: filters.monitor?.id,
       modality: filters.modality,

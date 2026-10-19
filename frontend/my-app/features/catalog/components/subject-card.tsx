@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import Icon from "@/components/ui/icon";
 import type { Subject } from "@/lib/catalog";
 
@@ -8,18 +10,21 @@ type SubjectCardProps = {
   subject: Subject;
   pinned: boolean;
   onTogglePin: (subject: Subject) => void;
+  /** Where the subject opens; the whole card is the link. */
+  href?: string;
   /** Heading level of the subject name within the page outline. */
   headingLevel?: 2 | 3;
 };
 
 /**
  * One subject of the catalog: what it is, where it belongs, and whether it has monitors in
- * the term in view. Informational; FASE-03 adds its schedules. Presentational.
+ * the term in view. With `href`, the card opens the subject's view. Presentational.
  */
 export default function SubjectCard({
   subject,
   pinned,
   onTogglePin,
+  href,
   headingLevel = 3,
 }: SubjectCardProps) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
@@ -44,7 +49,15 @@ export default function SubjectCard({
           <Icon name="bookmark" size={18} fill={pinned ? "currentColor" : "none"} />
         </button>
       </div>
-      <Heading className={styles.name}>{subject.name}</Heading>
+      <Heading className={styles.name}>
+        {href ? (
+          <Link href={href} className={styles.link}>
+            {subject.name}
+          </Link>
+        ) : (
+          subject.name
+        )}
+      </Heading>
       <p className={styles.department}>{subject.department.name}</p>
       <p className={styles.monitors} data-available={hasMonitors}>
         {monitorsLabel(subject.monitor_count)}

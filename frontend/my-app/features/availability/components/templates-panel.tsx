@@ -32,16 +32,12 @@ import styles from "./availability.module.css";
 import TemplateForm from "./template-form";
 
 type TemplatesPanelProps = {
-  /** Term code; null is the current term. */
-  term: string | null;
-  /** The code of the term in view, which a new template fills. */
-  termCode: string | null;
-  assignments: MonitorOwnAssignment[] | null;
+  /** The subject and term the templates belong to. */
+  assignment: MonitorOwnAssignment;
 };
 
 const COLUMNS = [
   { label: "Día y hora", className: styles.whenColumn },
-  { label: "Asignatura" },
   { label: "Sesión", className: styles.sessionColumn },
   { label: "Modalidad", className: styles.modalityColumn },
   { label: "Franjas", className: styles.countColumn },
@@ -50,7 +46,7 @@ const COLUMNS = [
 ];
 
 function sameFilters(a: TemplateFilters, b: TemplateFilters): boolean {
-  return a.term === b.term;
+  return a.term === b.term && a.subject === b.subject;
 }
 
 function deactivateButtonId(template: SlotTemplate): string {
@@ -63,11 +59,16 @@ function describe(template: SlotTemplate): string {
 }
 
 /**
- * The monitor's weekly templates of a term (T-03.16). Deactivating one withdraws its future
- * slots that hold no reservation; past and reserved ones stay.
+ * The monitor's weekly templates of one assignment, its subject in its term (T-03.16).
+ * Deactivating one withdraws its future slots that hold no reservation; past and reserved
+ * ones stay.
  */
-export default function TemplatesPanel({ term, termCode, assignments }: TemplatesPanelProps) {
-  const list = usePagedList(listMyTemplates, { term }, sameFilters);
+export default function TemplatesPanel({ assignment }: TemplatesPanelProps) {
+  const list = usePagedList(
+    listMyTemplates,
+    { term: assignment.term, subject: assignment.subject.id },
+    sameFilters,
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<SlotTemplate | null>(null);
@@ -151,7 +152,7 @@ export default function TemplatesPanel({ term, termCode, assignments }: Template
 
       <DataTable
         label="Lista de tus plantillas semanales"
-        caption="Tus plantillas semanales del período, con las franjas que generó cada una."
+        caption="Tus plantillas semanales de la asignatura en el período, con las franjas que generó cada una."
         loadingLabel="Cargando tus plantillas…"
         paginationLabel="Paginación de plantillas"
         columns={COLUMNS}
@@ -179,12 +180,6 @@ export default function TemplatesPanel({ term, termCode, assignments }: Template
                   <span className={styles.secondary}>{templateTimeRange(template.start_time)}</span>
                 </span>
               </th>
-              <td>
-                <span className={styles.stack}>
-                  <span className={styles.primary}>{template.subject.name}</span>
-                  <span className={styles.secondary}>{template.subject.code}</span>
-                </span>
-              </td>
               <td>
                 <span className={styles.session} data-group={template.capacity > 1 || undefined}>
                   {sessionLabel(template.capacity)}
@@ -263,8 +258,7 @@ export default function TemplatesPanel({ term, termCode, assignments }: Template
       {drawer.panel === "create" && (
         <Drawer title="Nueva plantilla semanal" locked={drawer.busy} onClose={drawer.close}>
           <TemplateForm
-            term={termCode}
-            assignments={assignments}
+            assignment={assignment}
             onSaved={saved}
             onBusyChange={drawer.setBusy}
           />

@@ -12,8 +12,11 @@ import {
   type Department,
   type DepartmentChanges,
   isTermCode,
+  type Term,
   TERM_CODE_MESSAGE,
+  type TermChanges,
   updateDepartment,
+  updateTerm,
 } from "@/lib/catalog";
 
 import styles from "./catalog-form.module.css";
@@ -124,11 +127,14 @@ export function DepartmentForm({
 const TERM_FIELDS = ["code", "start_date", "end_date"] as const;
 type TermErrors = Partial<Record<(typeof TERM_FIELDS)[number], string[]>>;
 
-/** Registers an academic term. The code follows the API's AAAA-S rule, checked here too. */
-export function TermForm({ onSaved, onBusyChange }: FormProps) {
-  const [code, setCode] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+/**
+ * Registers an academic term or corrects one, e.g. extending a term that already ended. The
+ * code follows the API's AAAA-S rule, checked here too.
+ */
+export function TermForm({ term, onSaved, onBusyChange }: FormProps & { term?: Term }) {
+  const [code, setCode] = useState(term?.code ?? "");
+  const [start, setStart] = useState(term?.start_date ?? "");
+  const [end, setEnd] = useState(term?.end_date ?? "");
   const [errors, setErrors] = useState<TermErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -150,11 +156,28 @@ export function TermForm({ onSaved, onBusyChange }: FormProps) {
     setFormError(null);
     if (Object.keys(missing).length > 0) return;
 
+    const data = { code: trimmed, start_date: start, end_date: end };
+    const changes: TermChanges = {};
+    if (term) {
+      if (data.code !== term.code) changes.code = data.code;
+      if (data.start_date !== term.start_date) changes.start_date = data.start_date;
+      if (data.end_date !== term.end_date) changes.end_date = data.end_date;
+      if (Object.keys(changes).length === 0) {
+        setFormError("No hay cambios por guardar.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     onBusyChange(true);
     try {
-      const created = await createTerm({ code: trimmed, start_date: start, end_date: end });
-      onSaved(`Se creó el período ${created.code}.`);
+      if (term) {
+        const saved = await updateTerm(term.id, changes);
+        onSaved(`Se guardaron los cambios de ${saved.code}.`);
+      } else {
+        const created = await createTerm(data);
+        onSaved(`Se creó el período ${created.code}.`);
+      }
     } catch (error) {
       const { byField, message } = formErrors(error, TERM_FIELDS);
       setErrors(byField);
@@ -201,7 +224,13 @@ export function TermForm({ onSaved, onBusyChange }: FormProps) {
         />
       </div>
       <Button type="submit" softDisabled={submitting} className={styles.submit}>
-        {submitting ? "Creando…" : "Crear período"}
+        {term
+          ? submitting
+            ? "Guardando…"
+            : "Guardar cambios"
+          : submitting
+            ? "Creando…"
+            : "Crear período"}
       </Button>
     </form>
   );

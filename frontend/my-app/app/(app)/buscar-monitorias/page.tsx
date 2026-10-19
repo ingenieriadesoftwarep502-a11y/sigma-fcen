@@ -1,18 +1,8 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import SlotSearch from "@/features/availability/components/slot-search";
-import RequireSession from "@/features/auth/session/require-session";
+import { SUBJECTS_PATH } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Buscar monitorías · SIGMA-FCEN" };
-
-/**
- * Students only: anyone else is sent home. The search endpoint itself is open to every
- * signed-in person (HU-02); the role decides who sees it in the interface.
- */
+/** The slot search now lives in each subject's view; old links land on the catalog. */
 export default function SlotSearchPage() {
-  return (
-    <RequireSession roles={["STUDENT"]}>
-      <SlotSearch />
-    </RequireSession>
-  );
+  redirect(SUBJECTS_PATH);
 }

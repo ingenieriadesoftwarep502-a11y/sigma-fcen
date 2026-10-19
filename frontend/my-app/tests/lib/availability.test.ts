@@ -70,11 +70,12 @@ describe("availability API (FASE-03)", () => {
     expect(onlyRequest().url).toBe(`${BASE_URL}/availability-slots/mine/?page=1`);
 
     fetchMock.mockClear();
-    await listMySlots(2, { term: "2026-2", status: "AVAILABLE" });
+    await listMySlots(2, { term: "2026-2", subject: 1, status: "AVAILABLE" });
     const url = new URL(onlyRequest().url);
     expect(Object.fromEntries(url.searchParams)).toEqual({
       page: "2",
       term: "2026-2",
+      subject: "1",
       status: "AVAILABLE",
     });
   });
@@ -120,8 +121,10 @@ describe("availability API (FASE-03)", () => {
 
   it("lists, creates and deactivates weekly templates", async () => {
     respond(EMPTY_PAGE);
-    await listMyTemplates(1, { term: "2026-2" });
-    expect(onlyRequest().url).toBe(`${BASE_URL}/slot-templates/mine/?page=1&term=2026-2`);
+    await listMyTemplates(1, { term: "2026-2", subject: 1 });
+    expect(onlyRequest().url).toBe(
+      `${BASE_URL}/slot-templates/mine/?page=1&term=2026-2&subject=1`,
+    );
 
     fetchMock.mockClear();
     respond({ id: 3 }, 201);
@@ -153,6 +156,7 @@ describe("availability API (FASE-03)", () => {
 
     fetchMock.mockClear();
     await searchSlots(3, {
+      term: "2026-2",
       subject: { id: 1, code: "MAT-101", name: "Cálculo diferencial" },
       monitor: { id: "m-1", name: "Ana Pérez" },
       modality: "VIRTUAL",
@@ -161,6 +165,7 @@ describe("availability API (FASE-03)", () => {
     });
     expect(Object.fromEntries(new URL(onlyRequest().url).searchParams)).toEqual({
       page: "3",
+      term: "2026-2",
       subject: "1",
       monitor: "m-1",
       modality: "VIRTUAL",

@@ -11,7 +11,8 @@ import SearchField from "@/components/ui/search-field";
 import SelectField from "@/components/ui/select-field";
 import ToggleChip from "@/components/ui/toggle-chip";
 import { useSession } from "@/features/auth/session/session-provider";
-import { getSubject, NO_SUBJECT_FILTERS, type Subject, type SubjectFilters } from "@/lib/catalog";
+import { subjectPath } from "@/lib/auth";
+import { NO_SUBJECT_FILTERS, type SubjectFilters } from "@/lib/catalog";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useUrlQuery } from "@/lib/use-url-query";
 
@@ -22,7 +23,7 @@ import {
   sameFilters,
 } from "../filters";
 import { countLabel, creditsLabel, formatCount } from "../labels";
-import { usePinnedSubjects } from "../pinned-subjects";
+import { usePinnedData, usePinnedSubjects } from "../pinned-subjects";
 import { useDepartments, useTerms } from "../use-catalog-reference";
 import { useSubjectFeed } from "../use-subject-feed";
 import SubjectCard, { SubjectCardSkeleton } from "./subject-card";
@@ -33,33 +34,6 @@ const CREDIT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const SKELETON_CARDS = 6;
 function shownLabel(shown: number, count: number): string {
   return `Mostrando ${formatCount(shown)} de ${countLabel(count, "asignatura", "asignaturas")}`;
-}
-
-/** The pinned subjects, read one by one for the term in view; vanished ones are skipped. */
-function usePinnedData(ids: readonly number[], term: string | null) {
-  const [loaded, setLoaded] = useState<Subject[]>([]);
-  const key = ids.join(",");
-
-  useEffect(() => {
-    if (!key) return;
-    const controller = new AbortController();
-    const wanted = key.split(",").map(Number);
-    Promise.allSettled(wanted.map((id) => getSubject(id, term, controller.signal))).then(
-      (outcomes) => {
-        if (controller.signal.aborted) return;
-        setLoaded(
-          outcomes.flatMap((outcome) => (outcome.status === "fulfilled" ? [outcome.value] : [])),
-        );
-      },
-    );
-    return () => controller.abort();
-  }, [key, term]);
-
-  // Unpinning is instant: the list follows the ids before any request settles.
-  return {
-    subjects: ids.flatMap((id) => loaded.filter((subject) => subject.id === id)),
-    pending: ids.some((id) => !loaded.some((subject) => subject.id === id)),
-  };
 }
 
 /**
@@ -209,7 +183,12 @@ function Explorer({ userId }: { userId: string }) {
           <ul className={styles.pinnedList}>
             {pinned.subjects.map((subject) => (
               <li key={subject.id}>
-                <SubjectCard subject={subject} pinned onTogglePin={() => pins.toggle(subject.id)} />
+                <SubjectCard
+                  subject={subject}
+                  href={subjectPath(subject.id)}
+                  pinned
+                  onTogglePin={() => pins.toggle(subject.id)}
+                />
               </li>
             ))}
             {pinned.pending && pinned.subjects.length === 0 && (
@@ -284,6 +263,7 @@ function Explorer({ userId }: { userId: string }) {
               <li key={subject.id}>
                 <SubjectCard
                   subject={subject}
+                  href={subjectPath(subject.id)}
                   pinned={pins.isPinned(subject.id)}
                   onTogglePin={() => pins.toggle(subject.id)}
                 />

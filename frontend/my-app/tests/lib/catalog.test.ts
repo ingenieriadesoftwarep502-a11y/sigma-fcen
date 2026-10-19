@@ -18,12 +18,14 @@ import {
   listCourses,
   listMyAssignments,
   listMyCourses,
+  listSubjectMonitors,
   listSubjects,
   NO_ASSIGNMENT_FILTERS,
   NO_COURSE_FILTERS,
   NO_SUBJECT_FILTERS,
   updateCourse,
   updateDepartment,
+  updateTerm,
   updateSubject,
 } from "@/lib/catalog";
 
@@ -110,6 +112,13 @@ describe("catalog API (FASE-02)", () => {
     expect(onlyRequest().url).toBe(`${BASE_URL}/subjects/7/?term=2026-2`);
   });
 
+  it("lists the monitors of a subject in the current term", async () => {
+    respond([{ id: "m-1", full_name: "Ana Pérez" }]);
+
+    expect(await listSubjectMonitors(7)).toEqual([{ id: "m-1", full_name: "Ana Pérez" }]);
+    expect(onlyRequest().url).toBe(`${BASE_URL}/subjects/7/monitors/`);
+  });
+
   it("creates and edits subjects", async () => {
     respond({ id: 1 }, 201);
     await createSubject({ code: "MAT-101", name: "Cálculo", credits: 4, department: 3 });
@@ -170,6 +179,17 @@ describe("catalog API (FASE-02)", () => {
     await createTerm({ code: "2027-1", start_date: "2027-02-01", end_date: "2027-06-15" });
 
     expect(onlyRequest()).toMatchObject({ url: `${BASE_URL}/terms/`, method: "POST" });
+  });
+
+  it("edits a term", async () => {
+    respond({ id: 2 });
+    await updateTerm(2, { end_date: "2027-07-31" });
+
+    expect(onlyRequest()).toMatchObject({
+      url: `${BASE_URL}/terms/2/`,
+      method: "PATCH",
+      body: { end_date: "2027-07-31" },
+    });
   });
 
   it("lists courses with the coverage toggles", async () => {

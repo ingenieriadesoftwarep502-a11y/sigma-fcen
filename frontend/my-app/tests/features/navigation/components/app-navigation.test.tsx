@@ -89,34 +89,11 @@ describe("AppNavigation", () => {
     expect(screen.queryByRole("link", { name: "Mis monitorías" })).not.toBeInTheDocument();
   });
 
-  it("links monitors to their availability", async () => {
+  it("folds the slot search into the subjects and availability into monitoring", async () => {
     await renderFor(["STUDENT", "MONITOR"]);
 
-    expect(screen.getByRole("link", { name: "Mi disponibilidad" })).toHaveAttribute(
-      "href",
-      "/disponibilidad",
-    );
-  });
-
-  it("keeps availability management from students", async () => {
-    await renderFor(["STUDENT"]);
-
-    expect(screen.queryByRole("link", { name: "Mi disponibilidad" })).not.toBeInTheDocument();
-  });
-
-  it("links students to the slot search", async () => {
-    await renderFor(["STUDENT"]);
-
-    expect(screen.getByRole("link", { name: "Buscar monitorías" })).toHaveAttribute(
-      "href",
-      "/buscar-monitorias",
-    );
-  });
-
-  it("offers monitors management but not the student search", async () => {
-    await renderFor(["MONITOR"]);
-
     expect(screen.queryByRole("link", { name: "Buscar monitorías" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mi disponibilidad" })).not.toBeInTheDocument();
   });
 
   it("links teachers to their courses", async () => {

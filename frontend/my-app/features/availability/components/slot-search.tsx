@@ -6,10 +6,8 @@ import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import Icon from "@/components/ui/icon";
-import PageHeader from "@/components/ui/page-header";
 import SelectField from "@/components/ui/select-field";
 import TextField from "@/components/ui/text-field";
-import { SubjectPicker } from "@/features/catalog/components/pickers";
 import {
   AVAILABILITY_PAGE_SIZE,
   type Modality,
@@ -29,6 +27,7 @@ const DATE_RANGE_MESSAGE = "La fecha final no puede ser anterior a la inicial.";
 
 function sameFilters(a: SlotSearchFilters, b: SlotSearchFilters): boolean {
   return (
+    a.term === b.term &&
     a.subject?.id === b.subject?.id &&
     a.monitor?.id === b.monitor?.id &&
     a.modality === b.modality &&
@@ -37,22 +36,28 @@ function sameFilters(a: SlotSearchFilters, b: SlotSearchFilters): boolean {
   );
 }
 
-function hasFilters(filters: SlotSearchFilters): boolean {
-  return !sameFilters(filters, NO_SLOT_SEARCH_FILTERS);
-}
+type SlotSearchProps = {
+  /** The subject whose slots are listed; fixed for the view. */
+  subject: { id: number; code: string; name: string };
+  /** Term code; null searches every term. */
+  term: string | null;
+};
 
 function availableLabel(count: number): string {
   return `${slotsCountLabel(count)} ${count === 1 ? "disponible" : "disponibles"}`;
 }
 
 /**
- * Slot search for students (T-03.17, HU-02): only available, future slots, ordered by start,
- * with combinable filters by subject, monitor, modality and Bogotá date range. Each result
- * says whether the session is individual or a group one and how many seats it has.
+ * The upcoming slots of one subject in a term, as students see them inside the subject
+ * (T-03.17, HU-02): only available, future slots, ordered by start, with combinable filters
+ * by monitor, modality and Bogotá date range. Each result says whether the session is
+ * individual or a group one and how many seats it has. Booking arrives in FASE-04.
  * Container: owns the filters and the page in view.
  */
-export default function SlotSearch() {
-  const list = usePagedList(searchSlots, NO_SLOT_SEARCH_FILTERS, sameFilters);
+export default function SlotSearch({ subject, term }: SlotSearchProps) {
+  // The subject and term frame the view: clearing the filters keeps them.
+  const [base] = useState<SlotSearchFilters>(() => ({ ...NO_SLOT_SEARCH_FILTERS, term, subject }));
+  const list = usePagedList(searchSlots, base, sameFilters);
   // The dates as typed: a reversed range stays here, with its message, and is never sent.
   const [dates, setDates] = useState({ from: "", to: "" });
   const filters = list.filters;
@@ -66,7 +71,7 @@ export default function SlotSearch() {
 
   function clearFilters() {
     setDates({ from: "", to: "" });
-    list.setFilters(NO_SLOT_SEARCH_FILTERS);
+    list.setFilters(base);
   }
 
   function pickMonitor(slot: Slot) {
@@ -81,7 +86,8 @@ export default function SlotSearch() {
   const pages = data ? Math.max(1, Math.ceil(data.count / AVAILABILITY_PAGE_SIZE)) : 1;
   const empty = data !== null && data.results.length === 0;
   // An empty result offers its own way out; one "Limpiar filtros" at a time.
-  const showClear = (hasFilters(filters) || reversed) && !empty;
+  const filtered = !sameFilters(filters, base);
+  const showClear = (filtered || reversed) && !empty;
 
   let status = "";
   if (firstLoad) status = "Buscando franjas…";
@@ -89,21 +95,14 @@ export default function SlotSearch() {
 
   return (
     <section className={styles.search} aria-labelledby="slot-search-title">
-      <PageHeader
-        title="Buscar monitorías"
-        titleId="slot-search-title"
-        lead="Franjas disponibles y futuras de los monitores, en hora de Bogotá."
-      />
+      <header className={styles.header}>
+        <h2 id="slot-search-title" className={styles.title}>
+          Próximas franjas
+        </h2>
+        <p className={styles.lead}>Franjas disponibles de sus monitores, en hora de Bogotá.</p>
+      </header>
 
       <div className={styles.filters} role="search" aria-label="Filtrar franjas">
-        <div className={styles.subjectFilter}>
-          <SubjectPicker
-            id="slot-search-subject"
-            label="Asignatura"
-            value={filters.subject}
-            onChange={(subject) => list.setFilters({ ...filters, subject })}
-          />
-        </div>
         <SelectField
           id="slot-search-modality"
           label="Modalidad"
@@ -164,9 +163,9 @@ export default function SlotSearch() {
       )}
 
       <section className={styles.results} aria-labelledby="slot-results-title">
-        <h2 id="slot-results-title" className="sr-only">
+        <h3 id="slot-results-title" className="sr-only">
           Resultados
-        </h2>
+        </h3>
         <p role="status" className={styles.status}>
           {status}
         </p>
@@ -191,7 +190,7 @@ export default function SlotSearch() {
 
         {empty && (
           <div className={styles.empty}>
-            {hasFilters(filters) ? (
+            {filtered ? (
               <EmptyState
                 title="Ninguna franja coincide con los filtros."
                 action={
@@ -203,8 +202,8 @@ export default function SlotSearch() {
                 <p>Prueba con otra modalidad, amplía el rango de fechas o quita algún filtro.</p>
               </EmptyState>
             ) : (
-              <EmptyState title="Aún no hay franjas disponibles.">
-                <p>Cuando los monitores publiquen su disponibilidad, aparecerá aquí.</p>
+              <EmptyState title="Esta asignatura aún no tiene franjas disponibles.">
+                <p>Cuando sus monitores publiquen su disponibilidad, aparecerá aquí.</p>
               </EmptyState>
             )}
           </div>

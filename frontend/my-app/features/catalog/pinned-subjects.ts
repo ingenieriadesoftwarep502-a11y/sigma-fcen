@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { getSubject, type Subject } from "@/lib/catalog";
 
 /**
  * "Mis asignaturas": subjects a person keeps at hand, stored in this browser only, one list
@@ -46,4 +48,31 @@ export function usePinnedSubjects(userId: string) {
   }
 
   return { ids, toggle, isPinned: (id: number) => ids.includes(id) };
+}
+
+/** The pinned subjects, read one by one for the term in view; vanished ones are skipped. */
+export function usePinnedData(ids: readonly number[], term: string | null) {
+  const [loaded, setLoaded] = useState<Subject[]>([]);
+  const key = ids.join(",");
+
+  useEffect(() => {
+    if (!key) return;
+    const controller = new AbortController();
+    const wanted = key.split(",").map(Number);
+    Promise.allSettled(wanted.map((id) => getSubject(id, term, controller.signal))).then(
+      (outcomes) => {
+        if (controller.signal.aborted) return;
+        setLoaded(
+          outcomes.flatMap((outcome) => (outcome.status === "fulfilled" ? [outcome.value] : [])),
+        );
+      },
+    );
+    return () => controller.abort();
+  }, [key, term]);
+
+  // Unpinning is instant: the list follows the ids before any request settles.
+  return {
+    subjects: ids.flatMap((id) => loaded.filter((subject) => subject.id === id)),
+    pending: ids.some((id) => !loaded.some((subject) => subject.id === id)),
+  };
 }

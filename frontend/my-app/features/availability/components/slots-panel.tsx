@@ -16,7 +16,6 @@ import {
   cancelSlot,
   listMySlots,
   type MySlotFilters,
-  NO_MY_SLOT_FILTERS,
   type Slot,
   type SlotStatus,
 } from "@/lib/availability";
@@ -36,16 +35,14 @@ import styles from "./availability.module.css";
 import SlotForm from "./slot-form";
 
 type SlotsPanelProps = {
-  /** Term code; null is the current term. */
-  term: string | null;
-  assignments: MonitorOwnAssignment[] | null;
+  /** The subject and term the slots belong to. */
+  assignment: MonitorOwnAssignment;
 };
 
 type Panel = { kind: "create" } | { kind: "edit"; slot: Slot };
 
 const COLUMNS = [
   { label: "Fecha y hora", className: styles.whenColumn },
-  { label: "Asignatura" },
   { label: "Sesión", className: styles.sessionColumn },
   { label: "Modalidad", className: styles.modalityColumn },
   { label: "Estado", className: styles.stateColumn },
@@ -53,7 +50,7 @@ const COLUMNS = [
 ];
 
 function sameFilters(a: MySlotFilters, b: MySlotFilters): boolean {
-  return a.term === b.term && a.status === b.status;
+  return a.term === b.term && a.subject === b.subject && a.status === b.status;
 }
 
 function withdrawButtonId(slot: Slot): string {
@@ -65,11 +62,17 @@ function describe(slot: Slot): string {
 }
 
 /**
- * The monitor's own slots of a term, every state (T-03.16). Only available slots can be
- * edited or withdrawn; withdrawing cancels the slot and keeps its record (FASE-03 G1).
+ * The monitor's own slots of one assignment, its subject in its term, every state (T-03.16).
+ * Only available slots can be edited or withdrawn; withdrawing cancels the slot and keeps
+ * its record (FASE-03 G1).
  */
-export default function SlotsPanel({ term, assignments }: SlotsPanelProps) {
-  const list = usePagedList(listMySlots, { ...NO_MY_SLOT_FILTERS, term }, sameFilters);
+export default function SlotsPanel({ assignment }: SlotsPanelProps) {
+  const initial: MySlotFilters = {
+    term: assignment.term,
+    subject: assignment.subject.id,
+    status: null,
+  };
+  const list = usePagedList(listMySlots, initial, sameFilters);
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<Slot | null>(null);
@@ -167,7 +170,7 @@ export default function SlotsPanel({ term, assignments }: SlotsPanelProps) {
 
       <DataTable
         label="Lista de tus franjas"
-        caption="Tus franjas del período, en hora de Bogotá, con su tipo de sesión y su estado."
+        caption="Tus franjas de la asignatura en el período, en hora de Bogotá, con su tipo de sesión y su estado."
         loadingLabel="Cargando tus franjas…"
         paginationLabel="Paginación de franjas"
         columns={COLUMNS}
@@ -204,12 +207,6 @@ export default function SlotsPanel({ term, assignments }: SlotsPanelProps) {
                   </span>
                 </span>
               </th>
-              <td>
-                <span className={styles.stack}>
-                  <span className={styles.primary}>{slot.subject.name}</span>
-                  <span className={styles.secondary}>{slot.subject.code}</span>
-                </span>
-              </td>
               <td>
                 <span className={styles.session} data-group={slot.capacity > 1 || undefined}>
                   {sessionLabel(slot.capacity)}
@@ -293,7 +290,7 @@ export default function SlotsPanel({ term, assignments }: SlotsPanelProps) {
 
       {panel?.kind === "create" && (
         <Drawer title="Publicar franja" locked={drawer.busy} onClose={drawer.close}>
-          <SlotForm assignments={assignments} onSaved={saved} onBusyChange={drawer.setBusy} />
+          <SlotForm assignment={assignment} onSaved={saved} onBusyChange={drawer.setBusy} />
         </Drawer>
       )}
       {panel?.kind === "edit" && (
@@ -305,7 +302,7 @@ export default function SlotsPanel({ term, assignments }: SlotsPanelProps) {
         >
           <SlotForm
             slot={panel.slot}
-            assignments={assignments}
+            assignment={assignment}
             onSaved={saved}
             onBusyChange={drawer.setBusy}
           />

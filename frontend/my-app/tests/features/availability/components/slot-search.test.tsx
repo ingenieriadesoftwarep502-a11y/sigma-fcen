@@ -3,19 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SlotSearch from "@/features/availability/components/slot-search";
 import { NO_SLOT_SEARCH_FILTERS, searchSlots } from "@/lib/availability";
-import { listSubjects } from "@/lib/catalog";
 
 import { CALCULO_REF, GROUP_SLOT, INDIVIDUAL_SLOT, pageOf } from "../fixtures";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn() }),
-  usePathname: () => "/buscar-monitorias",
-  useSearchParams: () => new URLSearchParams(),
-}));
-vi.mock("@/lib/catalog", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/catalog")>()),
-  listSubjects: vi.fn(),
-}));
 vi.mock("@/lib/availability", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/availability")>()),
   searchSlots: vi.fn(),
@@ -23,16 +13,11 @@ vi.mock("@/lib/availability", async (importOriginal) => ({
 
 const searchMock = vi.mocked(searchSlots);
 
-const CALCULO_SUBJECT = {
-  ...CALCULO_REF,
-  credits: 4,
-  is_active: true,
-  department: { id: 1, code: "MAT", name: "Matemáticas" },
-  monitor_count: 2,
-};
+/** The search as a subject's view opens it: that subject, in the current term. */
+const SUBJECT_FILTERS = { ...NO_SLOT_SEARCH_FILTERS, term: "2026-2", subject: CALCULO_REF };
 
 async function renderSearch() {
-  render(<SlotSearch />);
+  render(<SlotSearch subject={CALCULO_REF} term="2026-2" />);
   return screen.findByRole("list", { name: "Franjas disponibles" });
 }
 
@@ -42,7 +27,6 @@ function lastFilters() {
 
 describe("SlotSearch (T-03.17, HU-02)", () => {
   beforeEach(() => {
-    vi.mocked(listSubjects).mockResolvedValue(pageOf([CALCULO_SUBJECT]));
     searchMock.mockResolvedValue(pageOf([INDIVIDUAL_SLOT, GROUP_SLOT]));
   });
 
@@ -70,22 +54,21 @@ describe("SlotSearch (T-03.17, HU-02)", () => {
     expect(terms(items[0]!)).toEqual(["Monitor", "Modalidad", "Aula o lugar"]);
     expect(terms(items[1]!)).toEqual(["Monitor", "Modalidad", "Enlace de la sesión"]);
     expect(screen.getByText("2 franjas disponibles")).toBeInTheDocument();
-    expect(searchMock).toHaveBeenCalledWith(1, NO_SLOT_SEARCH_FILTERS, expect.any(AbortSignal));
+    expect(searchMock).toHaveBeenCalledWith(1, SUBJECT_FILTERS, expect.any(AbortSignal));
+    // Reservations come in FASE-04: nothing here books a slot yet.
+    expect(screen.queryByRole("button", { name: /Reservar/ })).not.toBeInTheDocument();
   });
 
-  it("combines subject, modality and date filters", async () => {
+  it("combines modality and date filters within the subject and term", async () => {
     await renderSearch();
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Asignatura" }), {
-      target: { value: "calc" },
-    });
-    fireEvent.click(await screen.findByRole("option", { name: /Cálculo diferencial/ }));
     fireEvent.change(screen.getByLabelText("Modalidad"), { target: { value: "VIRTUAL" } });
     fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-10-19" } });
     fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-10-25" } });
 
     await waitFor(() =>
       expect(lastFilters()).toEqual({
+        term: "2026-2",
         subject: CALCULO_REF,
         monitor: null,
         modality: "VIRTUAL",
@@ -140,11 +123,7 @@ describe("SlotSearch (T-03.17, HU-02)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
 
     await waitFor(() =>
-      expect(searchMock).toHaveBeenLastCalledWith(
-        2,
-        NO_SLOT_SEARCH_FILTERS,
-        expect.any(AbortSignal),
-      ),
+      expect(searchMock).toHaveBeenLastCalledWith(2, SUBJECT_FILTERS, expect.any(AbortSignal)),
     );
   });
 
@@ -156,14 +135,17 @@ describe("SlotSearch (T-03.17, HU-02)", () => {
 
     expect(await screen.findByText("Ninguna franja coincide con los filtros.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
-    await waitFor(() => expect(lastFilters()).toEqual(NO_SLOT_SEARCH_FILTERS));
+    // The subject and term are the view's own, not filters to clear.
+    await waitFor(() => expect(lastFilters()).toEqual(SUBJECT_FILTERS));
   });
 
   it("says when there are no bookable slots at all", async () => {
     searchMock.mockResolvedValue(pageOf([]));
-    render(<SlotSearch />);
+    render(<SlotSearch subject={CALCULO_REF} term="2026-2" />);
 
-    expect(await screen.findByText("Aún no hay franjas disponibles.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Esta asignatura aún no tiene franjas disponibles."),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
   });
 });

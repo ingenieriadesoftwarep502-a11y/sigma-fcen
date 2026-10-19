@@ -25,9 +25,9 @@ export default function SlotResultCard({ slot, onPickMonitor }: SlotResultCardPr
           <span className={styles.day}>{slotDayLabel(slot.starts_at)}</span>
           <span className={styles.time}>{slotTimeRange(slot.starts_at, slot.ends_at)}</span>
         </p>
-        <h2 id={titleId} className={styles.subject}>
+        <h3 id={titleId} className={styles.subject}>
           {slot.subject.name}
-        </h2>
+        </h3>
         <p className={styles.code}>{slot.subject.code}</p>
       </header>
 

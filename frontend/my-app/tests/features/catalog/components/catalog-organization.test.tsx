@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import CatalogAdmin from "@/features/catalog/components/catalog-admin";
+import { ApiError } from "@/lib/api-client";
 import {
   createDepartment,
   createTerm,
@@ -11,6 +12,7 @@ import {
   listAllTerms,
   TERM_CODE_MESSAGE,
   updateDepartment,
+  updateTerm,
 } from "@/lib/catalog";
 
 import { FIS, MAT, QUI, SUMMARY, TERM_1, TERM_2 } from "../fixtures";
@@ -29,11 +31,13 @@ vi.mock("@/lib/catalog", async (importOriginal) => ({
   createDepartment: vi.fn(),
   updateDepartment: vi.fn(),
   createTerm: vi.fn(),
+  updateTerm: vi.fn(),
 }));
 
 const listAllDepartmentsMock = vi.mocked(listAllDepartments);
 const listAllTermsMock = vi.mocked(listAllTerms);
 const createTermMock = vi.mocked(createTerm);
+const updateTermMock = vi.mocked(updateTerm);
 
 async function renderOrganization() {
   render(<CatalogAdmin />);
@@ -139,5 +143,50 @@ describe("CatalogAdmin departments and terms", () => {
     );
     expect(await screen.findByRole("status")).toHaveTextContent("Se creó el período 2027-1.");
     await waitFor(() => expect(listAllTermsMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("extends a term that already ended, sending only the changed date", async () => {
+    updateTermMock.mockResolvedValue({ ...TERM_1, end_date: "2026-07-31" });
+    const panel = await renderOrganization();
+
+    fireEvent.click(await within(panel).findByRole("button", { name: "Editar período 2026-1" }));
+    const form = screen.getByRole("dialog", { name: "Editar período" });
+    expect(within(form).getByLabelText("Código")).toHaveValue("2026-1");
+    expect(within(form).getByLabelText("Inicio")).toHaveValue("2026-02-01");
+    fireEvent.change(within(form).getByLabelText("Fin"), { target: { value: "2026-07-31" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(updateTermMock).toHaveBeenCalledWith(1, { end_date: "2026-07-31" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Se guardaron los cambios de 2026-1.",
+    );
+    await waitFor(() => expect(listAllTermsMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not send an edit without changes", async () => {
+    const panel = await renderOrganization();
+
+    fireEvent.click(await within(panel).findByRole("button", { name: "Editar período 2026-1" }));
+    const form = screen.getByRole("dialog", { name: "Editar período" });
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+
+    expect(within(form).getByText("No hay cambios por guardar.")).toBeInTheDocument();
+    expect(updateTermMock).not.toHaveBeenCalled();
+  });
+
+  it("shows why the API rejected a term edit", async () => {
+    const message =
+      "Hay franjas de disponibilidad del período hasta el 2026-06-08; " +
+      "la fecha de fin no puede ser anterior.";
+    updateTermMock.mockRejectedValue(new ApiError(400, "invalid", { end_date: [message] }));
+    const panel = await renderOrganization();
+
+    fireEvent.click(await within(panel).findByRole("button", { name: "Editar período 2026-1" }));
+    const form = screen.getByRole("dialog", { name: "Editar período" });
+    fireEvent.change(within(form).getByLabelText("Fin"), { target: { value: "2026-06-01" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await within(form).findByText(message)).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Editar período" })).toBeInTheDocument();
   });
 });

@@ -25,14 +25,14 @@ export const USERS_ADMIN_PATH = "/admin/usuarios";
 export const NEW_USER_PATH = `${USERS_ADMIN_PATH}?nuevo=1`;
 /** The subject catalog as students browse it (FASE-02). */
 export const SUBJECTS_PATH = "/asignaturas";
+/** One subject as a student sees it: its monitors and upcoming slots. */
+export function subjectPath(id: number): string {
+  return `${SUBJECTS_PATH}/${id}`;
+}
 /** A teacher's own courses and their monitors (T-02.8). */
 export const MY_COURSES_PATH = "/mis-cursos";
 /** A monitor's own assigned subjects and their teachers (RN-009.1). */
 export const MY_MONITORING_PATH = "/mis-monitorias";
-/** A monitor's own slots and weekly templates (T-03.16). */
-export const MY_AVAILABILITY_PATH = "/disponibilidad";
-/** The slot search, as students look for a monitoring session (T-03.17). */
-export const SLOT_SEARCH_PATH = "/buscar-monitorias";
 /** Catalog administration, for the ADMIN role only (FASE-02). */
 export const CATALOG_ADMIN_PATH = "/admin/catalogo";
 
