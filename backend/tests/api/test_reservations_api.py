@@ -304,6 +304,16 @@ def test_t_04_15_ca_hu04_4_cancelling_twice_is_409(world: dict[str, Any]) -> Non
     assert response.json()["type"] == "already_cancelled"
 
 
+def test_t_04_15_cancelling_a_no_show_is_409_not_active(world: dict[str, Any]) -> None:
+    reservation = make_reservation(world["slot"], world["ana"], status=ReservationStatus.NO_SHOW)
+
+    response = client_for(world["ana"]).post(cancel_url(reservation), {}, format="json")
+
+    assert response.status_code == 409
+    assert response.json()["type"] == "not_active"
+    assert response.json()["detail"] == "La reserva ya no está activa."
+
+
 def test_t_04_16_monitor_must_justify_and_is_recorded(world: dict[str, Any]) -> None:
     reservation = make_reservation(world["slot"], world["ana"])
     client = client_for(world["sofia"])

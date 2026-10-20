@@ -384,18 +384,27 @@ def test_t_04_14_ca_hu04_3_third_party_cannot_cancel(owner: Owner, code: str) ->
 # --- T-04.15 · double cancellation (CA-HU04-4, RN-005.3) -------------------------------------
 
 
-@pytest.mark.parametrize("status", [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW])
+@pytest.mark.parametrize(
+    ("status", "code", "message"),
+    [
+        (ReservationStatus.CANCELLED, "already_cancelled", "ya fue cancelada"),
+        (ReservationStatus.NO_SHOW, "not_active", "ya no está activa"),
+        (ReservationStatus.COMPLETED, "not_active", "ya no está activa"),
+    ],
+)
 def test_t_04_15_ca_hu04_4_ended_reservation_cannot_be_cancelled_again(
     owner: Owner,
     status: ReservationStatus,
+    code: str,
+    message: str,
 ) -> None:
     student = make_student()
     reservation = make_reservation(slot_of(owner), student, status=status)
 
-    with pytest.raises(ReservationConflictError) as exc:
+    with pytest.raises(ReservationConflictError, match=message) as exc:
         cancel_reservation(reservation=reservation, actor=student)
 
-    assert exc.value.code == "already_cancelled"
+    assert exc.value.code == code
 
 
 def test_t_04_15_stale_copy_cannot_cancel_twice(owner: Owner) -> None:

@@ -7,9 +7,11 @@ Three layers keep a slot from being overbooked; none replaces the others:
    and its CONFIRMED reservations are counted against the capacity under that lock.
 3. API: domain conflicts, including a unique violation, become a 409 response.
 
-Lock order is always student, then slot, then reservation, so concurrent reservations,
-cancellations and slot edits cannot deadlock each other. No external call runs inside a
-transaction (FASE-04 §11).
+Lock order is always the acting user's row, then the slot, then the reservation:
+`reserve_slot` locks the student and `cancel_reservation` the actor (who becomes
+`cancelled_by`, so the UPDATE needs a share lock on that row) before the slot. Slot edits
+lock only the slot. With one order, a same-user reserve and cancel on one slot cannot
+deadlock. No external call runs inside a transaction (FASE-04 §11).
 
 Domain events `ReservationConfirmed` and `ReservationCancelled` (DDD §7) are documented
 extension points: notifications are not implemented in v1 (ADR-011, item 3).
@@ -50,8 +52,16 @@ ALREADY_RESERVED_MESSAGE = "Ya tienes una reserva en esta franja."
 NOT_PARTICIPANT_MESSAGE = "No puedes cancelar una reserva de otra persona."
 ALREADY_CANCELLED_MESSAGE = "La reserva ya fue cancelada."
 NOT_ACTIVE_MESSAGE = "La reserva ya no está activa."
+# 409 codes for a reservation that already ended (SAD §6.3 `type`).
+ALREADY_CANCELLED = "already_cancelled"
+NOT_ACTIVE = "not_active"
 
 CONFIRMED = ReservationStatus.CONFIRMED.value
+
+
+def _lock_user(user: User) -> None:
+    """The first lock of every write: the acting user's row (see the module docstring)."""
+    list(User.objects.select_for_update().filter(pk=user.pk).values_list("pk", flat=True))
 
 
 def _lock_slot(pk: int) -> AvailabilitySlot:
@@ -121,7 +131,7 @@ def reserve_slot(*, student: User, slot: AvailabilitySlot, note: str | None = No
     cleaned_note = clean_note(note)
     # The student's own rows go first: two of their requests on different slots must not
     # both pass the overlap and weekly-limit checks (RN-004.4, RN-004.7).
-    list(User.objects.select_for_update().filter(pk=student.pk).values_list("pk", flat=True))
+    _lock_user(student)
     locked = _lock_slot(slot.pk)
 
     if locked.monitor_id == student.pk:
@@ -173,16 +183,15 @@ def cancel_reservation(
     ADR-011: the student cancels freely up to 4 hours before the start; later it is recorded
     as a no-show. The monitor or an administrator cancel with a mandatory reason.
     """
+    _lock_user(actor)
     slot = _lock_slot(reservation.slot_id)
     locked = Reservation.objects.select_for_update().get(pk=reservation.pk)
     role = _canceller(locked, slot, actor)
+    if locked.status == ReservationStatus.CANCELLED:
+        raise ReservationConflictError(ALREADY_CANCELLED, ALREADY_CANCELLED_MESSAGE)
     if locked.status != CONFIRMED:
-        message = (
-            ALREADY_CANCELLED_MESSAGE
-            if locked.status == ReservationStatus.CANCELLED
-            else NOT_ACTIVE_MESSAGE
-        )
-        raise ReservationConflictError("already_cancelled", message)
+        # NO_SHOW or COMPLETED: it ended some other way than a cancellation.
+        raise ReservationConflictError(NOT_ACTIVE, NOT_ACTIVE_MESSAGE)
 
     now = timezone.now()
     # The window decides the outcome for the student; the start closes it for everyone.

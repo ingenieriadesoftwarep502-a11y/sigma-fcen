@@ -94,23 +94,93 @@ def test_t_04_6_ca_hu03_3_two_students_on_the_last_seat_exactly_one_wins(
 
 
 def test_t_04_6_the_loser_blocked_on_the_row_lock(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The requests really overlapped: the loser fails without counting, yet it took as long
-    as the winner held the lock, because SELECT ... FOR UPDATE made it wait."""
+    """The second request gets the slot row only after the first one released it.
+
+    Only the first caller of the count pauses, so the second request cannot pass by sleeping
+    on its own. Each request records when its SELECT ... FOR UPDATE on the slot returned:
+    without the row lock both return at once, before the first one finishes its pause.
+    """
     slot = make_slot(*make_assigned_monitor())
     ana, luis = make_student("ana@unal.edu.co"), make_student("luis@unal.edu.co")
-    hold_the_lock(monkeypatch)
+    lock_slot, count = services._lock_slot, services._confirmed_count
+    acquired: list[float] = []
+    held_until: list[float] = []
+    first_count = threading.Lock()
+    record = threading.Lock()
 
-    def timed(request: Callable[[], int]) -> Callable[[], tuple[int, float]]:
-        def run() -> tuple[int, float]:
-            started = time.monotonic()
-            return request(), time.monotonic() - started
+    def recording_lock(pk: int) -> AvailabilitySlot:
+        locked = lock_slot(pk)
+        with record:
+            acquired.append(time.monotonic())
+        return locked
 
-        return run
+    def first_caller_holds(locked: AvailabilitySlot) -> int:
+        result = count(locked)
+        if first_count.acquire(blocking=False):
+            time.sleep(HOLD_SECONDS)
+            held_until.append(time.monotonic())
+        return result
 
-    results = race([timed(post_reservation(ana, slot)), timed(post_reservation(luis, slot))])
+    monkeypatch.setattr(services, "_lock_slot", recording_lock)
+    monkeypatch.setattr(services, "_confirmed_count", first_caller_holds)
 
-    loser = next(duration for status, duration in results if status == 409)
-    assert loser >= HOLD_SECONDS * 0.8
+    statuses = race([post_reservation(ana, slot), post_reservation(luis, slot)])
+
+    assert len(acquired) == 2
+    assert len(held_until) == 1
+    second = sorted(acquired)[1]
+    assert second >= held_until[0], "the second request got the slot while the first held it"
+    assert sorted(statuses) == [201, 409]
+    assert confirmed(slot) == 1
+
+
+def test_same_student_cancelling_and_booking_again_at_once_does_not_deadlock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cancel and reserve take their locks in the same order: user row, then slot.
+
+    The cancellation starts first and pauses once it holds the slot; the new booking of the
+    same student starts meanwhile. If the cancellation locked the slot before the user row,
+    the booking would take the user row, wait for the slot, and the cancellation (whose
+    UPDATE of `cancelled_by` needs a share lock on that user row) would deadlock with it.
+    """
+    slot = make_slot(*make_assigned_monitor(), capacity=2)
+    ana = make_student("ana@unal.edu.co")
+    reservation = make_reservation(slot, ana)
+    lock_slot = services._lock_slot
+    slot_held = threading.Event()
+
+    def pausing_lock(pk: int) -> AvailabilitySlot:
+        locked = lock_slot(pk)
+        if not slot_held.is_set():
+            slot_held.set()
+            time.sleep(HOLD_SECONDS)
+        return locked
+
+    monkeypatch.setattr(services, "_lock_slot", pausing_lock)
+    results: dict[str, Any] = {}
+
+    def run(name: str, request: Callable[[], int]) -> None:
+        try:
+            results[name] = request()
+        except Exception as error:  # surfaced through the results, never swallowed
+            results[name] = error
+        finally:
+            connection.close()
+
+    def cancel() -> int:
+        url = f"{RESERVATIONS_URL}{reservation.pk}/cancel/"
+        return client_for(ana).post(url, {}, format="json").status_code
+
+    cancelling = threading.Thread(target=run, args=("cancel", cancel))
+    cancelling.start()
+    assert slot_held.wait(timeout=10)
+    booking = threading.Thread(target=run, args=("reserve", post_reservation(ana, slot)))
+    booking.start()
+    cancelling.join(timeout=30)
+    booking.join(timeout=30)
+
+    assert results == {"cancel": 200, "reserve": 201}
     assert confirmed(slot) == 1
 
 
