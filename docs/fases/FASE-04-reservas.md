@@ -196,11 +196,11 @@ ruff check . && mypy .
 - [x] ADR-010 y ADR-011 cerrados y reflejados en la documentación. *(ADR-011 el 2026-10-19: DECISIONES-ABIERTAS, DDD RN-005 y §7, TRD HU-04)*
 - [x] Restricción única parcial existente en base de datos y **verificada en PostgreSQL**, no solo en el código del modelo. *(`test_t_04_3_the_partial_unique_index_exists_in_postgresql` lee `pg_indexes`)*
 - [x] **CA-HU03-3 probado con concurrencia real**, con conexiones y transacciones independientes. *(`tests/integration/test_reservation_concurrency.py`: hilos, `transaction=True`, PostgreSQL; fallan si se quita `select_for_update`)*
-- [ ] Los 10 criterios de aceptación con prueba automatizada.
+- [x] Los 10 criterios de aceptación con prueba automatizada. *(CA-HU03-1 a CA-HU03-6 y CA-HU04-1 a CA-HU04-4: pruebas nombradas con su id en `test_reservation_services.py`, `test_reservations_api.py` y `test_reservation_concurrency.py`)*
 - [x] Reserva y cancelación son atómicas; probado el fallo intermedio. *(T-04.11)*
 - [x] Todos los conflictos devuelven `409` con el formato de error del SAD §6.3. *(Solo en `/api/v1/reservations/`, mediante `ProblemDetailsMixin` de `shared/problems.py`; la migración global es deuda técnica, ver §11.1)*
 - [x] El estudiante nunca se toma del cuerpo de la petición. *(`test_t_04_4_student_is_never_taken_from_the_body`)*
-- [ ] Cobertura de `apps/reservations` por encima del umbral.
+- [x] Cobertura de `apps/reservations` por encima del umbral. *(97–100 % por archivo frente a `fail_under = 80`)*
 - [x] Eventos de dominio documentados (no implementados). *(DDD §7 y docstring de `apps/reservations/services.py`)*
 - [x] Esquema OpenAPI y tipos del frontend actualizados. *(`spectacular --validate --fail-on-warn`; `npm run gen:api`)*
 - [ ] CI en verde; PRs aprobadas.
