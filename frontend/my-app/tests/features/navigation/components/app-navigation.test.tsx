@@ -96,6 +96,20 @@ describe("AppNavigation", () => {
     expect(screen.queryByRole("link", { name: "Mi disponibilidad" })).not.toBeInTheDocument();
   });
 
+  it("links students and monitors to their reservations (FASE-04)", async () => {
+    await renderFor(["STUDENT"]);
+    expect(screen.getByRole("link", { name: "Mis reservas" })).toHaveAttribute(
+      "href",
+      "/mis-reservas",
+    );
+  });
+
+  it("offers no reservations link to teachers or administrators", async () => {
+    await renderFor(["TEACHER", "ADMIN"]);
+
+    expect(screen.queryByRole("link", { name: "Mis reservas" })).not.toBeInTheDocument();
+  });
+
   it("links teachers to their courses", async () => {
     await renderFor(["TEACHER"]);
 

@@ -159,7 +159,8 @@ describe("SubjectDetail", () => {
       },
       expect.any(AbortSignal),
     );
-    expect(screen.queryByRole("button", { name: /Reservar/ })).not.toBeInTheDocument();
+    // Booking happens inside the panel (FASE-04, T-04.19).
+    expect(within(panel).getByRole("button", { name: "Reservar 10:00–11:00" })).toBeInTheDocument();
 
     fireEvent.click(within(panel).getByRole("button", { name: "Cerrar panel" }));
 

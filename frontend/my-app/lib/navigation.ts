@@ -9,6 +9,7 @@ import {
   HOME_PATH,
   MY_COURSES_PATH,
   MY_MONITORING_PATH,
+  MY_RESERVATIONS_PATH,
   type RoleCode,
   SUBJECTS_PATH,
   USERS_ADMIN_PATH,
@@ -25,6 +26,12 @@ export type NavItem = {
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: HOME_PATH, label: "Inicio", icon: "home" },
   { href: SUBJECTS_PATH, label: "Asignaturas", icon: "book", roles: ["STUDENT"] },
+  {
+    href: MY_RESERVATIONS_PATH,
+    label: "Mis reservas",
+    icon: "calendar",
+    roles: ["STUDENT", "MONITOR"],
+  },
   { href: MY_MONITORING_PATH, label: "Mis monitorías", icon: "support", roles: ["MONITOR"] },
   { href: MY_COURSES_PATH, label: "Mis cursos", icon: "courses", roles: ["TEACHER"] },
   { href: CATALOG_ADMIN_PATH, label: "Catálogo", icon: "catalog", roles: ["ADMIN"] },

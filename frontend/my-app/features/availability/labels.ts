@@ -35,6 +35,16 @@ export function sessionLabel(capacity: number): string {
     : "Individual · 1 cupo";
 }
 
+/**
+ * What a student needs to book: "Individual · 1 cupo", or the free seats of a group session,
+ * e.g. "Grupal · 2 de 5 cupos libres" (ADR-010 R4).
+ */
+export function seatsLabel(capacity: number, remaining: number): string {
+  if (!isGroupSession(capacity)) return sessionLabel(capacity);
+  const free = remaining === 1 ? "cupo libre" : "cupos libres";
+  return `Grupal · ${numberFormat.format(remaining)} de ${numberFormat.format(capacity)} ${free}`;
+}
+
 /** e.g. "3 franjas". */
 export function slotsCountLabel(count: number): string {
   return `${numberFormat.format(count)} ${count === 1 ? "franja" : "franjas"}`;

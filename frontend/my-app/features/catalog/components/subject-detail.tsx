@@ -244,8 +244,8 @@ function MonitorRoster({ subject, term }: RosterProps) {
 
 /**
  * One subject as a student sees it: what it is and its monitors of the current term, each
- * opening its upcoming slots on demand (they took the place of the old standalone search).
- * Read-only: booking arrives in FASE-04. Container: owns the subject and the current term.
+ * opening its upcoming slots on demand (they took the place of the old standalone search),
+ * where a seat can be booked (FASE-04). Container: owns the subject and the current term.
  */
 export default function SubjectDetail({ subjectId }: { subjectId: number }) {
   const { session } = useSession();

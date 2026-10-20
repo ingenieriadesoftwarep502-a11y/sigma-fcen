@@ -44,6 +44,7 @@ export const INDIVIDUAL_SLOT: Slot = {
   starts_at: "2026-10-20T15:00:00Z",
   ends_at: "2026-10-20T16:00:00Z",
   capacity: 1,
+  remaining_seats: 1,
   status: "AVAILABLE",
   modality: "IN_PERSON",
   location: "Bloque 14-203",
@@ -59,6 +60,7 @@ export const GROUP_SLOT: Slot = {
   starts_at: "2026-10-21T19:30:00Z",
   ends_at: "2026-10-21T20:30:00Z",
   capacity: 6,
+  remaining_seats: 6,
   status: "AVAILABLE",
   modality: "VIRTUAL",
   location: "https://meet.example.org/fis",
@@ -69,6 +71,7 @@ export const RESERVED_SLOT: Slot = {
   id: 23,
   starts_at: "2026-10-22T15:00:00Z",
   ends_at: "2026-10-22T16:00:00Z",
+  remaining_seats: 0,
   status: "RESERVED",
 };
 

@@ -37,6 +37,8 @@ export const MY_MONITORING_PATH = "/mis-monitorias";
 export function myAssignmentPath(id: number, term: string): string {
   return `${MY_MONITORING_PATH}/${id}?periodo=${encodeURIComponent(term)}`;
 }
+/** A student's reservations, and the reservations on a monitor's slots (FASE-04). */
+export const MY_RESERVATIONS_PATH = "/mis-reservas";
 /** Catalog administration, for the ADMIN role only (FASE-02). */
 export const CATALOG_ADMIN_PATH = "/admin/catalogo";
 

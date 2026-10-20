@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import Alert from "@/components/ui/alert";
-import Button from "@/components/ui/button";
+import Button, { ButtonLink } from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import Icon from "@/components/ui/icon";
 import ToggleChip from "@/components/ui/toggle-chip";
@@ -16,13 +16,20 @@ import {
   type Slot,
   searchSlots,
 } from "@/lib/availability";
+import { MY_RESERVATIONS_PATH } from "@/lib/auth";
+import {
+  isReservationConflict,
+  MAX_NOTE_LENGTH,
+  problemType,
+  reserveSlot,
+} from "@/lib/reservations";
 
 import {
   availableSlotsLabel,
   durationLabel,
   MODALITY_LABELS,
   relativeDayLabel,
-  sessionLabel,
+  seatsLabel,
   slotDayLabel,
   slotTimeRange,
 } from "../labels";
@@ -60,14 +67,31 @@ function byDay(slots: Slot[]): DayGroup[] {
   return groups;
 }
 
+const TAKEN_MESSAGE =
+  "Otra persona la reservó hace un momento; te mostramos las franjas actualizadas.";
+
+/** One seat less: an individual slot, or the last seat of a group, leaves the list. */
+function afterBooking(loaded: Loaded, booked: Slot): Loaded {
+  const full = booked.remaining_seats <= 1;
+  return {
+    ...loaded,
+    count: full ? loaded.count - 1 : loaded.count,
+    slots: loaded.slots.flatMap((slot) => {
+      if (slot.id !== booked.id) return [slot];
+      return full ? [] : [{ ...slot, remaining_seats: slot.remaining_seats - 1 }];
+    }),
+  };
+}
+
 /**
  * The upcoming slots one monitor offers for a subject, grouped by day in Bogotá time, with a
- * modality filter and more pages on demand (HU-02, CA-HU02-1). Read-only: booking arrives in
- * FASE-04. Container: owns the filter and the pages read so far.
+ * modality filter and more pages on demand (HU-02, CA-HU02-1), and booking a seat in one
+ * (HU-03, T-04.19). Container: owns the filter, the pages read so far and the booking.
  */
 export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsProps) {
   const { id: subjectId, code: subjectCode, name: subjectName } = subject;
   const { id: monitorId, name: monitorName } = monitor;
+  const firstName = monitorName.split(" ")[0] || monitorName;
   const [modality, setModality] = useState<Modality | null>(null);
   const [page, setPage] = useState(1);
   const [attempt, setAttempt] = useState(0);
@@ -79,6 +103,11 @@ export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsPro
     key: string;
     message: string;
   } | null>(null);
+  // The slot whose booking is being confirmed, with the optional note (RF-047).
+  const [confirming, setConfirming] = useState<{ slotId: number; note: string } | null>(null);
+  const [booking, setBooking] = useState<number | null>(null);
+  const [booked, setBooked] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -124,6 +153,40 @@ export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsPro
   const error = failure?.key === requestKey ? failure.message : null;
   const loading = settled !== requestKey && error === null;
 
+  function ask(slot: Slot) {
+    setBooked(null);
+    setBookingError(null);
+    setConfirming({ slotId: slot.id, note: "" });
+  }
+
+  async function reserve(slot: Slot, note: string) {
+    setBooking(slot.id);
+    setBooked(null);
+    setBookingError(null);
+    try {
+      await reserveSlot(slot.id, note);
+    } catch (error) {
+      setBooking(null);
+      if (isReservationConflict(error) && problemType(error) !== "already_reserved") {
+        // The seat went to someone else between the search and the click: read again.
+        setConfirming(null);
+        setBookingError(`${requestErrorMessage(error)} ${TAKEN_MESSAGE}`);
+        setPage(1);
+        setAttempt((value) => value + 1);
+      } else {
+        // A rule to fix, e.g. an overlap: the confirmation and its note stay open.
+        setBookingError(requestErrorMessage(error));
+      }
+      return;
+    }
+    setBooking(null);
+    setConfirming(null);
+    setLoaded((previous) => previous && afterBooking(previous, slot));
+    setBooked(
+      `Reservaste la monitoría del ${slotDayLabel(slot.starts_at)}, ${slotTimeRange(slot.starts_at, slot.ends_at)}, con ${firstName}.`,
+    );
+  }
+
   function chooseModality(next: Modality | null) {
     if (next === modality) return;
     setLoaded(null);
@@ -132,7 +195,6 @@ export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsPro
   }
 
   const firstLoad = loaded === null && error === null;
-  const firstName = monitorName.split(" ")[0] || monitorName;
 
   let status = "";
   if (firstLoad) status = "Buscando franjas…";
@@ -160,6 +222,16 @@ export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsPro
           {status}
         </p>
       </div>
+
+      {booked && (
+        <div className={styles.booked}>
+          <Alert tone="success">{booked}</Alert>
+          <ButtonLink href={MY_RESERVATIONS_PATH} variant="ghost" size="sm">
+            Ver mis reservas
+          </ButtonLink>
+        </div>
+      )}
+      {bookingError && <Alert tone="error">{bookingError}</Alert>}
 
       {error && (
         <div className={styles.failure}>
@@ -213,11 +285,23 @@ export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsPro
                   {relative && <span className={styles.relative}>{relative}</span>}
                 </h3>
                 <ul className={styles.slots}>
-                  {group.slots.map((slot) => (
-                    <li key={slot.id}>
-                      <SlotRow slot={slot} />
-                    </li>
-                  ))}
+                  {group.slots.map((slot) => {
+                    const note = confirming?.slotId === slot.id ? confirming.note : null;
+                    return (
+                      <li key={slot.id}>
+                        <SlotRow
+                          slot={slot}
+                          note={note}
+                          reserving={booking === slot.id}
+                          busy={booking !== null}
+                          onAsk={() => ask(slot)}
+                          onNoteChange={(value) => setConfirming({ slotId: slot.id, note: value })}
+                          onConfirm={() => reserve(slot, note ?? "")}
+                          onBack={() => setConfirming(null)}
+                        />
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
             );
@@ -239,13 +323,41 @@ export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsPro
   );
 }
 
-/** One slot: its hours, how long it lasts, where, and how many seats. Presentational. */
-function SlotRow({ slot }: { slot: Slot }) {
+type SlotRowProps = {
+  slot: Slot;
+  /** The note being written while the booking is confirmed; null when not confirming. */
+  note: string | null;
+  /** This slot is being booked. */
+  reserving: boolean;
+  /** Some booking is in flight: no second one starts meanwhile. */
+  busy: boolean;
+  onAsk: () => void;
+  onNoteChange: (note: string) => void;
+  onConfirm: () => void;
+  onBack: () => void;
+};
+
+/**
+ * One slot: its hours, how long it lasts, where, its free seats and "Reservar", which opens a
+ * confirmation with an optional note for the monitor (RF-047). Presentational.
+ */
+function SlotRow({
+  slot,
+  note,
+  reserving,
+  busy,
+  onAsk,
+  onNoteChange,
+  onConfirm,
+  onBack,
+}: SlotRowProps) {
   const virtual = slot.modality === "VIRTUAL";
   const group = isGroupSession(slot.capacity);
+  const range = slotTimeRange(slot.starts_at, slot.ends_at);
+  const noteId = `note-${slot.id}`;
 
   return (
-    <article className={styles.slot} aria-label={slotTimeRange(slot.starts_at, slot.ends_at)}>
+    <article className={styles.slot} aria-label={range}>
       <div className={styles.time}>
         <span className={styles.range}>{slotTimeRange(slot.starts_at, slot.ends_at)}</span>
         <span className={styles.duration}>
@@ -264,8 +376,46 @@ function SlotRow({ slot }: { slot: Slot }) {
       </div>
       <span className={styles.session} data-group={group || undefined}>
         <Icon name="users" size={14} />
-        {sessionLabel(slot.capacity)}
+        {seatsLabel(slot.capacity, slot.remaining_seats)}
       </span>
+      {note === null ? (
+        <Button
+          size="sm"
+          className={styles.reserve}
+          aria-label={`Reservar ${range}`}
+          softDisabled={busy}
+          onClick={onAsk}
+        >
+          Reservar
+        </Button>
+      ) : (
+        <div className={styles.confirm} role="group" aria-label="Confirmar reserva">
+          <label htmlFor={noteId} className={styles.noteLabel}>
+            Nota para el monitor (opcional)
+          </label>
+          <textarea
+            id={noteId}
+            className={styles.note}
+            rows={2}
+            maxLength={MAX_NOTE_LENGTH}
+            value={note}
+            placeholder="Por ejemplo, el tema que quieres repasar."
+            aria-describedby={`${noteId}-count`}
+            onChange={(event) => onNoteChange(event.target.value)}
+          />
+          <div className={styles.confirmFooter}>
+            <span id={`${noteId}-count`} className={styles.noteCount}>
+              {`${note.length}/${MAX_NOTE_LENGTH}`}
+            </span>
+            <Button variant="ghost" size="sm" softDisabled={reserving} onClick={onBack}>
+              Volver
+            </Button>
+            <Button size="sm" softDisabled={busy} onClick={onConfirm}>
+              {reserving ? "Reservando…" : "Confirmar reserva"}
+            </Button>
+          </div>
+        </div>
+      )}
     </article>
   );
 }
