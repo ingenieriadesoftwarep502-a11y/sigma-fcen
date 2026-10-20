@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.academics",
     "apps.availability",
+    "apps.reservations",
 ]
 
 MIDDLEWARE = [
@@ -153,6 +154,12 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API REST del sistema de gestion de monitorias academicas de la FCEN.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Slots and reservations both have a "status" field; each keeps a stable enum name
+    # ("StatusEnum" is the slot's, as the frontend types already call it).
+    "ENUM_NAME_OVERRIDES": {
+        "StatusEnum": "apps.availability.domain.rules.SlotStatus",
+        "ReservationStatusEnum": "apps.reservations.domain.rules.ReservationStatus",
+    },
 }
 
 # --- Scheduling rules (ADR-010: adjustable without touching the model) ----------------------
@@ -163,6 +170,8 @@ SLOT_DEFAULT_CAPACITY = 1
 # Read by FASE-04 (reservations).
 RESERVATION_MIN_ADVANCE_HOURS = 2
 RESERVATION_MAX_ACTIVE_PER_SUBJECT_WEEK = 1
+# ADR-011: a student cancels at least this many hours ahead; later counts as a no-show.
+RESERVATION_CANCEL_WINDOW_HOURS = 4
 
 # --- Logging --------------------------------------------------------------------------------
 
