@@ -7,7 +7,8 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 
 import pytest
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from apps.academics.models import AcademicTerm
@@ -24,6 +25,7 @@ from apps.availability.services import (
     deactivate_template,
     update_slot,
 )
+from apps.reservations.domain.rules import ReservationStatus
 from tests.availability_data import (
     HOUR,
     SLOT_START,
@@ -35,6 +37,7 @@ from tests.availability_data import (
     next_weekday,
 )
 from tests.catalog_data import make_subject, make_term, make_user
+from tests.reservation_data import make_reservation, make_student
 
 pytestmark = pytest.mark.django_db
 
@@ -208,8 +211,8 @@ def test_update_onto_another_slot_is_rejected() -> None:
         update_slot(slot, {"starts_at": SLOT_START + 2 * HOUR})
 
 
-@pytest.mark.parametrize("status", [SlotStatus.RESERVED, SlotStatus.CANCELLED])
-def test_rn_003_4_only_available_slots_can_be_edited(status: SlotStatus) -> None:
+@pytest.mark.parametrize("status", [SlotStatus.CANCELLED, SlotStatus.EXPIRED])
+def test_rn_003_4_withdrawn_or_expired_slots_cannot_be_edited(status: SlotStatus) -> None:
     slot = make_slot(*make_assigned_monitor(), status=status)
 
     with pytest.raises(SlotConflictError):
@@ -230,6 +233,7 @@ def test_t_03_7_ca_hu05_3_withdrawing_cancels_and_keeps_the_row() -> None:
 
 def test_t_03_7_ca_hu05_4_reserved_slot_cannot_be_withdrawn() -> None:
     slot = make_slot(*make_assigned_monitor(), status=SlotStatus.RESERVED)
+    make_reservation(slot, make_student())
 
     with pytest.raises(SlotConflictError, match="reserva"):
         cancel_slot(slot)
@@ -331,6 +335,7 @@ def test_deactivating_a_template_cancels_only_its_future_available_slots() -> No
     template = make_template(owner)
     first, *rest = template.slots.order_by("starts_at")
     first.transition_to(SlotStatus.RESERVED)
+    make_reservation(first, make_student())
     loose = publish(owner, local_datetime(next_weekday(3), time(8, 0)))
 
     deactivate_template(template)
@@ -345,3 +350,111 @@ def test_deactivating_a_template_cancels_only_its_future_available_slots() -> No
         s.status == SlotStatus.CANCELLED
         for s in AvailabilitySlot.objects.filter(pk__in=[s.pk for s in rest])
     )
+
+
+# --- T-04.21 · monitor restrictions by CONFIRMED count (ADR-010 R2, CA-HU05-4, RN-003.4) -----
+
+
+def group_slot_with(seats: int, capacity: int = 3, **extra: Any) -> AvailabilitySlot:
+    """A group slot holding `seats` CONFIRMED reservations; still AVAILABLE while not full."""
+    status = SlotStatus.RESERVED if seats >= capacity else SlotStatus.AVAILABLE
+    slot = make_slot(*make_assigned_monitor(), capacity=capacity, status=status, **extra)
+    for seat in range(seats):
+        make_reservation(slot, make_student(f"estudiante{seat}@unal.edu.co"))
+    return slot
+
+
+def test_t_04_21_group_slot_with_one_reservation_cannot_be_withdrawn() -> None:
+    slot = group_slot_with(1)
+
+    with pytest.raises(SlotConflictError, match="reserva"):
+        cancel_slot(slot)
+
+    slot.refresh_from_db()
+    assert slot.status == SlotStatus.AVAILABLE
+
+
+def test_t_04_21_group_slot_with_one_reservation_cannot_move_its_start() -> None:
+    slot = group_slot_with(1)
+
+    with pytest.raises(SlotConflictError, match="reserva"):
+        update_slot(slot, {"starts_at": SLOT_START + timedelta(minutes=30)})
+
+    slot.refresh_from_db()
+    assert slot.starts_at == SLOT_START
+
+
+def test_t_04_21_place_of_a_slot_with_reservations_can_still_change() -> None:
+    slot = group_slot_with(1)
+
+    update_slot(slot, {"location": "Otra aula", "modality": AvailabilitySlot.Modality.VIRTUAL})
+
+    slot.refresh_from_db()
+    assert slot.location == "Otra aula"
+
+
+def test_t_04_21_capacity_cannot_drop_below_the_confirmed_reservations() -> None:
+    slot = group_slot_with(2)
+
+    with pytest.raises(SlotConflictError, match="cupos"):
+        update_slot(slot, {"capacity": 1})
+
+    slot.refresh_from_db()
+    assert slot.capacity == 3
+
+
+def test_t_04_21_lowering_capacity_to_the_reservations_fills_the_slot() -> None:
+    slot = group_slot_with(2)
+
+    update_slot(slot, {"capacity": 2})
+
+    slot.refresh_from_db()
+    assert (slot.capacity, slot.status) == (2, SlotStatus.RESERVED)
+
+
+def test_t_04_21_raising_capacity_of_a_full_slot_reopens_it() -> None:
+    slot = group_slot_with(2, capacity=2)
+
+    update_slot(slot, {"capacity": 4})
+
+    slot.refresh_from_db()
+    assert (slot.capacity, slot.status) == (4, SlotStatus.AVAILABLE)
+
+
+def test_t_04_21_cancelled_reservations_do_not_block_the_monitor() -> None:
+    slot = make_slot(*make_assigned_monitor(), capacity=3)
+    make_reservation(slot, make_student(), status=ReservationStatus.CANCELLED)
+
+    cancel_slot(slot)
+
+    slot.refresh_from_db()
+    assert slot.status == SlotStatus.CANCELLED
+
+
+def test_t_04_21_deactivating_a_template_keeps_slots_with_any_reservation() -> None:
+    owner = make_assigned_monitor(term=short_term())
+    template = make_template(owner, capacity=3)
+    first, *rest = template.slots.order_by("starts_at")
+    make_reservation(first, make_student())
+
+    deactivate_template(template)
+
+    first.refresh_from_db()
+    assert first.status == SlotStatus.AVAILABLE
+    assert all(
+        s.status == SlotStatus.CANCELLED
+        for s in AvailabilitySlot.objects.filter(pk__in=[s.pk for s in rest])
+    )
+
+
+def test_t_04_21_withdrawal_locks_the_slot_row_before_counting() -> None:
+    """The count runs under the same lock the reservation service takes (FASE-04 §6)."""
+    slot = make_slot(*make_assigned_monitor())
+
+    with CaptureQueriesContext(connection) as queries:
+        cancel_slot(slot)
+
+    sqls = [query["sql"] for query in queries.captured_queries]
+    lock = next(i for i, sql in enumerate(sqls) if "FOR UPDATE" in sql)
+    count = next(i for i, sql in enumerate(sqls) if '"reservations_reservation"' in sql)
+    assert lock < count

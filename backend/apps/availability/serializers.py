@@ -43,6 +43,9 @@ class AvailabilitySlotSerializer(serializers.ModelSerializer[AvailabilitySlot]):
         slug_field="code", read_only=True
     )
     status = serializers.ChoiceField(choices=[s.value for s in SlotStatus], read_only=True)
+    remaining_seats = serializers.IntegerField(
+        read_only=True, help_text="Cupos libres: capacidad menos reservas confirmadas."
+    )
 
     class Meta:
         model = AvailabilitySlot
@@ -55,6 +58,7 @@ class AvailabilitySlotSerializer(serializers.ModelSerializer[AvailabilitySlot]):
             "starts_at",
             "ends_at",
             "capacity",
+            "remaining_seats",
             "status",
             "modality",
             "location",

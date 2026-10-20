@@ -27,11 +27,13 @@ from apps.availability.domain.rules import (
     overlaps,
 )
 from apps.availability.models import AvailabilitySlot, SlotTemplate
+from apps.reservations.domain.rules import ReservationStatus
 
 OVERLAP_MESSAGE = "Se solapa con otra franja tuya."
 OUT_OF_TERM_MESSAGE = "La franja no cae dentro de ningún período académico."
-RESERVED_MESSAGE = "La franja tiene una reserva y no se puede modificar ni retirar."
+RESERVED_MESSAGE = "La franja tiene reservas y no se puede retirar ni cambiar de hora."
 NOT_AVAILABLE_MESSAGE = "La franja ya no está disponible."
+CAPACITY_BELOW_MESSAGE = "La franja ya tiene {count} reservas; no puedes dejarla con menos cupos."
 WEEKDAY_MESSAGE = "El día debe estar entre 0 (lunes) y 6 (domingo)."
 NO_WEEKS_MESSAGE = "El período no tiene semanas restantes para esta plantilla."
 
@@ -162,25 +164,50 @@ def create_slot(
     )
 
 
-def _lock_available(slot: AvailabilitySlot) -> AvailabilitySlot:
-    """Locks the row so a reservation (FASE-04) cannot slip in during the change."""
+# Seats are taken by CONFIRMED reservations (reverse relation: no import of the model).
+CONFIRMED_RESERVATION = ReservationStatus.CONFIRMED.value
+
+
+def _lock_open(slot: AvailabilitySlot) -> tuple[AvailabilitySlot, int]:
+    """Locks the row, the same lock a reservation takes (FASE-04 §6), then counts its seats.
+
+    Under the lock no reservation can slip in between the count and the change, so the
+    monitor's restrictions are decided by CONFIRMED reservations, not by the state
+    (ADR-010 R2, RN-003.4): a group slot with one reservation is still AVAILABLE.
+    """
     locked = AvailabilitySlot.objects.select_for_update().get(pk=slot.pk)
-    if locked.status == SlotStatus.RESERVED:
-        raise SlotConflictError(RESERVED_MESSAGE)
-    if locked.status != SlotStatus.AVAILABLE:
+    if locked.status not in (SlotStatus.AVAILABLE, SlotStatus.RESERVED):
         raise SlotConflictError(NOT_AVAILABLE_MESSAGE)
-    return locked
+    confirmed = locked.reservations.filter(status=CONFIRMED_RESERVATION).count()
+    return locked, confirmed
+
+
+def _status_for(current: str, confirmed: int, capacity: int) -> str:
+    """ADR-010 R1: RESERVED means full; a new capacity can fill or reopen the slot."""
+    if current == SlotStatus.AVAILABLE and confirmed >= capacity:
+        return SlotStatus.RESERVED.value
+    if current == SlotStatus.RESERVED and confirmed < capacity:
+        return SlotStatus.AVAILABLE.value
+    return current
 
 
 @transaction.atomic
 def update_slot(slot: AvailabilitySlot, data: dict[str, Any]) -> AvailabilitySlot:
-    """Moves or edits an available slot; a reserved one keeps its schedule (RN-003.4)."""
+    """Edits a slot; one with reservations keeps its start and enough seats (ADR-010 R2)."""
     unknown = set(data) - EDITABLE_FIELDS
     if unknown:
         raise ValueError(f"Campos no editables: {sorted(unknown)}")
-    locked = _lock_available(slot)
+    locked, confirmed = _lock_open(slot)
     changes = dict(data)
+    if "capacity" in changes:
+        if changes["capacity"] < confirmed:
+            raise SlotConflictError(CAPACITY_BELOW_MESSAGE.format(count=confirmed))
+        status = _status_for(locked.status, confirmed, changes["capacity"])
+        if status != locked.status:
+            changes["status"] = status
     if "starts_at" in changes:
+        if confirmed and changes["starts_at"] != locked.starts_at:
+            raise SlotConflictError(RESERVED_MESSAGE)
         starts_at = changes["starts_at"]
         _ensure_window(starts_at)
         term = _term_containing(starts_at)
@@ -196,8 +223,13 @@ def update_slot(slot: AvailabilitySlot, data: dict[str, Any]) -> AvailabilitySlo
 
 @transaction.atomic
 def cancel_slot(slot: AvailabilitySlot) -> AvailabilitySlot:
-    """Withdraws a slot: it becomes CANCELLED and the row is kept (T-03.7, CA-HU05-3/4)."""
-    locked = _lock_available(slot)
+    """Withdraws a slot: it becomes CANCELLED and the row is kept (T-03.7, CA-HU05-3/4).
+
+    Any CONFIRMED reservation forbids it, even on a group slot that is not full (T-04.21).
+    """
+    locked, confirmed = _lock_open(slot)
+    if confirmed or locked.status != SlotStatus.AVAILABLE:
+        raise SlotConflictError(RESERVED_MESSAGE)
     locked.transition_to(SlotStatus.CANCELLED)
     slot.status = locked.status
     return slot
@@ -287,11 +319,22 @@ def create_template(
 
 @transaction.atomic
 def deactivate_template(template: SlotTemplate) -> SlotTemplate:
-    """Stops a template and withdraws its future slots that hold no reservation."""
+    """Stops a template and withdraws its future slots that hold no CONFIRMED reservation.
+
+    Slots with at least one reservation are kept, even on a group slot that is not full
+    (ADR-010 R2, T-04.21). The candidate rows are locked in pk order first, so no reservation
+    can arrive between the count and the withdrawal.
+    """
     template.is_active = False
     template.save(update_fields=["is_active"])
-    # AVAILABLE -> CANCELLED is an allowed transition (DDD section 6.1).
-    template.slots.filter(status=SlotStatus.AVAILABLE.value, starts_at__gt=timezone.now()).update(
-        status=SlotStatus.CANCELLED.value
+    future = (
+        template.slots.select_for_update()
+        .filter(status=SlotStatus.AVAILABLE.value, starts_at__gt=timezone.now())
+        .order_by("pk")
     )
+    candidates = list(future.values_list("pk", flat=True))
+    # AVAILABLE -> CANCELLED is an allowed transition (DDD section 6.1).
+    AvailabilitySlot.objects.filter(pk__in=candidates).exclude(
+        reservations__status=CONFIRMED_RESERVATION
+    ).update(status=SlotStatus.CANCELLED.value)
     return template

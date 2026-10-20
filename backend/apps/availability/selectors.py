@@ -7,13 +7,16 @@ Every listing joins what its serializer prints, so a page costs a fixed number o
 from datetime import date, datetime, time, timedelta
 from uuid import UUID
 
-from django.db.models import Count, QuerySet
+from django.db.models import Count, F, Q, QuerySet
 from django.utils import timezone
 
 from apps.academics.models import AcademicTerm
 from apps.accounts.models import User
 from apps.availability.domain.rules import LOCAL_TZ, SlotStatus
 from apps.availability.models import AvailabilitySlot, SlotTemplate
+from apps.reservations.domain.rules import ReservationStatus
+
+CONFIRMED = ReservationStatus.CONFIRMED.value
 
 
 def _local_midnight(day: date) -> datetime:
@@ -32,8 +35,18 @@ def _between(
 
 
 def slots_with_details() -> QuerySet[AvailabilitySlot]:
-    return AvailabilitySlot.objects.select_related("subject", "monitor", "term").order_by(
-        "starts_at", "id"
+    """Slots with what their serializer prints, `remaining_seats` included (ADR-010 R4).
+
+    The seats come from one aggregate in the same query, so a page never costs a query per
+    slot (T-04.24, RNF-PER-001).
+    """
+    return (
+        AvailabilitySlot.objects.select_related("subject", "monitor", "term")
+        .annotate(
+            remaining_seats=F("capacity")
+            - Count("reservations", filter=Q(reservations__status=CONFIRMED))
+        )
+        .order_by("starts_at", "id")
     )
 
 

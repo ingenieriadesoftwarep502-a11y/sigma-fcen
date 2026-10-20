@@ -25,6 +25,7 @@ from tests.availability_data import (
     next_weekday,
 )
 from tests.catalog_data import client_for, make_assignment, make_subject, make_term, make_user
+from tests.reservation_data import make_reservation
 
 pytestmark = pytest.mark.django_db
 
@@ -266,15 +267,27 @@ def test_patch_with_capacity_over_the_limit_is_a_400(world: dict[str, Any]) -> N
     assert "capacity" in response.json()
 
 
-def test_rn_003_4_patch_on_a_reserved_slot_is_409(world: dict[str, Any]) -> None:
-    slot = make_slot(world["sofia"], world["calculo"], world["term"], status=SlotStatus.RESERVED)
+def test_rn_003_4_moving_a_slot_with_a_reservation_is_409(world: dict[str, Any]) -> None:
+    slot = make_slot(world["sofia"], world["calculo"], world["term"], capacity=2)
+    make_reservation(slot, world["student"])
 
     response = client_for(world["sofia"]).patch(
-        slot_url(slot.pk), {"location": "Otra aula"}, format="json"
+        slot_url(slot.pk), {"starts_at": (SLOT_START + 2 * HOUR).isoformat()}, format="json"
     )
 
     assert response.status_code == 409
     assert "reserva" in response.json()["detail"]
+
+
+def test_t_04_21_capacity_below_the_reservations_is_409(world: dict[str, Any]) -> None:
+    slot = make_slot(world["sofia"], world["calculo"], world["term"], capacity=3)
+    make_reservation(slot, world["student"])
+    make_reservation(slot, make_user("luis@unal.edu.co", Role.Code.STUDENT))
+
+    response = client_for(world["sofia"]).patch(slot_url(slot.pk), {"capacity": 1}, format="json")
+
+    assert response.status_code == 409
+    assert "cupos" in response.json()["detail"]
 
 
 def test_t_03_7_ca_hu05_3_delete_withdraws_the_slot(world: dict[str, Any]) -> None:
@@ -289,6 +302,7 @@ def test_t_03_7_ca_hu05_3_delete_withdraws_the_slot(world: dict[str, Any]) -> No
 
 def test_t_03_7_ca_hu05_4_delete_on_a_reserved_slot_is_409(world: dict[str, Any]) -> None:
     slot = make_slot(world["sofia"], world["calculo"], world["term"], status=SlotStatus.RESERVED)
+    make_reservation(slot, world["student"])
 
     response = client_for(world["sofia"]).delete(slot_url(slot.pk))
 
@@ -443,6 +457,47 @@ def test_t_03_14_rnf_per_001_search_runs_a_fixed_number_of_queries(world: dict[s
         make_slot(world["andres"], world["mecanica"], world["term"], SLOT_START + hours * HOUR)
 
     assert count_queries() == one
+
+
+def test_t_04_24_search_exposes_the_remaining_seats(world: dict[str, Any]) -> None:
+    group = make_slot(world["sofia"], world["calculo"], world["term"], capacity=3)
+    make_reservation(group, world["student"])
+    make_reservation(group, make_user("eva@unal.edu.co", Role.Code.STUDENT), status="CANCELLED")
+    single = make_slot(world["andres"], world["mecanica"], world["term"])
+
+    response = client_for(world["student"]).get(SEARCH_URL)
+
+    seats = {slot["id"]: slot["remaining_seats"] for slot in response.json()["results"]}
+    assert seats == {group.pk: 2, single.pk: 1}
+
+
+def test_t_04_24_remaining_seats_add_no_query_per_slot(world: dict[str, Any]) -> None:
+    client = client_for(world["student"])
+
+    def count_queries() -> int:
+        with CaptureQueriesContext(connection) as queries:
+            assert client.get(SEARCH_URL).status_code == 200
+        return len(queries)
+
+    first = make_slot(world["sofia"], world["calculo"], world["term"], capacity=4)
+    make_reservation(first, world["student"])
+    one = count_queries()
+    for hours in range(1, 6):
+        slot = make_slot(
+            world["sofia"], world["calculo"], world["term"], SLOT_START + hours * HOUR, capacity=4
+        )
+        make_reservation(slot, make_user(f"e{hours}@unal.edu.co", Role.Code.STUDENT))
+
+    assert count_queries() == one
+
+
+def test_t_04_24_monitor_sees_the_remaining_seats_of_their_slots(world: dict[str, Any]) -> None:
+    slot = make_slot(world["sofia"], world["calculo"], world["term"], capacity=2)
+    make_reservation(slot, world["student"])
+
+    response = client_for(world["sofia"]).get(MINE_URL)
+
+    assert response.json()["results"][0]["remaining_seats"] == 1
 
 
 # --- Weekly templates ----------------------------------------------------------------------------
