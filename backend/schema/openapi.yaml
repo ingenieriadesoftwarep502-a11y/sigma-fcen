@@ -805,6 +805,175 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedMonitorOwnAssignmentList'
           description: ''
+  /api/v1/reservations/:
+    post:
+      operationId: reservations_create
+      description: A student books a seat in a slot (HU-03, CA-HU03-1 to CA-HU03-6).
+      tags:
+      - reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '409':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/reservations/{id}/:
+    get:
+      operationId: reservations_retrieve
+      description: A reservation, for its participants and administrators.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reservations
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '404':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/reservations/{id}/cancel/:
+    post:
+      operationId: reservations_cancel_create
+      description: The student, the slot's monitor or an administrator cancel (HU-04,
+        ADR-011).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCancel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationCancel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationCancel'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '409':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/reservations/mine/:
+    get:
+      operationId: reservations_mine_list
+      description: The student's own reservations and the monitor's reservations on
+        their slots.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          enum:
+          - student
+          - monitor
+          type: string
+          minLength: 1
+        description: |-
+          student: reservas hechas por el usuario; monitor: reservas en sus franjas. Sin valor, ambas.
+
+          * `student` - student
+          * `monitor` - monitor
+      - in: query
+        name: status
+        schema:
+          enum:
+          - CONFIRMED
+          - CANCELLED
+          - COMPLETED
+          - NO_SHOW
+          type: string
+          minLength: 1
+        description: |-
+          * `CONFIRMED` - CONFIRMED
+          * `CANCELLED` - CANCELLED
+          * `COMPLETED` - COMPLETED
+          * `NO_SHOW` - NO_SHOW
+      - in: query
+        name: when
+        schema:
+          enum:
+          - upcoming
+          - past
+          type: string
+          minLength: 1
+        description: |-
+          upcoming: por empezar, la más próxima primero; past: ya iniciadas.
+
+          * `upcoming` - upcoming
+          * `past` - past
+      tags:
+      - reservations
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReservationList'
+          description: ''
   /api/v1/slot-templates/:
     post:
       operationId: slot_templates_create
@@ -1649,6 +1818,10 @@ components:
           type: integer
           readOnly: true
           title: Capacidad
+        remaining_seats:
+          type: integer
+          readOnly: true
+          description: 'Cupos libres: capacidad menos reservas confirmadas.'
         status:
           allOf:
           - $ref: '#/components/schemas/StatusEnum'
@@ -1668,6 +1841,7 @@ components:
       - location
       - modality
       - monitor
+      - remaining_seats
       - starts_at
       - status
       - subject
@@ -2125,6 +2299,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MonitorOwnAssignment'
+    PaginatedReservationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reservation'
     PaginatedSlotTemplateList:
       type: object
       required:
@@ -2311,6 +2508,148 @@ components:
       - first_name
       - last_name
       - password
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slot:
+          allOf:
+          - $ref: '#/components/schemas/ReservationSlot'
+          readOnly: true
+        student:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReservationStatusEnum'
+          readOnly: true
+        student_note:
+          type: string
+          readOnly: true
+          title: Nota del estudiante
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Creada
+        cancelled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Cancelada
+        cancelled_by:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+          nullable: true
+        cancellation_reason:
+          type: string
+          readOnly: true
+          title: Justificación
+      required:
+      - cancellation_reason
+      - cancelled_at
+      - cancelled_by
+      - created_at
+      - id
+      - slot
+      - status
+      - student
+      - student_note
+    ReservationCancel:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Justificación; obligatoria si cancela el monitor o un administrador.
+          maxLength: 500
+    ReservationCreate:
+      type: object
+      description: 'Only the slot: the student is always the authenticated user (FASE-04
+        §5).'
+      properties:
+        slot_id:
+          type: integer
+          description: Id de la franja a reservar.
+        note:
+          type: string
+          description: Nota opcional para el monitor; no se puede editar después (RF-047).
+          maxLength: 500
+      required:
+      - slot_id
+    ReservationSlot:
+      type: object
+      description: 'The booked slot: when, where, with whom and for which subject.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        monitor:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Inicio
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Fin
+        capacity:
+          type: integer
+          readOnly: true
+          title: Capacidad
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        modality:
+          allOf:
+          - $ref: '#/components/schemas/ModalityEnum'
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+          title: Lugar o enlace
+      required:
+      - capacity
+      - ends_at
+      - id
+      - location
+      - modality
+      - monitor
+      - starts_at
+      - status
+      - subject
+      - term
+    ReservationStatusEnum:
+      enum:
+      - CONFIRMED
+      - CANCELLED
+      - COMPLETED
+      - NO_SHOW
+      type: string
+      description: |-
+        * `CONFIRMED` - CONFIRMED
+        * `CANCELLED` - CANCELLED
+        * `COMPLETED` - COMPLETED
+        * `NO_SHOW` - NO_SHOW
     RoleAssignment:
       type: object
       properties:

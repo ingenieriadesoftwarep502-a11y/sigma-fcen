@@ -342,6 +342,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reservations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A student books a seat in a slot (HU-03, CA-HU03-1 to CA-HU03-6). */
+        post: operations["reservations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservations/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A reservation, for its participants and administrators. */
+        get: operations["reservations_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservations/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The student, the slot's monitor or an administrator cancel (HU-04, ADR-011). */
+        post: operations["reservations_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservations/mine/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The student's own reservations and the monitor's reservations on their slots. */
+        get: operations["reservations_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/slot-templates/": {
         parameters: {
             query?: never;
@@ -701,6 +769,8 @@ export interface components {
             readonly ends_at: string;
             /** Capacidad */
             readonly capacity: number;
+            /** @description Cupos libres: capacidad menos reservas confirmadas. */
+            readonly remaining_seats: number;
             readonly status: components["schemas"]["StatusEnum"];
             readonly modality: components["schemas"]["ModalityEnum"];
             /** Lugar o enlace */
@@ -931,6 +1001,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["MonitorOwnAssignment"][];
         };
+        PaginatedReservationList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Reservation"][];
+        };
         PaginatedSlotTemplateList: {
             /** @example 123 */
             count: number;
@@ -1041,6 +1126,71 @@ export interface components {
             first_name: string;
             last_name: string;
         };
+        Reservation: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly slot: components["schemas"]["ReservationSlot"];
+            readonly student: components["schemas"]["MonitorReference"];
+            readonly status: components["schemas"]["ReservationStatusEnum"];
+            /** Nota del estudiante */
+            readonly student_note: string;
+            /**
+             * Creada
+             * Format: date-time
+             */
+            readonly created_at: string;
+            /**
+             * Cancelada
+             * Format: date-time
+             */
+            readonly cancelled_at: string | null;
+            readonly cancelled_by: components["schemas"]["MonitorReference"] | null;
+            /** Justificación */
+            readonly cancellation_reason: string;
+        };
+        ReservationCancel: {
+            /** @description Justificación; obligatoria si cancela el monitor o un administrador. */
+            reason?: string;
+        };
+        /** @description Only the slot: the student is always the authenticated user (FASE-04 §5). */
+        ReservationCreate: {
+            /** @description Id de la franja a reservar. */
+            slot_id: number;
+            /** @description Nota opcional para el monitor; no se puede editar después (RF-047). */
+            note?: string;
+        };
+        /** @description The booked slot: when, where, with whom and for which subject. */
+        ReservationSlot: {
+            readonly id: number;
+            readonly subject: components["schemas"]["SubjectReference"];
+            readonly monitor: components["schemas"]["MonitorReference"];
+            /** Código */
+            readonly term: string;
+            /**
+             * Inicio
+             * Format: date-time
+             */
+            readonly starts_at: string;
+            /**
+             * Fin
+             * Format: date-time
+             */
+            readonly ends_at: string;
+            /** Capacidad */
+            readonly capacity: number;
+            readonly status: components["schemas"]["StatusEnum"];
+            readonly modality: components["schemas"]["ModalityEnum"];
+            /** Lugar o enlace */
+            readonly location: string;
+        };
+        /**
+         * @description * `CONFIRMED` - CONFIRMED
+         *     * `CANCELLED` - CANCELLED
+         *     * `COMPLETED` - COMPLETED
+         *     * `NO_SHOW` - NO_SHOW
+         * @enum {string}
+         */
+        ReservationStatusEnum: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
         RoleAssignment: {
             roles: components["schemas"]["RolesEnum"][];
         };
@@ -1905,6 +2055,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedMonitorOwnAssignmentList"];
+                };
+            };
+        };
+    };
+    reservations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReservationCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReservationCreate"];
+                "multipart/form-data": components["schemas"]["ReservationCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reservation"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reservations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reservation"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reservations_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReservationCancel"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReservationCancel"];
+                "multipart/form-data": components["schemas"]["ReservationCancel"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reservation"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reservations_mine_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /**
+                 * @description student: reservas hechas por el usuario; monitor: reservas en sus franjas. Sin valor, ambas.
+                 *
+                 *     * `student` - student
+                 *     * `monitor` - monitor
+                 */
+                role?: "student" | "monitor";
+                /**
+                 * @description * `CONFIRMED` - CONFIRMED
+                 *     * `CANCELLED` - CANCELLED
+                 *     * `COMPLETED` - COMPLETED
+                 *     * `NO_SHOW` - NO_SHOW
+                 */
+                status?: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
+                /**
+                 * @description upcoming: por empezar, la más próxima primero; past: ya iniciadas.
+                 *
+                 *     * `upcoming` - upcoming
+                 *     * `past` - past
+                 */
+                when?: "upcoming" | "past";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedReservationList"];
                 };
             };
         };
