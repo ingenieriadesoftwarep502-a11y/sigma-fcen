@@ -1,18 +1,22 @@
 """Deactivation that reports its impact before confirming (T-01.12, CA-HU11-2, CA-HU11-3).
 
-Reservations arrive in FASE-04; until then the impact count comes from a placeholder that
-returns 0 (registered as technical debt).
+The impact counts the account's future CONFIRMED reservations, as student or as monitor
+(completed in FASE-04, T-04.18).
 """
 
 import re
+from datetime import timedelta
 from unittest import mock
 
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.domain.rules import AdminLockoutError
 from apps.accounts.models import AuditLog, Role, User, UserRole
 from apps.accounts.services import deactivate_user, register_student
+from tests.availability_data import HOUR, SLOT_START, make_assigned_monitor, make_slot
+from tests.reservation_data import make_reservation, make_student
 
 pytestmark = pytest.mark.django_db
 
@@ -84,6 +88,33 @@ def test_ca_hu11_3_impact_counts_future_reservations(
         response = admin_client.post(_url(student), {"confirm": False}, format="json")
 
     assert response.json()["impact"] == {"future_reservations": 3}
+
+
+def test_t_04_18_ca_hu11_3_impact_counts_the_students_future_confirmed_reservations(
+    admin_client: APIClient, student: User
+) -> None:
+    owner = make_assigned_monitor()
+    make_reservation(make_slot(*owner), student)
+    make_reservation(make_slot(*owner, SLOT_START + 2 * HOUR), student, status="CANCELLED")
+    make_reservation(make_slot(*owner, timezone.now() - timedelta(days=1)), student)
+
+    response = admin_client.post(_url(student), {}, format="json")
+
+    assert response.json()["impact"] == {"future_reservations": 1}
+
+
+def test_t_04_18_ca_hu11_3_impact_counts_the_reservations_on_a_monitors_slots(
+    admin_client: APIClient, student: User
+) -> None:
+    owner = make_assigned_monitor()
+    slot = make_slot(*owner, capacity=2)
+    make_reservation(slot, student)
+    make_reservation(slot, make_student("luis@unal.edu.co"))
+
+    response = admin_client.post(_url(owner[0]), {"confirm": True}, format="json")
+
+    assert response.json()["impact"] == {"future_reservations": 2}
+    assert AuditLog.objects.get().context == {"future_reservations": 2}
 
 
 def test_ca_hu11_2_confirmed_deactivation_invalidates_credentials_immediately(

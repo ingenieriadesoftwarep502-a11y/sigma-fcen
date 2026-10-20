@@ -8,6 +8,7 @@ from django.db.models import Q
 
 from apps.accounts.domain.rules import AdminChange, ensure_admin_remains, normalize_email
 from apps.accounts.models import AuditLog, Role, User, UserRole
+from apps.reservations import selectors as reservation_selectors
 
 
 @transaction.atomic
@@ -146,8 +147,8 @@ def set_roles(*, actor: User, user: User, roles: list[str]) -> User:
 
 
 def count_future_reservations(user: User) -> int:
-    """Reservations arrive in FASE-04; until then no account has any (technical debt, T-01.12)."""
-    return 0
+    """Future CONFIRMED reservations the account holds as student or as monitor (T-04.18)."""
+    return reservation_selectors.count_future_reservations(user)
 
 
 def deactivation_impact(user: User) -> dict[str, int]:
