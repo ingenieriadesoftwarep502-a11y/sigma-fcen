@@ -116,10 +116,11 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 | RF-040 | El estudiante debe poder reservar una franja disponible | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-041 | El sistema debe marcar la franja como no disponible al confirmarse la reserva | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-042 | El sistema debe impedir reservas sobre franjas ya ocupadas, incluso ante peticiones concurrentes | Alta | `[PROPUESTA]` | ADR-010 |
-| RF-043 | El estudiante debe poder cancelar dentro de la ventana permitida | Alta | `[PENDIENTE]` | ADR-011 |
-| RF-044 | El sistema debe liberar la franja al cancelarse una reserva | Alta | `[PENDIENTE]` | ADR-011 |
+| RF-043 | El estudiante debe poder cancelar dentro de la ventana permitida | Alta | `[CONFIRMADO]` | ADR-011 |
+| RF-044 | El sistema debe liberar la franja al cancelarse una reserva | Alta | `[CONFIRMADO]` | ADR-011 |
 | RF-045 | El monitor debe poder consultar sus reservas confirmadas | Alta | `[PROPUESTA]` | — |
 | RF-046 | El estudiante debe poder consultar el historial completo de sus monitorías | Media | `[PROPUESTA]` | — |
+| RF-047 | Al reservar, el estudiante puede dejar una nota opcional para el monitor (máximo 500 caracteres, sin espacios sobrantes; en blanco queda vacía). La nota se fija al crear la reserva y no se edita (para cambiarla se cancela y se reserva de nuevo). Solo la ven el estudiante de la reserva, el monitor de la franja y los administradores; nunca aparece en la búsqueda, en los listados de disponibilidad ni para otros estudiantes de una franja grupal | Media | `[CONFIRMADO]` 2026-10-19 | — |
 
 ### 4.5 Sesiones (RF-05x)
 
@@ -235,7 +236,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como estudiante, quiero reservar un espacio de monitoría disponible, de tal manera que tenga una cita confirmada con el monitor y el sistema actualice automáticamente la disponibilidad para evitar conflictos de horario.
 
-**Requisitos:** RF-040, RF-041, RF-042 · **Fase:** FASE-04 · **Bloqueado por:** ADR-010
+**Requisitos:** RF-040, RF-041, RF-042, RF-047 · **Fase:** FASE-04 · **Bloqueado por:** ADR-010
 
 | ID | Criterio | Estado |
 |---|---|---|
@@ -254,12 +255,12 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como estudiante, quiero cancelar una reserva de monitoría con suficiente anticipación, de tal manera que el espacio quede disponible para otros estudiantes y mi historial se actualice correctamente.
 
-**Requisitos:** RF-043, RF-044 · **Fase:** FASE-04 · **Bloqueado por:** ADR-011
+**Requisitos:** RF-043, RF-044 · **Fase:** FASE-04 · **Bloqueado por:** — (ADR-011 cerrado el 2026-10-19)
 
 | ID | Criterio | Estado |
 |---|---|---|
-| CA-HU04-1 | **Dado** una reserva dentro de la ventana permitida, **cuando** cancelo, **entonces** queda `CANCELLED` y la franja vuelve a estar disponible | `[PENDIENTE]` ADR-011 |
-| CA-HU04-2 | **Dado** una reserva fuera de la ventana, **cuando** intento cancelar, **entonces** el sistema aplica la política definida | `[PENDIENTE]` ADR-011 |
+| CA-HU04-1 | **Dado** una reserva dentro de la ventana permitida, **cuando** cancelo, **entonces** queda `CANCELLED` y la franja vuelve a estar disponible | `[CONFIRMADO]` ADR-011 — ventana de 4 h |
+| CA-HU04-2 | **Dado** una reserva fuera de la ventana, **cuando** intento cancelar, **entonces** el sistema aplica la política definida | `[CONFIRMADO]` ADR-011 — la reserva queda `NO_SHOW` y el cupo se libera |
 | CA-HU04-3 | **Dado** una reserva de otro estudiante, **cuando** intento cancelarla, **entonces** recibo `403` | `[PROPUESTA]` |
 | CA-HU04-4 | **Dado** una reserva ya cancelada, **cuando** intento cancelarla de nuevo, **entonces** recibo `409` | `[PROPUESTA]` |
 
@@ -372,7 +373,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 |---|---|---|
 | CA-HU11-1 | **Dado** un administrador, **cuando** crea un usuario con rol, **entonces** la cuenta queda activa y puede iniciar sesión | `[CONFIRMADO]` ADR-008, ADR-009 |
 | CA-HU11-2 | **Dado** un usuario activo, **cuando** lo desactivo, **entonces** sus credenciales dejan de ser válidas de inmediato | `[CONFIRMADO]` |
-| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[CONFIRMADO]` · `[PARCIAL]` — el flujo de impacto y confirmación existe, pero el conteo de reservas futuras devuelve 0 hasta FASE-04 (deuda técnica T-01.12) |
+| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[CONFIRMADO]` — el conteo de reservas futuras se completó en FASE-04 (T-04.18) |
 | CA-HU11-4 | **Dado** un usuario no administrador, **cuando** intenta gestionar usuarios, **entonces** recibe `403` | `[CONFIRMADO]` |
 | CA-HU11-5 | **Dado** cualquier operación de gestión de usuarios, **cuando** se ejecuta, **entonces** queda registrada en auditoría | `[CONFIRMADO]` |
 
@@ -435,6 +436,7 @@ Cada requisito se conecta con su historia, su fase y su regla de negocio. Un req
 | RF-040 a RF-042 | HU-03 | FASE-04 | RN-004 | Bloqueado |
 | RF-043, RF-044 | HU-04 | FASE-04 | RN-005 | Bloqueado |
 | RF-045, RF-046 | HU-03, HU-12 | FASE-04, FASE-05 | — | Bloqueado |
+| RF-047 | HU-03 | FASE-04 | — | En revisión |
 | RF-050 a RF-053 | HU-06, HU-12 | FASE-05 | RN-006 | Bloqueado |
 | RF-060 a RF-063 | HU-07 | FASE-06 | RN-007 | Bloqueado |
 | RF-070 a RF-073 | HU-08 | FASE-07 | RN-008 | Bloqueado |

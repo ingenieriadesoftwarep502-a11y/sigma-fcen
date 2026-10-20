@@ -32,24 +32,7 @@ Cerrada el 2026-09-27. ADR-007, ADR-008 y ADR-009 están confirmados y registrad
 
 ---
 
-ADR-010 cerrado el 2026-10-11 y registrado en [§2](#2-decisiones-cerradas). Siguen abiertos los ADR de esta tanda que se listan a continuación.
-
----
-
-#### ADR-011 · Política de cancelación
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-04, HU-04, RN-005
-- **Contexto:** HU-04 exige cancelar "con suficiente anticipación". El documento base delega explícitamente esa definición al equipo.
-
-| # | Pregunta | Propuesta a validar |
-|---|---|---|
-| 1 | Ventana mínima de cancelación para el estudiante | 4 horas antes del inicio |
-| 2 | ¿Qué pasa si cancela fuera de la ventana? | Se registra como inasistencia en su historial |
-| 3 | ¿El monitor puede cancelar? ¿Con qué condiciones? | Sí, con justificación obligatoria y notificación |
-| 4 | ¿Hay penalización por inasistencias reiteradas? | No en la versión 1; se mide y se reporta |
-
-- **Pregunta:** ¿Se aprueban las cuatro propuestas de la tabla?
+ADR-010 cerrado el 2026-10-11 y ADR-011 cerrado el 2026-10-19; ambos registrados en [§2](#2-decisiones-cerradas). Siguen abiertos los ADR de esta tanda que se listan a continuación.
 
 ---
 
@@ -128,6 +111,7 @@ Se registran aquí al confirmarse. Formato obligatorio:
 | ADR-008 | Modelo de usuario y roles: **Opción A** — `User` personalizado con `email` como identificador de acceso y relación N:M con `Role` mediante `UserRole` (`unique(user, role)`). Un usuario puede tener varios roles simultáneos. `AUTH_USER_MODEL` se define en la primera migración. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1, §5 y §8, SAD §7, TRD §2, §4, §5 y §6 |
 | ADR-009 | Política de registro: (1) registro restringido al dominio `@unal.edu.co`; (2) el auto-registro asigna únicamente el rol Estudiante; (3) sin verificación por correo — la cuenta queda activa al registrarse y no se requiere SMTP en v1; (4) los roles Monitor, Docente y Administrador los asigna un administrador. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1 y §5, TRD §4.1 y §6 |
 | ADR-010 | Granularidad de franjas: (1) sesión de 60 min; (2) bloques fijos de 60 min; (3) capacidad configurable, por defecto 1; (4) máximo 1 reserva activa por estudiante, asignatura y semana; (5) plantilla semanal recurrente que genera franjas concretas; (6) anticipación mínima de 2 h para reservar. Capacidad, límite y anticipación son parámetros configurables; cada franja guarda inicio y fin explícitos. **Ampliación 2026-10-15:** la capacidad de cada franja o plantilla la elige el monitor (1 = individual, >1 = grupal); semántica de cupos R1–R4 en el detalle. | `[CONFIRMADO]` | Nicolás García Orozco (2026-10-11) · Alejandro Puerta Loaiza (ampliación) | 2026-10-11 · 2026-10-15 | FASE-03, FASE-04, DDD §4.3, §4.4, §5 y §6.1, SAD §4.4, TRD §3 |
+| ADR-011 | Política de cancelación: (1) el estudiante cancela con al menos 4 h de anticipación al inicio de la franja; (2) si cancela fuera de esa ventana, la reserva queda como inasistencia (`NO_SHOW`) en su historial y el cupo se libera igualmente; (3) el monitor puede cancelar una reserva con justificación obligatoria y queda registrado el autor (la notificación se documenta como evento de dominio, no se implementa en v1); (4) sin penalización por inasistencias reiteradas en v1: solo se miden y se reportan. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-10-19 | FASE-04, DDD §4.4, §5 (RN-005) y §6.2, TRD §3 (HU-04) |
 
 ---
 
@@ -247,6 +231,24 @@ Se conserva el contexto original de cada ADR para trazabilidad.
 
 ---
 
+#### ADR-011 · Política de cancelación
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-10-19
+- **Decisión:** se aprueban las cuatro propuestas de la tabla. La ventana es un parámetro configurable (`RESERVATION_CANCEL_WINDOW_HOURS = 4`). Una cancelación tardía del estudiante libera el cupo igual que una cancelación a tiempo, pero la reserva queda en `NO_SHOW` con autor y fecha. El monitor (o un administrador) cancela con justificación obligatoria, que se guarda junto al autor. El evento `ReservationCancelled` queda documentado (DDD §7) y no se implementa en v1.
+- **Bloqueaba:** FASE-04, HU-04, RN-005
+- **Contexto:** HU-04 exige cancelar "con suficiente anticipación". El documento base delega explícitamente esa definición al equipo.
+
+| # | Pregunta | Propuesta a validar |
+|---|---|---|
+| 1 | Ventana mínima de cancelación para el estudiante | 4 horas antes del inicio |
+| 2 | ¿Qué pasa si cancela fuera de la ventana? | Se registra como inasistencia en su historial |
+| 3 | ¿El monitor puede cancelar? ¿Con qué condiciones? | Sí, con justificación obligatoria y notificación |
+| 4 | ¿Hay penalización por inasistencias reiteradas? | No en la versión 1; se mide y se reporta |
+
+- **Pregunta:** ¿Se aprueban las cuatro propuestas de la tabla? — Sí, las cuatro (2026-10-19).
+
+---
+
 #### ADR-010 · Granularidad de franjas y reglas de conflicto
 
 - **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-10-11
@@ -341,7 +343,7 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-01 | Ninguno (ADR-007 a ADR-009 confirmados el 2026-09-27) |
 | FASE-02 | Ninguno (ADR-008 confirmado el 2026-09-27) |
 | FASE-03 | Ninguno (ADR-010 confirmado el 2026-10-11) |
-| FASE-04 | ADR-011 |
+| FASE-04 | Ninguno (ADR-010 confirmado el 2026-10-11 y ADR-011 el 2026-10-19) |
 | FASE-05 | Ninguno por ADR (ADR-010 confirmado) |
 | FASE-06 | ADR-013 (escala de calificación) |
 | FASE-07 | ADR-012 |
@@ -349,4 +351,4 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-09 | ADR-013 |
 | FASE-10 | ADR-014, ADR-015 |
 
-> **5 decisiones abiertas. 10 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**
+> **4 decisiones abiertas. 11 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**

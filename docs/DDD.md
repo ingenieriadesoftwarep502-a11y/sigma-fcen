@@ -151,7 +151,7 @@ Restricción única `(user, role)` (`accounts_userrole_unique`, RN-002): un rol 
 - Un usuario inactivo no puede autenticarse ni renovar su sesión (RN-002.4, CA-HU11-2). *Que no pueda ser destinatario de reservas nuevas se implementa en FASE-04.*
 - El auto-registro crea una cuenta activa con el rol `STUDENT` y ningún otro (RN-001.4).
 - Siempre queda al menos un administrador activo: un administrador no puede desactivarse ni quitarse el rol `ADMIN` a sí mismo, y nadie puede desactivar o degradar al último administrador activo (`domain/rules.py::ensure_admin_remains`; respuesta `400`). Los servicios bloquean con `select_for_update` la cuenta afectada y a los administradores activos para evitar carreras.
-- La desactivación informa su impacto antes de confirmarse (CA-HU11-3). `future_reservations` devuelve siempre `0` hasta FASE-04 (deuda técnica T-01.12).
+- La desactivación informa su impacto antes de confirmarse (CA-HU11-3). `future_reservations` cuenta las reservas `CONFIRMED` futuras de la cuenta, como estudiante o como monitor de la franja (T-01.12 completada en FASE-04, T-04.18).
 
 #### 4.1.1 Registro de auditoría `AuditLog` · `[IMPLEMENTADO]` FASE-01
 
@@ -237,6 +237,7 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 | `slot` | FK a `AvailabilitySlot` | — |
 | `student` | FK a `User` | Debe tener rol `STUDENT` |
 | `status` | `CONFIRMED` · `CANCELLED` · `COMPLETED` · `NO_SHOW` | Máquina de estados §6.2 |
+| `student_note` | Texto, máximo 500 caracteres, vacío por defecto | Nota opcional del estudiante al reservar (RF-047). Inmutable; visible solo para el estudiante, el monitor de la franja y los administradores |
 | `created_at` | Marca de tiempo UTC | — |
 | `cancelled_at` | Marca de tiempo UTC nulable | — |
 | `cancellation_reason` | Texto nulable | Obligatorio si cancela el monitor — ADR-011 |
@@ -354,16 +355,16 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | 004.6 | Anticipación mínima para reservar: 2 h, configurable | `[CONFIRMADO]` ADR-010 |
 | 004.7 | Límite de reservas activas: 1 por estudiante, asignatura y semana, configurable | `[CONFIRMADO]` ADR-010 |
 
-### RN-005 · Cancelación · `[PENDIENTE]` ADR-011
+### RN-005 · Cancelación · ADR-011 `[CONFIRMADO]` 2026-10-19
 
 | # | Regla | Estado |
 |---|---|---|
-| 005.1 | El estudiante cancela dentro de la ventana definida | `[PENDIENTE]` |
+| 005.1 | El estudiante cancela con al menos 4 h de anticipación al inicio (configurable: `RESERVATION_CANCEL_WINDOW_HOURS`); una vez iniciada la sesión ya no se cancela | `[CONFIRMADO]` ADR-011 |
 | 005.2 | Al cancelar una reserva de una franja llena, la franja vuelve de `RESERVED` a `AVAILABLE` de forma atómica | `[PROPUESTA]` |
 | 005.3 | Una reserva `CANCELLED` no se cancela de nuevo | `[PROPUESTA]` |
 | 005.4 | Solo el estudiante propietario, el monitor o un administrador cancelan | `[PROPUESTA]` |
-| 005.5 | La cancelación del monitor exige justificación | `[PENDIENTE]` |
-| 005.6 | Consecuencia de cancelar fuera de la ventana | `[PENDIENTE]` |
+| 005.5 | La cancelación del monitor (o de un administrador) exige justificación; se registran autor y fecha | `[CONFIRMADO]` ADR-011 |
+| 005.6 | Si el estudiante cancela fuera de la ventana, la reserva queda `NO_SHOW` (inasistencia en su historial) y el cupo se libera igual; sin penalización en v1, solo se mide y reporta | `[CONFIRMADO]` ADR-011 |
 
 ### RN-006 · Sesiones
 
@@ -475,7 +476,7 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
 | Evento | Se dispara cuando | Consumidor futuro |
 |---|---|---|
 | `ReservationConfirmed` | Se crea una reserva | Notificación al monitor |
-| `ReservationCancelled` | Se cancela una reserva | Notificación y liberación de franja |
+| `ReservationCancelled` | Se cancela una reserva (también la cancelación tardía registrada como `NO_SHOW`) | Notificación al estudiante o al monitor (ADR-011; no implementada en v1) |
 | `SessionRecorded` | El monitor registra la sesión | Invitación a evaluar, métricas |
 | `EvaluationSubmitted` | El estudiante evalúa | Recálculo del promedio del monitor |
 | `UserDeactivated` | Se desactiva una cuenta | Revisión de reservas futuras afectadas |
