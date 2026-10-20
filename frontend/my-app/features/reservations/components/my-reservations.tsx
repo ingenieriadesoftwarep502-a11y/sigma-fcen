@@ -14,6 +14,7 @@ import { slotDayLabel, slotTimeRange } from "@/features/availability/labels";
 import { requestErrorMessage } from "@/lib/api-client";
 import { hasAnyRole, SUBJECTS_PATH } from "@/lib/auth";
 import {
+  CANCEL_WINDOW_HOURS,
   cancelReservation,
   isReservationConflict,
   listMyReservations,
@@ -93,7 +94,7 @@ export default function MyReservations() {
       <PageHeader
         title="Mis reservas"
         titleId="reservations-title"
-        lead="Lo que reservaste y lo que reservaron en tus franjas. Un estudiante puede cancelar sin consecuencias hasta 4 horas antes del inicio."
+        lead={`Lo que reservaste y lo que reservaron en tus franjas. Un estudiante puede cancelar sin consecuencias hasta ${CANCEL_WINDOW_HOURS} horas antes del inicio.`}
       />
 
       {current && sections.length > 1 && (
