@@ -32,57 +32,7 @@ Cerrada el 2026-09-27. ADR-007, ADR-008 y ADR-009 están confirmados y registrad
 
 ---
 
-#### ADR-010 · Granularidad de franjas y reglas de conflicto
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-03, FASE-04, RN-003, RN-004
-- **Contexto:** "prevenir conflictos de horario" no es implementable sin números concretos.
-
-| # | Pregunta | Propuesta a validar |
-|---|---|---|
-| 1 | Duración de una sesión de monitoría | 60 minutos fijos |
-| 2 | ¿Las franjas se dividen en bloques fijos o el monitor define rangos libres? | Bloques fijos de 60 min |
-| 3 | ¿Una franja admite un estudiante o varios (monitoría grupal)? | Capacidad configurable, por defecto 1 |
-| 4 | ¿Un estudiante puede tener varias reservas activas simultáneas? | Máximo 1 por asignatura y semana |
-| 5 | ¿Las franjas se repiten semanalmente o se publican fecha a fecha? | Plantilla semanal recurrente |
-| 6 | ¿Con cuánta anticipación mínima se puede reservar? | 2 horas antes del inicio |
-
-- **Pregunta:** ¿Se aprueban las seis propuestas de la tabla, o cuáles cambian?
-
----
-
-#### ADR-011 · Política de cancelación
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-04, HU-04, RN-005
-- **Contexto:** HU-04 exige cancelar "con suficiente anticipación". El documento base delega explícitamente esa definición al equipo.
-
-| # | Pregunta | Propuesta a validar |
-|---|---|---|
-| 1 | Ventana mínima de cancelación para el estudiante | 4 horas antes del inicio |
-| 2 | ¿Qué pasa si cancela fuera de la ventana? | Se registra como inasistencia en su historial |
-| 3 | ¿El monitor puede cancelar? ¿Con qué condiciones? | Sí, con justificación obligatoria y notificación |
-| 4 | ¿Hay penalización por inasistencias reiteradas? | No en la versión 1; se mide y se reporta |
-
-- **Pregunta:** ¿Se aprueban las cuatro propuestas de la tabla?
-
----
-
-#### ADR-012 · Repositorio de materiales: almacenamiento y límites
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-07, HU-08
-- **Contexto:** el documento base no define formatos, tamaños ni destino de almacenamiento.
-
-| # | Pregunta | Propuesta a validar |
-|---|---|---|
-| 1 | ¿Dónde se guardan los archivos? | Sistema de archivos local en v1, con abstracción de Django storages para migrar a S3 |
-| 2 | Formatos permitidos | `pdf`, `docx`, `pptx`, `png`, `jpg`, `zip` |
-| 3 | Tamaño máximo por archivo | 20 MB |
-| 4 | ¿Quién puede subir? ¿Quién puede ver? | Suben monitores y docentes; ven todos los usuarios autenticados |
-| 5 | ¿Se validan los archivos contra malware? | No en v1; se registra como deuda técnica |
-
-- **Pregunta:** ¿Se aprueban las cinco propuestas de la tabla?
+ADR-010 cerrado el 2026-10-11 y ADR-011 cerrado el 2026-10-19; ambos registrados en [§2](#2-decisiones-cerradas). Siguen abiertos los ADR de esta tanda que se listan a continuación.
 
 ---
 
@@ -142,6 +92,9 @@ Se registran aquí al confirmarse. Formato obligatorio:
 | ADR-007 | Mecanismo de autenticación: **Opción A** — JWT (`djangorestframework-simplejwt`) en cookies `HttpOnly` + `SameSite`, con protección CSRF y renovación mediante token de refresco. El SSO institucional queda como integración futura (ADR-015). | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, SAD §7, TRD §4.1 |
 | ADR-008 | Modelo de usuario y roles: **Opción A** — `User` personalizado con `email` como identificador de acceso y relación N:M con `Role` mediante `UserRole` (`unique(user, role)`). Un usuario puede tener varios roles simultáneos. `AUTH_USER_MODEL` se define en la primera migración. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1, §5 y §8, SAD §7, TRD §2, §4, §5 y §6 |
 | ADR-009 | Política de registro: (1) registro restringido al dominio `@unal.edu.co`; (2) el auto-registro asigna únicamente el rol Estudiante; (3) sin verificación por correo — la cuenta queda activa al registrarse y no se requiere SMTP en v1; (4) los roles Monitor, Docente y Administrador los asigna un administrador. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1 y §5, TRD §4.1 y §6 |
+| ADR-010 | Granularidad de franjas: (1) sesión de 60 min; (2) bloques fijos de 60 min; (3) capacidad configurable, por defecto 1; (4) máximo 1 reserva activa por estudiante, asignatura y semana; (5) plantilla semanal recurrente que genera franjas concretas; (6) anticipación mínima de 2 h para reservar. Capacidad, límite y anticipación son parámetros configurables; cada franja guarda inicio y fin explícitos. **Ampliación 2026-10-15:** la capacidad de cada franja o plantilla la elige el monitor (1 = individual, >1 = grupal); semántica de cupos R1–R4 en el detalle. | `[CONFIRMADO]` | Nicolás García Orozco (2026-10-11) · Alejandro Puerta Loaiza (ampliación) | 2026-10-11 · 2026-10-15 | FASE-03, FASE-04, DDD §4.3, §4.4, §5 y §6.1, SAD §4.4, TRD §3 |
+| ADR-011 | Política de cancelación: (1) el estudiante cancela con al menos 4 h de anticipación al inicio de la franja; (2) si cancela fuera de esa ventana, la reserva queda como inasistencia (`NO_SHOW`) en su historial y el cupo se libera igualmente; (3) el monitor puede cancelar una reserva con justificación obligatoria y queda registrado el autor (la notificación se documenta como evento de dominio, no se implementa en v1); (4) sin penalización por inasistencias reiteradas en v1: solo se miden y se reportan. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-10-19 | FASE-04, DDD §4.4, §5 (RN-005) y §6.2, TRD §3 (HU-04) |
+| ADR-012 | Repositorio de materiales: (1) disco local tras Django storages; (2) cualquier documento salvo ejecutables, con verificación del contenido real en formatos conocidos; (3) videos solo como enlace de YouTube embebido; (4) 20 MB por documento, configurable; (5) suben el monitor asignado y el docente de la asignatura en el período actual, ven todos los autenticados; (6) sin antivirus en v1, como deuda técnica. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-10-20 | FASE-07, DDD §4.7 y §5 (RN-008), TRD §3 (HU-08), SAD |
 
 ---
 
@@ -261,6 +214,74 @@ Se conserva el contexto original de cada ADR para trazabilidad.
 
 ---
 
+#### ADR-012 · Repositorio de materiales: almacenamiento y límites
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-10-20
+- **Decisión:** (1) los archivos se guardan en el disco del servidor (`MEDIA_ROOT`) detrás de la abstracción de *storages* de Django, para migrar a S3 sin tocar el código de negocio; (2) se acepta **cualquier formato de documento** salvo los ejecutables y los que el navegador puede ejecutar (`exe`, `msi`, `bat`, `cmd`, `sh`, `ps1`, `js`, `html`, `svg`, `jar`, `apk`…), y se verifica que el contenido real coincida con la extensión en los formatos conocidos; (3) **los videos no se suben**: se agregan como enlace de YouTube y se ven embebidos en la plataforma, separados de los documentos; (4) tamaño máximo por documento de 20 MB (`MATERIAL_MAX_FILE_BYTES`, configurable); (5) suben material el monitor asignado a la asignatura y el docente con un curso de la asignatura, ambos en el período actual; lo ven todos los usuarios autenticados; (6) sin antivirus en v1: se registra como deuda técnica.
+- **Bloqueaba:** FASE-07, HU-08, RN-008
+- **Contexto:** el documento base no define formatos, tamaños ni destino de almacenamiento.
+
+| # | Pregunta | Propuesta a validar | Respuesta |
+|---|---|---|---|
+| 1 | ¿Dónde se guardan los archivos? | Sistema de archivos local en v1, con abstracción de Django storages para migrar a S3 | Aprobada |
+| 2 | Formatos permitidos | `pdf`, `docx`, `pptx`, `png`, `jpg`, `zip` | Cualquier formato, bloqueando ejecutables |
+| 3 | Tamaño máximo por archivo | 20 MB | Aprobada; los videos van por YouTube |
+| 4 | ¿Quién puede subir? ¿Quién puede ver? | Suben monitores y docentes; ven todos los usuarios autenticados | Aprobada, limitada a la asignatura propia |
+| 5 | ¿Se validan los archivos contra malware? | No en v1; se registra como deuda técnica | Aprobada |
+
+- **Pregunta:** ¿Se aprueban las cinco propuestas de la tabla? — Sí, con los cambios de la columna «Respuesta» (2026-10-20).
+
+---
+
+#### ADR-011 · Política de cancelación
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-10-19
+- **Decisión:** se aprueban las cuatro propuestas de la tabla. La ventana es un parámetro configurable (`RESERVATION_CANCEL_WINDOW_HOURS = 4`). Una cancelación tardía del estudiante libera el cupo igual que una cancelación a tiempo, pero la reserva queda en `NO_SHOW` con autor y fecha. El monitor (o un administrador) cancela con justificación obligatoria, que se guarda junto al autor. El evento `ReservationCancelled` queda documentado (DDD §7) y no se implementa en v1.
+- **Bloqueaba:** FASE-04, HU-04, RN-005
+- **Contexto:** HU-04 exige cancelar "con suficiente anticipación". El documento base delega explícitamente esa definición al equipo.
+
+| # | Pregunta | Propuesta a validar |
+|---|---|---|
+| 1 | Ventana mínima de cancelación para el estudiante | 4 horas antes del inicio |
+| 2 | ¿Qué pasa si cancela fuera de la ventana? | Se registra como inasistencia en su historial |
+| 3 | ¿El monitor puede cancelar? ¿Con qué condiciones? | Sí, con justificación obligatoria y notificación |
+| 4 | ¿Hay penalización por inasistencias reiteradas? | No en la versión 1; se mide y se reporta |
+
+- **Pregunta:** ¿Se aprueban las cuatro propuestas de la tabla? — Sí, las cuatro (2026-10-19).
+
+---
+
+#### ADR-010 · Granularidad de franjas y reglas de conflicto
+
+- **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-10-11
+- **Decisión:** se aprueban las seis propuestas de la tabla, con tres condiciones de diseño para que las reglas 1, 3, 4 y 6 se puedan ajustar sin rehacer el modelo: (a) capacidad, límite de reservas y anticipación mínima son parámetros configurables; (b) cada franja guarda `starts_at` y `ends_at` explícitos, sin asumir la duración; (c) la plantilla semanal solo genera franjas concretas con fecha, que son las que se reservan.
+- **Bloqueaba:** FASE-03, FASE-04, RN-003, RN-004
+- **Contexto:** "prevenir conflictos de horario" no es implementable sin números concretos.
+
+| # | Pregunta | Propuesta a validar |
+|---|---|---|
+| 1 | Duración de una sesión de monitoría | 60 minutos fijos |
+| 2 | ¿Las franjas se dividen en bloques fijos o el monitor define rangos libres? | Bloques fijos de 60 min |
+| 3 | ¿Una franja admite un estudiante o varios (monitoría grupal)? | Capacidad configurable, por defecto 1 |
+| 4 | ¿Un estudiante puede tener varias reservas activas simultáneas? | Máximo 1 por asignatura y semana |
+| 5 | ¿Las franjas se repiten semanalmente o se publican fecha a fecha? | Plantilla semanal recurrente |
+| 6 | ¿Con cuánta anticipación mínima se puede reservar? | 2 horas antes del inicio |
+
+- **Pregunta:** ¿Se aprueban las seis propuestas de la tabla, o cuáles cambian?
+- **Ampliación de la regla 3:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-10-15. Las monitorías grupales están permitidas y la decisión es del monitor: elige la capacidad (número de cupos) de cada franja o plantilla semanal; capacidad 1 es una sesión individual y mayor que 1, una sesión grupal. Semántica acordada de cupos:
+
+| # | Regla |
+|---|---|
+| R1 | Una franja sigue `AVAILABLE` (visible en la búsqueda y reservable) mientras las reservas `CONFIRMED` sean menos que su capacidad; pasa a `RESERVED` (llena) solo cuando las reservas `CONFIRMED` igualan la capacidad. Si se cancela una reserva de una franja llena, vuelve de `RESERVED` a `AVAILABLE`. |
+| R2 | El monitor no puede retirar una franja, mover su hora de inicio ni desactivar las franjas futuras de una plantilla mientras la franja tenga al menos una reserva `CONFIRMED`: CA-HU05-4 y RN-003.4 se aplican por conteo de reservas, no solo por el estado `RESERVED`. Tampoco puede bajar la capacidad por debajo del número de reservas `CONFIRMED`. |
+| R3 | Un estudiante tiene como máximo una reserva por franja. Las reglas vigentes ya lo implican y se conservan: RN-004.4 (sin reservas `CONFIRMED` solapadas) y RN-004.7 (una reserva activa por asignatura y semana). |
+| R4 | La búsqueda expone los cupos restantes (capacidad − reservas `CONFIRMED`). Se implementa en FASE-04, cuando exista `Reservation`. |
+
+  Las validaciones de FASE-03 (`update_slot`, `cancel_slot`, `deactivate_template`) comprueban solo el estado, lo cual es correcto mientras no exista `Reservation`; FASE-04 las cambia a un conteo de reservas `CONFIRMED` bajo bloqueo de fila.
+- **Costo de revertir:** bajo para 1, 3, 4 y 6 gracias a las condiciones (a) y (b); alto para 2 (algoritmo de solapamiento y pantalla del monitor) y moderado para 5 (gracias a la condición (c)). Cualquier cambio es más barato antes de FASE-04, cuando aún no hay reservas guardadas.
+
+---
+
 #### ADR-008 · Modelo de usuario y representación de roles
 
 - **Estado:** `[CONFIRMADO]` — Nicolás García Orozco, 2026-09-27
@@ -323,13 +344,13 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-00 | Ninguno (ADR-001 a ADR-006 confirmados el 2026-09-25) |
 | FASE-01 | Ninguno (ADR-007 a ADR-009 confirmados el 2026-09-27) |
 | FASE-02 | Ninguno (ADR-008 confirmado el 2026-09-27) |
-| FASE-03 | ADR-010 |
-| FASE-04 | ADR-010, ADR-011 |
-| FASE-05 | ADR-010 |
+| FASE-03 | Ninguno (ADR-010 confirmado el 2026-10-11) |
+| FASE-04 | Ninguno (ADR-010 confirmado el 2026-10-11 y ADR-011 el 2026-10-19) |
+| FASE-05 | Ninguno por ADR (ADR-010 confirmado) |
 | FASE-06 | ADR-013 (escala de calificación) |
-| FASE-07 | ADR-012 |
+| FASE-07 | Ninguno (ADR-012 confirmado el 2026-10-20) |
 | FASE-08 | Ninguno por ADR (ADR-008 confirmado); sigue abierta la definición de RF-083 |
 | FASE-09 | ADR-013 |
 | FASE-10 | ADR-014, ADR-015 |
 
-> **6 decisiones abiertas. 9 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**
+> **3 decisiones abiertas. 12 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**

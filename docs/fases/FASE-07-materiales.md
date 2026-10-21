@@ -5,8 +5,8 @@
 | Sprint | 8 (semanas 17–18) |
 | Historias | HU-08 Repositorio de material académico (8 pts) |
 | Puntos | 8 |
-| Estado | **Bloqueada** |
-| ADR bloqueantes | ADR-012 |
+| Estado | **En curso** — ADR-012 cerrado el 2026-10-20; backend y frontend implementados, en revisión |
+| ADR bloqueantes | Ninguno (ADR-012 confirmado) |
 | Requisitos | RF-070 a RF-073 |
 | Prioridad | 3 — **primera candidata a recorte si la velocidad real queda por debajo de lo estimado** |
 
@@ -22,8 +22,8 @@ Que monitores y docentes suban material de apoyo asociado a una asignatura y que
 
 ## 2. Gate de entrada
 
-- [ ] FASE-02 cerrada (necesita asignaturas)
-- [ ] **ADR-012 cerrado**: destino de almacenamiento, formatos permitidos, tamaño máximo, permisos, política de análisis de archivos
+- [ ] FASE-02 cerrada (necesita asignaturas) — *el código está integrado; falta la aprobación del PR #16*
+- [x] **ADR-012 cerrado** (2026-10-20): disco local tras Django storages; cualquier documento salvo ejecutables; videos como enlace de YouTube; 20 MB; suben el monitor asignado y el docente de la asignatura; sin antivirus en v1
 
 > Esta fase es independiente del núcleo de agendamiento: solo depende de FASE-02. Puede adelantarse si un sprint queda con capacidad libre, o recortarse sin afectar el producto mínimo.
 
@@ -40,6 +40,7 @@ Que monitores y docentes suban material de apoyo asociado a una asignatura y que
 - Listado y descarga filtrando por asignatura.
 - Eliminación por el autor o un administrador.
 - Pantallas de carga y de consulta del repositorio.
+- **Videos como enlace de YouTube** (ADR-012): se reproducen embebidos (`youtube-nocookie.com`) en una pestaña aparte de los documentos.
 
 ### No entra
 
@@ -51,16 +52,17 @@ Que monitores y docentes suban material de apoyo asociado a una asignatura y que
 
 ---
 
-## 4. Contratos propuestos · `[PROPUESTA]`
+## 4. Contratos · `[CONFIRMADO]` ADR-012
 
 | Método | Ruta | Rol | Respuestas |
 |---|---|---|---|
-| `POST` | `/api/v1/materials/` | monitor o docente | `201` · `400` formato · `413` tamaño |
-| `GET` | `/api/v1/materials/?subject=` | autenticado | `200` paginado |
-| `GET` | `/api/v1/materials/{id}/download/` | autenticado | `200` con `Content-Disposition` |
-| `DELETE` | `/api/v1/materials/{id}/` | autor o admin | `204` · `403` |
+| `POST` | `/api/v1/materials/` | monitor asignado o docente de la asignatura (período actual) | `201` · `400` formato · `403` · `413` tamaño |
+| `GET` | `/api/v1/materials/?subject=&kind=` | autenticado | `200` paginado, más reciente primero |
+| `GET` | `/api/v1/materials/subjects/` | autenticado | `200` asignaturas donde puede subir, con `roles` y conteos |
+| `GET` | `/api/v1/materials/{id}/download/` | autenticado | `200` adjunto con `Content-Disposition`, `nosniff` y `CSP: sandbox` · `404` si es video o fue retirado |
+| `DELETE` | `/api/v1/materials/{id}/` | autor o admin | `204` · `403` · `404` |
 
-Carga con `multipart/form-data`: `subject_id`, `title`, `description`, `file`.
+Documento con `multipart/form-data`: `subject_id`, `kind=DOCUMENT`, `title`, `description`, `file`. Video con JSON: `subject_id`, `kind=VIDEO`, `title`, `description`, `video_url` (enlace de YouTube).
 
 ---
 
@@ -102,15 +104,15 @@ ruff check . && mypy .
 
 ## 8. Definition of Done
 
-- [ ] ADR-012 cerrado y documentado.
-- [ ] Formato y tamaño validados **en el servidor**, no solo en el navegador.
-- [ ] Tipo de contenido real verificado, no solo la extensión.
-- [ ] Nombres de archivo sanitizados; probado con nombres maliciosos.
-- [ ] Descarga solo para usuarios autenticados.
-- [ ] Almacenamiento tras la abstracción de storages, sin rutas absolutas en el código.
-- [ ] Los 5 criterios de aceptación con prueba automatizada.
-- [ ] Ausencia de análisis antivirus registrada como deuda técnica, si aplica.
-- [ ] Esquema OpenAPI y tipos del frontend actualizados.
+- [x] ADR-012 cerrado y documentado. *(DECISIONES-ABIERTAS, DDD §4.7 y RN-008, TRD HU-08, SAD)*
+- [x] Formato y tamaño validados **en el servidor**, no solo en el navegador. *(`apps/materials/domain/rules.py`; `test_t_07_2_*`, `test_t_07_3_*` en `tests/api/test_materials_api.py`)*
+- [x] Tipo de contenido real verificado, no solo la extensión. *(firmas de ejecutables y de PDF, Office, imágenes y ZIP; `test_t_07_4_*`)*
+- [x] Nombres de archivo sanitizados; probado con nombres maliciosos. *(el nombre en disco es un UUID; `test_t_07_5_*`)*
+- [x] Descarga solo para usuarios autenticados. *(`test_t_07_9_anonymous_download_is_rejected`)*
+- [x] Almacenamiento tras la abstracción de storages, sin rutas absolutas en el código. *(`FileField` + `MEDIA_ROOT` por entorno)*
+- [x] Los 5 criterios de aceptación con prueba automatizada. *(CA-HU08-1 a CA-HU08-5 nombrados en las pruebas)*
+- [ ] Ausencia de análisis antivirus registrada como deuda técnica, si aplica. *(pendiente crear el ticket en Jira)*
+- [x] Esquema OpenAPI y tipos del frontend actualizados. *(`spectacular --validate --fail-on-warn`; `npm run gen:api`)*
 - [ ] CI en verde; PRs aprobadas.
 
 ---

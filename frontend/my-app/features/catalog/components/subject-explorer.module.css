@@ -1,0 +1,135 @@
+.explorer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.term {
+  min-width: 11rem;
+}
+
+/* The search leads the page; the quick filters sit right under it as one block. */
+.finder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.search {
+  max-width: 46rem;
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.credits {
+  flex: 0 1 16rem;
+}
+
+/* One line of department chips that scrolls sideways instead of wrapping into a wall. */
+.departments {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline: calc(var(--space-2) * -1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: var(--space-2);
+  scroll-snap-type: x proximity;
+}
+
+.snap {
+  scroll-snap-align: start;
+}
+
+.sectionTitle {
+  margin-bottom: var(--space-3);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.pinned {
+  min-width: 0;
+}
+
+.pinnedList {
+  display: grid;
+  grid-auto-columns: minmax(15rem, 17rem);
+  grid-auto-flow: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+
+.pinnedList > li {
+  scroll-snap-align: start;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.resultsHeader {
+  min-height: 1.25rem;
+}
+
+.status {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-3);
+  transition: opacity var(--duration);
+}
+
+/* New filters loading over the previous results: they stay legible but read as stale. */
+.grid[data-refreshing] {
+  opacity: 0.55;
+}
+
+.empty {
+  padding: var(--space-7) var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 1px;
+}
+
+@media (max-width: 599.98px) {
+  .credits {
+    flex: 1 1 100%;
+  }
+
+  .pinnedList {
+    grid-auto-columns: minmax(15rem, 85%);
+  }
+
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

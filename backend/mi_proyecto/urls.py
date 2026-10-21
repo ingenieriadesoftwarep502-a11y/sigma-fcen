@@ -1,13 +1,24 @@
 """Root URL configuration. Every API route lives under /api/v1/ (RNF-MAN-002)."""
 
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import URLPattern, URLResolver, include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from apps.accounts.urls import auth_patterns, users_patterns
 from mi_proyecto.health import HealthView
 
-api_v1_patterns = [
+api_v1_patterns: list[URLPattern | URLResolver] = [
     path("health/", HealthView.as_view(), name="health"),
+    path("auth/", include(auth_patterns)),
+    path("users/", include(users_patterns)),
+    # Academic catalog (FASE-02): departments, subjects, terms, courses, assignments.
+    path("", include("apps.academics.urls")),
+    # Availability (FASE-03): slots, weekly templates and the student search.
+    path("", include("apps.availability.urls")),
+    # Reservations (FASE-04): reserve, list and cancel.
+    path("", include("apps.reservations.urls")),
+    # Study material (FASE-07): documents and YouTube videos of each subject.
+    path("", include("apps.materials.urls")),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]

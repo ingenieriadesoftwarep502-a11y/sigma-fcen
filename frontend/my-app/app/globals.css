@@ -1,15 +1,102 @@
 @import "tailwindcss";
 
+/*
+ * Global tokens only. Component styles live next to their component as CSS Modules,
+ * so nothing here is specific to one screen.
+ */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Brand accent, drawn from the green of the UNAL campus. */
+  --accent: #b9dc5a;
+  --accent-ink: #132005;
+  --accent-soft: rgb(185 220 90 / 0.14);
+  --accent-line: rgb(185 220 90 / 0.45);
+  /* Soft accent shadow under primary buttons, and its hover step. */
+  --accent-glow: rgb(185 220 90 / 0.65);
+  --accent-glow-strong: rgb(185 220 90 / 0.75);
+  /* Halo around a focused text control, drawn in addition to its accent border. */
+  --focus-ring: rgb(185 220 90 / 0.22);
+  --success-soft: rgb(185 220 90 / 0.16);
+  --text-on-success: #eef7d6;
+  --ink: #070a08;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /*
+   * Signed-in surfaces (dark, green-tinted neutrals). surface-0 is the page, surface-1 the
+   * second neutral layer for the sidebar and toolbars, surface-2 anything raised over them.
+   */
+  --surface-0: var(--ink);
+  --surface-1: #0d110e;
+  --surface-2: #131914;
+  --surface-hover: rgb(255 255 255 / 0.045);
+  --surface-selected: rgb(185 220 90 / 0.08);
+  --scrim: rgb(2 4 3 / 0.66);
+
+  --border-subtle: rgb(255 255 255 / 0.07);
+  --border: rgb(255 255 255 / 0.12);
+  --border-strong: rgb(255 255 255 / 0.26);
+  /* Resting edge of inputs and selects: >= 3:1 against surface-0 and surface-1 (WCAG 1.4.11). */
+  --border-control: rgb(255 255 255 / 0.36);
+  --control-hover: rgb(127 127 127 / 0.12);
+  /* Highlight that sweeps across loading placeholders. */
+  --shimmer: rgb(255 255 255 / 0.04);
+
+  /* Text on surface-0/1/2: primary 17:1, muted 8:1, subtle 5.3:1 (all AA for body text). */
+  --text: #f1f4ef;
+  --text-muted: #a9b1a6;
+  --text-subtle: #858d82;
+
+  --danger: #fda4af;
+  --danger-ink: #ffe4e8;
+  --danger-soft: rgb(244 63 94 / 0.16);
+  --danger-line: rgb(253 164 175 / 0.45);
+  --danger-fill: rgb(244 63 94 / 0.22);
+  --danger-fill-hover: rgb(244 63 94 / 0.34);
+
+  /* Something needs attention but nothing failed, e.g. a course without a teacher. */
+  --warning: #f2c14e;
+  --warning-ink: #fff3d6;
+  --warning-soft: rgb(242 193 78 / 0.12);
+  --warning-line: rgb(242 193 78 / 0.42);
+
+  /* One hue per role, validated as a categorical set on surface-1 (CVD-safe, >= 3:1). */
+  --role-student: #3987e5;
+  --role-monitor: #c98500;
+  --role-teacher: #9085e9;
+  --role-admin: #d55181;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+  --radius-full: 999px;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  --duration-fast: 150ms;
+  --duration: 220ms;
+
+  --shadow-raised: 0 24px 48px -16px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-instrument-serif);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,8 +106,39 @@
   }
 }
 
+html {
+  /* Reserve the scrollbar's space so locking scroll under a dialog does not shift the page. */
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Browser surfaces carry the palette too: scrollbars on the dark signed-in frame. */
+* {
+  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
+  scrollbar-width: thin;
+}
+
+/*
+ * Reduced motion: a blanket safety net. A component that authors its own reduced-motion
+ * alternative (a short fade instead of a slide) declares it with !important on its class,
+ * which outranks this universal selector.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

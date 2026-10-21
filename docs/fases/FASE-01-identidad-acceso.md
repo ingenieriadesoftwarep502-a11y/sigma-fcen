@@ -5,7 +5,7 @@
 | Sprints | 1 y 2 (semanas 3–6) |
 | Historias | HU-01 Registro (5 pts) · HU-11 Gestión de usuarios y roles (8 pts) |
 | Puntos | 13 |
-| Estado | **Lista para iniciar** — G0 y G1 superados (ADR, contratos y criterios confirmados); FASE-00 cerrada (2026-09-27) |
+| Estado | **En curso** — T-01.1 a T-01.16 implementadas (2026-09-28); pendiente el cierre de la DoD (documentación, aprobación del PR y deuda de T-01.12 en Jira) |
 | ADR bloqueantes | Ninguno (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27) |
 | Requisitos | RF-010 a RF-014, RF-020, RF-021, RF-025 |
 
@@ -120,15 +120,18 @@ npm test && npm run type-check
 ## 8. Definition of Done
 
 - [x] ADR-007, ADR-008 y ADR-009 cerrados antes de la primera migración. *(2026-09-27)*
-- [ ] `AUTH_USER_MODEL` definido en la migración inicial.
-- [ ] Los 10 criterios de aceptación tienen prueba automatizada.
-- [ ] Cada endpoint tiene prueba de `401` sin autenticación y `403` por rol incorrecto.
-- [ ] Cobertura de `apps/accounts` por encima del umbral.
-- [ ] Ninguna contraseña ni credencial en los registros de log.
-- [ ] Esquema OpenAPI actualizado con los endpoints de esta fase.
-- [ ] Tipos del frontend generados desde el esquema.
-- [ ] Documentación actualizada: TRD (estados), DDD (modelo final), SAD (permisos).
-- [ ] PRs revisadas y aprobadas; CI en verde.
+- [x] `AUTH_USER_MODEL` definido en la migración inicial. *(`accounts/0001_initial` crea `User`; 2026-09-28)*
+- [x] Los 10 criterios de aceptación tienen prueba automatizada. *(CA-HU01-1 a 5 y CA-HU11-1 a 5 referenciados en `backend/tests`; 2026-09-28)*
+- [x] Cada endpoint tiene prueba de `401` sin autenticación y `403` por rol incorrecto. *(`test_user_admin.py`, `test_user_deactivation.py`, `test_role_permissions.py`; 2026-09-28)*
+- [x] Cobertura de `apps/accounts` por encima del umbral. *(98 % frente a 80 %; 2026-09-28)*
+- [x] Ninguna contraseña ni credencial en los registros de log. *(`test_auth_session.py` con `caplog`; 2026-09-28)*
+- [x] Esquema OpenAPI actualizado con los endpoints de esta fase. *(`backend/schema/openapi.yaml` con prueba de vigencia; 2026-09-28)*
+- [x] Tipos del frontend generados desde el esquema. *(`frontend/my-app/types/api.d.ts`; 2026-09-28)*
+- [x] Documentación actualizada: TRD (estados), DDD (modelo final), SAD (permisos). *(TRD, DDD y SAD actualizados; 2026-09-29)*
+- [ ] PRs revisadas y aprobadas; CI en verde. *(CI en verde en el PR #15; falta la revisión y aprobación)*
+- [x] T-01.16 — administración de usuarios en el frontend. *(`/admin/usuarios`, commit `1730d46`; 2026-09-28)*
+- [ ] Deuda técnica de T-01.12 (impacto sobre reservas futuras hasta FASE-04) registrada en Jira.
+- [x] Comprobación manual: estudiante en `/api/v1/users/` recibe `403` y sin sesión `401`. *(2026-09-28)*
 
 ---
 

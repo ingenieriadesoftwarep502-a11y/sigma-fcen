@@ -1,0 +1,442 @@
+/*
+ * The repository of a subject. Each family of documents carries one hue on its badge, so a
+ * long list reads at a glance (PDF, presentations, spreadsheets…); everything else stays in
+ * the app's green-tinted neutrals.
+ */
+
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.doc {
+  --family: var(--text-muted);
+}
+
+.doc[data-family="pdf"] {
+  --family: #f87171;
+}
+
+.doc[data-family="text"] {
+  --family: #60a5fa;
+}
+
+.doc[data-family="slides"] {
+  --family: #fb923c;
+}
+
+.doc[data-family="sheet"] {
+  --family: #4ade80;
+}
+
+.doc[data-family="image"] {
+  --family: #c4a5fd;
+}
+
+.doc[data-family="code"] {
+  --family: var(--accent);
+}
+
+.doc[data-family="archive"] {
+  --family: #f2c14e;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.summary {
+  font-size: 0.875rem;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.uploadActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+/* --- Documents ------------------------------------------------------------------------- */
+
+.docs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.docs > li,
+.videos > li {
+  animation: enter 480ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+.doc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  transition:
+    border-color var(--duration) var(--ease-out-expo),
+    background var(--duration) var(--ease-out-expo);
+}
+
+.doc:hover {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface-1) 90%, var(--text) 3%);
+}
+
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  width: 3rem;
+  height: 3.25rem;
+  border: 1px solid color-mix(in srgb, var(--family) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--family) 12%, transparent);
+  color: var(--family);
+}
+
+.badgeExt {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.docBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.fileName {
+  overflow: hidden;
+  max-width: 22rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.byline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+}
+
+.itemError {
+  font-size: 0.8125rem;
+  color: var(--danger);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.iconButton {
+  padding-inline: var(--space-2);
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.confirmText {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.confirmError {
+  flex-basis: 100%;
+  font-size: 0.8125rem;
+  color: var(--danger);
+}
+
+.docSkeleton,
+.videoSkeleton {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, var(--surface-1) 0%, var(--shimmer) 50%, var(--surface-1) 100%)
+    0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.docSkeleton {
+  height: 4.5rem;
+}
+
+.videoSkeleton {
+  aspect-ratio: 16 / 12;
+}
+
+/* --- Videos ---------------------------------------------------------------------------- */
+
+.videos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-4);
+}
+
+.video {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+  transition: border-color var(--duration) var(--ease-out-expo);
+}
+
+.video:hover {
+  border-color: var(--border);
+}
+
+.screen {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.player,
+.poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.poster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface-2);
+  background-position: center;
+  background-size: cover;
+  cursor: pointer;
+}
+
+/* A soft vignette keeps the play button legible over any frame. */
+.poster::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 0.45));
+  transition: background var(--duration);
+}
+
+.play {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding-left: 0.1875rem;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.7);
+  transition: transform var(--duration) var(--ease-out-expo);
+}
+
+.poster:hover .play {
+  transform: scale(1.08);
+}
+
+.poster:hover::before {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.1) 30%, rgb(0 0 0 / 0.5));
+}
+
+.poster:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.videoBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+}
+
+.videoFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.external {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  transition:
+    background var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.external:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.external:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs > li,
+  .videos > li {
+    animation: none;
+  }
+
+  .poster:hover .play {
+    transform: none;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .uploadActions {
+    width: 100%;
+  }
+
+  .uploadActions > * {
+    flex: 1;
+  }
+
+  .doc {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+
+  .doc .actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .fileName {
+    max-width: 12rem;
+  }
+}

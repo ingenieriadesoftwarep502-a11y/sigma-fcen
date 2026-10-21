@@ -1,0 +1,148 @@
+import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { SessionProvider } from "@/features/auth/session/session-provider";
+import AppNavigation from "@/features/navigation/components/app-navigation";
+import { getCurrentUser, type RoleCode } from "@/lib/auth";
+
+let pathname = "/inicio";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => pathname,
+}));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth")>()),
+  getCurrentUser: vi.fn(),
+}));
+
+const getCurrentUserMock = vi.mocked(getCurrentUser);
+
+async function renderFor(roles: RoleCode[]) {
+  getCurrentUserMock.mockResolvedValue({
+    id: "3f0c2b1e-0000-4000-8000-000000000001",
+    email: "ana.perez@unal.edu.co",
+    first_name: "Ana",
+    last_name: "Pérez",
+    roles,
+  });
+  render(
+    <SessionProvider>
+      <AppNavigation />
+    </SessionProvider>,
+  );
+  await screen.findByRole("link", { name: "Inicio" });
+}
+
+describe("AppNavigation", () => {
+  afterEach(() => {
+    pathname = "/inicio";
+    vi.clearAllMocks();
+  });
+
+  it("links everyone to the home screen", async () => {
+    await renderFor(["STUDENT"]);
+
+    expect(screen.getByRole("link", { name: "Inicio" })).toHaveAttribute("href", "/inicio");
+  });
+
+  it("links administrators to user administration", async () => {
+    await renderFor(["TEACHER", "ADMIN"]);
+
+    expect(screen.getByRole("link", { name: "Usuarios" })).toHaveAttribute(
+      "href",
+      "/admin/usuarios",
+    );
+  });
+
+  it("offers no such link to anyone else", async () => {
+    await renderFor(["STUDENT", "MONITOR", "TEACHER"]);
+
+    expect(screen.queryByRole("link", { name: "Usuarios" })).not.toBeInTheDocument();
+  });
+
+  it("links a student who is also a monitor to the explorer and their monitoring", async () => {
+    await renderFor(["STUDENT", "MONITOR"]);
+
+    expect(screen.getByRole("link", { name: "Asignaturas" })).toHaveAttribute(
+      "href",
+      "/asignaturas",
+    );
+    expect(screen.getByRole("link", { name: "Mis monitorías" })).toHaveAttribute(
+      "href",
+      "/mis-monitorias",
+    );
+    expect(screen.queryByRole("link", { name: "Mis cursos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Catálogo" })).not.toBeInTheDocument();
+  });
+
+  it("links monitors only to their own monitoring, never to the whole catalog", async () => {
+    await renderFor(["MONITOR"]);
+
+    expect(screen.getByRole("link", { name: "Mis monitorías" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Asignaturas" })).not.toBeInTheDocument();
+  });
+
+  it("links students to the explorer but not to monitoring", async () => {
+    await renderFor(["STUDENT"]);
+
+    expect(screen.getByRole("link", { name: "Asignaturas" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mis monitorías" })).not.toBeInTheDocument();
+  });
+
+  it("folds the slot search into the subjects and availability into monitoring", async () => {
+    await renderFor(["STUDENT", "MONITOR"]);
+
+    expect(screen.queryByRole("link", { name: "Buscar monitorías" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mi disponibilidad" })).not.toBeInTheDocument();
+  });
+
+  it("links students and monitors to their reservations (FASE-04)", async () => {
+    await renderFor(["STUDENT"]);
+    expect(screen.getByRole("link", { name: "Mis reservas" })).toHaveAttribute(
+      "href",
+      "/mis-reservas",
+    );
+  });
+
+  it("offers no reservations link to teachers or administrators", async () => {
+    await renderFor(["TEACHER", "ADMIN"]);
+
+    expect(screen.queryByRole("link", { name: "Mis reservas" })).not.toBeInTheDocument();
+  });
+
+  it("links monitors and teachers to the material they publish (FASE-07)", async () => {
+    await renderFor(["MONITOR"]);
+    expect(screen.getByRole("link", { name: "Material" })).toHaveAttribute("href", "/material");
+  });
+
+  it("offers no material link to students, who find it inside each subject", async () => {
+    await renderFor(["STUDENT"]);
+
+    expect(screen.queryByRole("link", { name: "Material" })).not.toBeInTheDocument();
+  });
+
+  it("links teachers to their courses", async () => {
+    await renderFor(["TEACHER"]);
+
+    expect(screen.getByRole("link", { name: "Mis cursos" })).toHaveAttribute("href", "/mis-cursos");
+    expect(screen.queryByRole("link", { name: "Asignaturas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Mis monitorías" })).not.toBeInTheDocument();
+  });
+
+  it("links administrators to the catalog", async () => {
+    await renderFor(["ADMIN"]);
+
+    expect(screen.getByRole("link", { name: "Catálogo" })).toHaveAttribute(
+      "href",
+      "/admin/catalogo",
+    );
+  });
+
+  it("marks the section in view as the current page", async () => {
+    pathname = "/admin/usuarios";
+    await renderFor(["ADMIN"]);
+
+    expect(screen.getByRole("link", { name: "Usuarios" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Inicio" })).not.toHaveAttribute("aria-current");
+  });
+});

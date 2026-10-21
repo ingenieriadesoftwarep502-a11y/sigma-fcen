@@ -25,12 +25,12 @@
 |---|---|---|---:|---|---|
 | [00](FASE-00-fundaciones.md) | Fundaciones técnicas | — | 0 | 001, 002, 003, 004, 005, 006 (confirmados) | Cerrada |
 | [01](FASE-01-identidad-acceso.md) | Identidad y acceso | HU-01, HU-11 | 13 | 007, 008, 009 (confirmados) | Lista para iniciar |
-| [02](FASE-02-catalogo-academico.md) | Catálogo académico | HU-11 (parcial) | 5 | 008 (confirmado) | Pendiente de FASE-01 |
+| [02](FASE-02-catalogo-academico.md) | Catálogo académico | HU-11 (parcial) | 5 | 008 (confirmado) | En curso |
 | [03](FASE-03-disponibilidad.md) | Disponibilidad y búsqueda | HU-05, HU-02 | 10 | 010 | Bloqueada |
 | [04](FASE-04-reservas.md) | Reservas y cancelación | HU-03, HU-04 | 11 | 010, 011 | Bloqueada |
 | [05](FASE-05-sesiones.md) | Sesiones e historial | HU-06, HU-12 | 11 | 010 | Bloqueada |
 | [06](FASE-06-evaluaciones.md) | Evaluación del servicio | HU-07 | 5 | 013 | Bloqueada |
-| [07](FASE-07-materiales.md) | Repositorio académico | HU-08 | 8 | 012 | Bloqueada |
+| [07](FASE-07-materiales.md) | Repositorio académico | HU-08 | 8 | 012 (confirmado) | En curso |
 | [08](FASE-08-seguimiento-docente.md) | Seguimiento docente | HU-09 | 8 | 008 | Bloqueada |
 | [09](FASE-09-metricas.md) | Métricas administrativas | HU-10 | 13 | 013 | Bloqueada |
 | [10](FASE-10-hardening-despliegue.md) | Endurecimiento y despliegue | — | 0 | 014, 015 | Bloqueada |
@@ -174,12 +174,12 @@ Se actualiza al cerrar cada fase.
 |---|---|---|---|---|
 | FASE-00 | Abierto (ADR 001–006) | Completa | Completa | 2026-09-27 |
 | FASE-01 | Abierto (ADR 007–009, contratos y CA confirmados) | No iniciada | — | — |
-| FASE-02 | Bloqueado | No iniciada | — | — |
+| FASE-02 | Abierto (ADR-008, contratos y formato de período confirmados el 2026-09-29) | En curso | — | — |
 | FASE-03 | Bloqueado | No iniciada | — | — |
 | FASE-04 | Bloqueado | No iniciada | — | — |
 | FASE-05 | Bloqueado | No iniciada | — | — |
 | FASE-06 | Bloqueado | No iniciada | — | — |
-| FASE-07 | Bloqueado | No iniciada | — | — |
+| FASE-07 | Abierto (ADR-012 confirmado el 2026-10-20) | En curso — adelantada por capacidad libre | — | — |
 | FASE-08 | Bloqueado | No iniciada | — | — |
 | FASE-09 | Bloqueado | No iniciada | — | — |
 | FASE-10 | Bloqueado | No iniciada | — | — |

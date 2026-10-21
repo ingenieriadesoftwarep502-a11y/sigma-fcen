@@ -1,18 +1,15 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import Home from "@/app/page";
+import Root from "@/app/page";
 
-describe("Home page", () => {
-  it("shows the product name as the main heading", () => {
-    render(<Home />);
+const redirect = vi.fn();
 
-    expect(screen.getByRole("heading", { level: 1, name: "SIGMA-FCEN" })).toBeInTheDocument();
-  });
+vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url) }));
 
-  it("describes the purpose of the system in Spanish", () => {
-    render(<Home />);
+describe("Root page", () => {
+  it("sends everyone to the signed-in home, which asks guests to log in", () => {
+    Root();
 
-    expect(screen.getByText(/gestión de monitorías académicas/i)).toBeInTheDocument();
+    expect(redirect).toHaveBeenCalledWith("/inicio");
   });
 });

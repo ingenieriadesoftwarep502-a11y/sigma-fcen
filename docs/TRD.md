@@ -76,28 +76,28 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 
 ## 4. Requisitos funcionales
 
-**Convención de estado:** `[CONFIRMADO]` habilita implementación. `[PROPUESTA]` y `[PENDIENTE]` la bloquean.
+**Convención de estado:** `[CONFIRMADO]` habilita implementación. `[PROPUESTA]` y `[PENDIENTE]` la bloquean. `[IMPLEMENTADO]` indica un requisito confirmado, construido y verificado con pruebas automatizadas en la fase indicada; `[PARCIAL]` indica que parte del comportamiento depende de una fase posterior y queda registrado como deuda técnica.
 
 ### 4.1 Identidad y acceso (RF-01x)
 
 | ID | Requisito | Prioridad | Estado | Bloqueado por |
 |---|---|---|---|---|
-| RF-010 | El sistema debe permitir el registro de usuarios con datos institucionales | Alta | `[CONFIRMADO]` | — (ADR-009 cerrado) |
-| RF-011 | El sistema debe permitir iniciar y cerrar sesión de forma segura | Alta | `[CONFIRMADO]` | — (ADR-007 cerrado) |
-| RF-012 | El sistema debe restringir cada funcionalidad según el rol del usuario | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
+| RF-010 | El sistema debe permitir el registro de usuarios con datos institucionales | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-009 cerrado) |
+| RF-011 | El sistema debe permitir iniciar y cerrar sesión de forma segura | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-007 cerrado) |
+| RF-012 | El sistema debe restringir cada funcionalidad según el rol del usuario | Alta | `[IMPLEMENTADO]` FASE-01 — permisos por rol disponibles; cada fase posterior los aplica a sus endpoints | — (ADR-008 cerrado) |
 | RF-013 | El sistema debe permitir recuperar la contraseña | Media | `[PENDIENTE]` | Sin SMTP en v1 (ADR-009); se traslada a FASE-10 |
-| RF-014 | El sistema debe invalidar el acceso de las cuentas desactivadas | Alta | `[CONFIRMADO]` | — (ADR-007 cerrado) |
+| RF-014 | El sistema debe invalidar el acceso de las cuentas desactivadas | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-007 cerrado) |
 
 ### 4.2 Usuarios y asignaturas (RF-02x)
 
 | ID | Requisito | Prioridad | Estado | Bloqueado por |
 |---|---|---|---|---|
-| RF-020 | El administrador debe poder crear, editar, activar y desactivar usuarios | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
-| RF-021 | El administrador debe poder asignar y retirar roles | Alta | `[CONFIRMADO]` | — (ADR-008 cerrado) |
+| RF-020 | El administrador debe poder crear, editar, activar y desactivar usuarios | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-008 cerrado) |
+| RF-021 | El administrador debe poder asignar y retirar roles | Alta | `[IMPLEMENTADO]` FASE-01 | — (ADR-008 cerrado) |
 | RF-022 | El administrador debe poder administrar el catálogo de asignaturas | Alta | `[PROPUESTA]` | — |
 | RF-023 | El administrador debe poder asociar monitores a asignaturas | Alta | `[PROPUESTA]` | — (ADR-009 cerrado) |
 | RF-024 | El administrador debe poder asociar docentes a cursos | Media | `[PROPUESTA]` | — |
-| RF-025 | Las cuentas nunca se eliminan físicamente; solo se desactivan | Alta | `[CONFIRMADO]` | — |
+| RF-025 | Las cuentas nunca se eliminan físicamente; solo se desactivan | Alta | `[IMPLEMENTADO]` FASE-01 | — |
 
 ### 4.3 Disponibilidad (RF-03x)
 
@@ -106,7 +106,7 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 | RF-030 | El monitor debe poder registrar sus franjas de disponibilidad | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-031 | El monitor debe poder editar o eliminar franjas sin reservas activas | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-032 | El sistema debe impedir franjas solapadas del mismo monitor | Alta | `[PROPUESTA]` | ADR-010 |
-| RF-033 | El sistema debe soportar franjas recurrentes semanales | Media | `[PENDIENTE]` | ADR-010 |
+| RF-033 | El sistema debe soportar franjas recurrentes semanales | Media | `[CONFIRMADO]` | ADR-010 |
 | RF-034 | El estudiante debe poder consultar franjas disponibles filtrando por asignatura, horario y monitor | Alta | `[PROPUESTA]` | ADR-010 |
 
 ### 4.4 Reservas (RF-04x)
@@ -116,10 +116,11 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 | RF-040 | El estudiante debe poder reservar una franja disponible | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-041 | El sistema debe marcar la franja como no disponible al confirmarse la reserva | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-042 | El sistema debe impedir reservas sobre franjas ya ocupadas, incluso ante peticiones concurrentes | Alta | `[PROPUESTA]` | ADR-010 |
-| RF-043 | El estudiante debe poder cancelar dentro de la ventana permitida | Alta | `[PENDIENTE]` | ADR-011 |
-| RF-044 | El sistema debe liberar la franja al cancelarse una reserva | Alta | `[PENDIENTE]` | ADR-011 |
+| RF-043 | El estudiante debe poder cancelar dentro de la ventana permitida | Alta | `[CONFIRMADO]` | ADR-011 |
+| RF-044 | El sistema debe liberar la franja al cancelarse una reserva | Alta | `[CONFIRMADO]` | ADR-011 |
 | RF-045 | El monitor debe poder consultar sus reservas confirmadas | Alta | `[PROPUESTA]` | — |
 | RF-046 | El estudiante debe poder consultar el historial completo de sus monitorías | Media | `[PROPUESTA]` | — |
+| RF-047 | Al reservar, el estudiante puede dejar una nota opcional para el monitor (máximo 500 caracteres, sin espacios sobrantes; en blanco queda vacía). La nota se fija al crear la reserva y no se edita (para cambiarla se cancela y se reserva de nuevo). Solo la ven el estudiante de la reserva, el monitor de la franja y los administradores; nunca aparece en la búsqueda, en los listados de disponibilidad ni para otros estudiantes de una franja grupal | Media | `[CONFIRMADO]` 2026-10-19 | — |
 
 ### 4.5 Sesiones (RF-05x)
 
@@ -173,8 +174,8 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 |---|---|---|---|---|
 | RNF-SEC-001 | Seguridad | Ningún secreto en el repositorio; toda configuración sensible por variables de entorno | `git grep` sin coincidencias de secretos; `SECRET_KEY` leída del entorno | `[CONFIRMADO]` ADR-002 |
 | RNF-SEC-002 | Seguridad | Contraseñas almacenadas con el hasher por defecto de Django (PBKDF2) | Revisión de `PASSWORD_HASHERS` | `[PROPUESTA]` |
-| RNF-SEC-003 | Seguridad | Todo endpoint distinto de autenticación exige usuario autenticado | Prueba automatizada: cada endpoint responde 401 sin credenciales | `[CONFIRMADO]` |
-| RNF-SEC-004 | Seguridad | Autorización verificada por rol en cada endpoint, no solo en la interfaz | Prueba por rol y endpoint que confirma 403 | `[CONFIRMADO]` |
+| RNF-SEC-003 | Seguridad | Todo endpoint distinto de autenticación exige usuario autenticado | Prueba automatizada: cada endpoint responde 401 sin credenciales | `[IMPLEMENTADO]` FASE-01 — `IsAuthenticated` es el permiso por defecto de DRF; solo `health`, `schema`, `docs` y los endpoints de autenticación son públicos |
+| RNF-SEC-004 | Seguridad | Autorización verificada por rol en cada endpoint, no solo en la interfaz | Prueba por rol y endpoint que confirma 403 | `[IMPLEMENTADO]` FASE-01 — clases `HasRole` en `backend/shared/permissions.py` |
 | RNF-SEC-005 | Seguridad | CORS restringido a los orígenes de `CORS_ALLOWED_ORIGINS` | Revisión de configuración + prueba | `[CONFIRMADO]` ADR-002 |
 | RNF-CAL-001 | Calidad | Cobertura mínima del 80 % en la capa de dominio y servicios | Reporte de `pytest-cov` en CI | `[PENDIENTE]` — herramienta confirmada (ADR-004); el umbral del 80 % aún no está acordado formalmente |
 | RNF-CAL-002 | Calidad | Toda regla de negocio `RN-xxx` con prueba de camino feliz y de violación | Matriz de trazabilidad §8 completa | `[PROPUESTA]` |
@@ -202,7 +203,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como nuevo usuario (estudiante, monitor, docente o administrador), quiero registrarme en el sistema con mis datos institucionales, de tal manera que pueda acceder a las funcionalidades correspondientes a mi rol sin necesidad de procesos manuales.
 
-**Requisitos:** RF-010, RF-011 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27)
+**Requisitos:** RF-010, RF-011 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-007, ADR-008 y ADR-009 cerrados el 2026-09-27) · **Estado:** implementada y verificada (2026-09-28)
 
 | ID | Criterio (Gherkin) | Estado |
 |---|---|---|
@@ -235,7 +236,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como estudiante, quiero reservar un espacio de monitoría disponible, de tal manera que tenga una cita confirmada con el monitor y el sistema actualice automáticamente la disponibilidad para evitar conflictos de horario.
 
-**Requisitos:** RF-040, RF-041, RF-042 · **Fase:** FASE-04 · **Bloqueado por:** ADR-010
+**Requisitos:** RF-040, RF-041, RF-042, RF-047 · **Fase:** FASE-04 · **Bloqueado por:** ADR-010
 
 | ID | Criterio | Estado |
 |---|---|---|
@@ -243,7 +244,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 | CA-HU03-2 | **Dado** una franja ya reservada, **cuando** intento reservarla, **entonces** recibo `409` y no se crea una segunda reserva | `[PROPUESTA]` |
 | CA-HU03-3 | **Dado** dos estudiantes reservando la misma franja de forma simultánea, **cuando** ambos envían la petición, **entonces** exactamente uno obtiene `201` y el otro `409` | `[PROPUESTA]` |
 | CA-HU03-4 | **Dado** una franja pasada, **cuando** intento reservar, **entonces** recibo `400` | `[PROPUESTA]` |
-| CA-HU03-5 | **Dado** una reserva activa mía en el mismo horario, **cuando** intento reservar otra, **entonces** el sistema lo impide | `[PENDIENTE]` ADR-010 |
+| CA-HU03-5 | **Dado** una reserva activa mía en el mismo horario, **cuando** intento reservar otra, **entonces** el sistema lo impide | `[CONFIRMADO]` ADR-010 |
 | CA-HU03-6 | **Dado** un usuario con rol distinto de estudiante, **cuando** intenta reservar, **entonces** recibe `403` | `[PROPUESTA]` — revisar en FASE-04 el caso de un usuario con varios roles (ADR-008) |
 
 > **CA-HU03-3 es el criterio técnicamente más exigente del proyecto.** Exige bloqueo a nivel de base de datos o restricción de unicidad; no se resuelve con una validación en el serializer.
@@ -254,12 +255,12 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como estudiante, quiero cancelar una reserva de monitoría con suficiente anticipación, de tal manera que el espacio quede disponible para otros estudiantes y mi historial se actualice correctamente.
 
-**Requisitos:** RF-043, RF-044 · **Fase:** FASE-04 · **Bloqueado por:** ADR-011
+**Requisitos:** RF-043, RF-044 · **Fase:** FASE-04 · **Bloqueado por:** — (ADR-011 cerrado el 2026-10-19)
 
 | ID | Criterio | Estado |
 |---|---|---|
-| CA-HU04-1 | **Dado** una reserva dentro de la ventana permitida, **cuando** cancelo, **entonces** queda `CANCELLED` y la franja vuelve a estar disponible | `[PENDIENTE]` ADR-011 |
-| CA-HU04-2 | **Dado** una reserva fuera de la ventana, **cuando** intento cancelar, **entonces** el sistema aplica la política definida | `[PENDIENTE]` ADR-011 |
+| CA-HU04-1 | **Dado** una reserva dentro de la ventana permitida, **cuando** cancelo, **entonces** queda `CANCELLED` y la franja vuelve a estar disponible | `[CONFIRMADO]` ADR-011 — ventana de 4 h |
+| CA-HU04-2 | **Dado** una reserva fuera de la ventana, **cuando** intento cancelar, **entonces** el sistema aplica la política definida | `[CONFIRMADO]` ADR-011 — la reserva queda `NO_SHOW` y el cupo se libera |
 | CA-HU04-3 | **Dado** una reserva de otro estudiante, **cuando** intento cancelarla, **entonces** recibo `403` | `[PROPUESTA]` |
 | CA-HU04-4 | **Dado** una reserva ya cancelada, **cuando** intento cancelarla de nuevo, **entonces** recibo `409` | `[PROPUESTA]` |
 
@@ -317,15 +318,15 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como monitor o docente, quiero cargar y organizar material de apoyo asociado a una asignatura, de tal manera que los estudiantes puedan consultarlo desde el sistema sin depender de medios externos.
 
-**Requisitos:** RF-070 a RF-073 · **Fase:** FASE-07 · **Bloqueado por:** ADR-012
+**Requisitos:** RF-070 a RF-073 · **Fase:** FASE-07 · **ADR:** ADR-012 (confirmado el 2026-10-20)
 
 | ID | Criterio | Estado |
 |---|---|---|
-| CA-HU08-1 | **Dado** un archivo de formato y tamaño permitidos, **cuando** lo subo asociado a una asignatura, **entonces** queda disponible en el repositorio | `[PENDIENTE]` ADR-012 |
-| CA-HU08-2 | **Dado** un formato no permitido, **cuando** lo subo, **entonces** recibo `400` | `[PENDIENTE]` ADR-012 |
-| CA-HU08-3 | **Dado** un archivo que excede el tamaño máximo, **cuando** lo subo, **entonces** recibo `413` | `[PENDIENTE]` ADR-012 |
-| CA-HU08-4 | **Dado** un estudiante autenticado, **cuando** consulta el material de una asignatura, **entonces** puede listarlo y descargarlo | `[PENDIENTE]` ADR-012 |
-| CA-HU08-5 | **Dado** un material que no subí yo, **cuando** intento eliminarlo, **entonces** recibo `403` | `[PENDIENTE]` ADR-012 |
+| CA-HU08-1 | **Dado** un archivo de formato y tamaño permitidos, **cuando** lo subo asociado a una asignatura, **entonces** queda disponible en el repositorio | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-2 | **Dado** un formato no permitido, **cuando** lo subo, **entonces** recibo `400` | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-3 | **Dado** un archivo que excede el tamaño máximo, **cuando** lo subo, **entonces** recibo `413` | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-4 | **Dado** un estudiante autenticado, **cuando** consulta el material de una asignatura, **entonces** puede listarlo y descargarlo | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-5 | **Dado** un material que no subí yo, **cuando** intento eliminarlo, **entonces** recibo `403` | `[CONFIRMADO]` ADR-012 |
 
 ---
 
@@ -366,13 +367,13 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como administrador, quiero crear, editar, activar y desactivar cuentas de usuarios y asignarles roles, de tal manera que el acceso al sistema esté controlado y corresponda siempre a la situación real de cada persona en la Facultad.
 
-**Requisitos:** RF-020, RF-021, RF-025 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-008 cerrado el 2026-09-27)
+**Requisitos:** RF-020, RF-021, RF-025 · **Fase:** FASE-01 · **Bloqueado por:** — (ADR-008 cerrado el 2026-09-27) · **Estado:** implementada y verificada (2026-09-28), con CA-HU11-3 parcial hasta FASE-04
 
 | ID | Criterio | Estado |
 |---|---|---|
 | CA-HU11-1 | **Dado** un administrador, **cuando** crea un usuario con rol, **entonces** la cuenta queda activa y puede iniciar sesión | `[CONFIRMADO]` ADR-008, ADR-009 |
 | CA-HU11-2 | **Dado** un usuario activo, **cuando** lo desactivo, **entonces** sus credenciales dejan de ser válidas de inmediato | `[CONFIRMADO]` |
-| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[CONFIRMADO]` |
+| CA-HU11-3 | **Dado** un usuario con reservas futuras, **cuando** lo desactivo, **entonces** el sistema informa el impacto antes de confirmar | `[CONFIRMADO]` — el conteo de reservas futuras se completó en FASE-04 (T-04.18) |
 | CA-HU11-4 | **Dado** un usuario no administrador, **cuando** intenta gestionar usuarios, **entonces** recibe `403` | `[CONFIRMADO]` |
 | CA-HU11-5 | **Dado** cualquier operación de gestión de usuarios, **cuando** se ejecuta, **entonces** queda registrada en auditoría | `[CONFIRMADO]` |
 
@@ -426,18 +427,19 @@ Cada requisito se conecta con su historia, su fase y su regla de negocio. Un req
 
 | Requisito | Historia | Fase | Regla de negocio | Estado |
 |---|---|---|---|---|
-| RF-010, RF-011 | HU-01 | FASE-01 | RN-001 | Confirmado |
-| RF-012 | HU-01, HU-11 | FASE-01 | RN-002 | Confirmado |
-| RF-020, RF-021, RF-025 | HU-11 | FASE-01 | RN-002 | Confirmado |
+| RF-010, RF-011 | HU-01 | FASE-01 | RN-001 | Implementado |
+| RF-012 | HU-01, HU-11 | FASE-01 | RN-002 | Implementado |
+| RF-020, RF-021, RF-025 | HU-11 | FASE-01 | RN-002 | Implementado (CA-HU11-3 parcial hasta FASE-04) |
 | RF-022, RF-023, RF-024 | HU-11 | FASE-02 | — | Bloqueado |
 | RF-030 a RF-033 | HU-05 | FASE-03 | RN-003 | Bloqueado |
 | RF-034 | HU-02 | FASE-03 | — | Bloqueado |
 | RF-040 a RF-042 | HU-03 | FASE-04 | RN-004 | Bloqueado |
 | RF-043, RF-044 | HU-04 | FASE-04 | RN-005 | Bloqueado |
 | RF-045, RF-046 | HU-03, HU-12 | FASE-04, FASE-05 | — | Bloqueado |
+| RF-047 | HU-03 | FASE-04 | — | En revisión |
 | RF-050 a RF-053 | HU-06, HU-12 | FASE-05 | RN-006 | Bloqueado |
 | RF-060 a RF-063 | HU-07 | FASE-06 | RN-007 | Bloqueado |
-| RF-070 a RF-073 | HU-08 | FASE-07 | RN-008 | Bloqueado |
+| RF-070 a RF-073 | HU-08 | FASE-07 | RN-008 | En curso |
 | RF-080 a RF-083 | HU-09 | FASE-08 | RN-009 | Bloqueado |
 | RF-090 a RF-092 | HU-10 | FASE-09 | RN-010 | Bloqueado |
 

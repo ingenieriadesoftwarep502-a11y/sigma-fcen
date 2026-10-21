@@ -1,0 +1,3412 @@
+openapi: 3.0.3
+info:
+  title: SIGMA-FCEN API
+  version: 1.0.0
+  description: API REST del sistema de gestion de monitorias academicas de la FCEN.
+paths:
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_retrieve
+      description: |-
+        Hands out the CSRF token the frontend echoes in X-CSRFToken (ADR-007).
+
+        The token travels in the body because the frontend may run on another host, where it
+        cannot read the API's cookies; the csrftoken cookie itself stays HttpOnly.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+          description: ''
+  /api/v1/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: Issues the access and refresh tokens as HttpOnly cookies (ADR-007).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '401':
+          description: Invalid credentials
+  /api/v1/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: |-
+        Revokes the refresh token and clears the token cookies.
+
+        No authentication: an expired access cookie must not prevent revoking the refresh token.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: Issues a new access cookie from the refresh cookie, even if the
+        access token expired.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+        '401':
+          description: Missing or invalid session
+  /api/v1/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Public self-registration with an institutional email (HU-01).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/availability-slots/:
+    post:
+      operationId: availability_slots_create
+      description: A monitor publishes a single slot on an assigned subject (CA-HU05-1,
+        CA-HU05-5).
+      tags:
+      - availability-slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SlotCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SlotCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySlot'
+          description: ''
+  /api/v1/availability-slots/{id}/:
+    patch:
+      operationId: availability_slots_partial_update
+      description: The owner moves, edits or withdraws a slot; another monitor's slot
+        is a 404.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - availability-slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSlotUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSlotUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSlotUpdate'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySlot'
+          description: ''
+        '409':
+          description: La franja tiene una reserva o ya no está disponible.
+    delete:
+      operationId: availability_slots_destroy
+      description: The owner moves, edits or withdraws a slot; another monitor's slot
+        is a 404.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - availability-slots
+      security:
+      - cookieJWT: []
+      responses:
+        '204':
+          description: No response body
+        '409':
+          description: La franja tiene una reserva o ya no está disponible.
+  /api/v1/availability-slots/mine/:
+    get:
+      operationId: availability_slots_mine_list
+      description: The requesting monitor's own slots, every state, of one term (the
+        current by default).
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          enum:
+          - AVAILABLE
+          - RESERVED
+          - CANCELLED
+          - EXPIRED
+          type: string
+          minLength: 1
+        description: |-
+          * `AVAILABLE` - AVAILABLE
+          * `RESERVED` - RESERVED
+          * `CANCELLED` - CANCELLED
+          * `EXPIRED` - EXPIRED
+      - in: query
+        name: subject
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de asignatura.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - availability-slots
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAvailabilitySlotList'
+          description: ''
+  /api/v1/availability-slots/search/:
+    get:
+      operationId: availability_slots_search_list
+      description: Bookable slots for any authenticated user, with combinable filters
+        (HU-02).
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Fecha local de Bogotá, incluida.
+      - in: query
+        name: modality
+        schema:
+          enum:
+          - IN_PERSON
+          - VIRTUAL
+          type: string
+          minLength: 1
+        description: |-
+          * `IN_PERSON` - Presencial
+          * `VIRTUAL` - Virtual
+      - in: query
+        name: monitor
+        schema:
+          type: string
+          format: uuid
+        description: Id del monitor.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: subject
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de asignatura.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, todos.
+      tags:
+      - availability-slots
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAvailabilitySlotList'
+          description: ''
+  /api/v1/catalog/summary/:
+    get:
+      operationId: catalog_summary_retrieve
+      description: Headline numbers of the catalog for one term (the current one by
+        default).
+      parameters:
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - catalog
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogSummary'
+          description: ''
+  /api/v1/courses/:
+    get:
+      operationId: courses_list
+      description: Courses of one term (the current one by default); administrators
+        only (RF-024).
+      parameters:
+      - in: query
+        name: department
+        schema:
+          type: string
+          maxLength: 20
+          minLength: 1
+        description: Id o código del departamento.
+      - in: query
+        name: ordering
+        schema:
+          enum:
+          - code
+          - name
+          - -monitor_count
+          type: string
+          default: name
+          minLength: 1
+        description: |-
+          * `code` - code
+          * `name` - name
+          * `-monitor_count` - -monitor_count
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 100
+        description: Busca en código y nombre de la asignatura y en nombre y correo
+          del docente.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      - in: query
+        name: without_monitors
+        schema:
+          type: boolean
+      - in: query
+        name: without_teacher
+        schema:
+          type: boolean
+      tags:
+      - courses
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCourseList'
+          description: ''
+    post:
+      operationId: courses_create
+      description: Courses of one term (the current one by default); administrators
+        only (RF-024).
+      tags:
+      - courses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CourseCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CourseCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+          description: ''
+  /api/v1/courses/{id}/:
+    get:
+      operationId: courses_retrieve
+      description: Administrators read a course and change its group or teacher. PUT
+        is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - courses
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+          description: ''
+    patch:
+      operationId: courses_partial_update
+      description: Administrators read a course and change its group or teacher. PUT
+        is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - courses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCourseUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCourseUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCourseUpdate'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+          description: ''
+  /api/v1/courses/mine/:
+    get:
+      operationId: courses_mine_list
+      description: The requesting teacher's own courses and their monitors (T-02.8,
+        RN-009.1).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - courses
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeacherCourseList'
+          description: ''
+  /api/v1/departments/:
+    get:
+      operationId: departments_list
+      description: Everyone reads active departments; administrators also see inactive
+        ones and write.
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Solo administradores.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      tags:
+      - departments
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDepartmentList'
+          description: ''
+    post:
+      operationId: departments_create
+      description: Everyone reads active departments; administrators also see inactive
+        ones and write.
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Department'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Department'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Department'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+  /api/v1/departments/{id}/:
+    get:
+      operationId: departments_retrieve
+      description: Read one department; administrators edit it. PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - departments
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+    patch:
+      operationId: departments_partial_update
+      description: Read one department; administrators edit it. PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartment'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+  /api/v1/health/:
+    get:
+      operationId: health_retrieve
+      description: Reports service liveness and database connectivity. No authentication
+        required.
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+  /api/v1/materials/:
+    get:
+      operationId: materials_list
+      description: The repository of a subject (CA-HU08-4) and the upload into it
+        (CA-HU08-1).
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          enum:
+          - DOCUMENT
+          - VIDEO
+          type: string
+          minLength: 1
+        description: |-
+          * `DOCUMENT` - DOCUMENT
+          * `VIDEO` - VIDEO
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: subject
+        schema:
+          type: integer
+        description: Id de la asignatura.
+        required: true
+      tags:
+      - materials
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMaterialList'
+          description: ''
+    post:
+      operationId: materials_create
+      description: The repository of a subject (CA-HU08-4) and the upload into it
+        (CA-HU08-1).
+      tags:
+      - materials
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MaterialCreate'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Material'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '413':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/materials/{id}/:
+    delete:
+      operationId: materials_destroy
+      description: The author or an administrator removes material; it only stops
+        being listed.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - materials
+      security:
+      - cookieJWT: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '404':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/materials/{id}/download/:
+    get:
+      operationId: materials_download_retrieve
+      description: A document, for anyone signed in (CA-HU08-4, RNF-SEC-003). Videos
+        play from YouTube.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - materials
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '401':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '404':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/materials/subjects/:
+    get:
+      operationId: materials_subjects_list
+      description: Where the signed-in user may add material, with what each subject
+        already holds.
+      tags:
+      - materials
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UploadableSubject'
+          description: ''
+  /api/v1/monitor-assignments/:
+    get:
+      operationId: monitor_assignments_list
+      description: Monitor assignments of one term; administrators authorize monitors
+        (RF-023).
+      parameters:
+      - in: query
+        name: monitor
+        schema:
+          type: string
+          format: uuid
+        description: Id del monitor.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 100
+        description: Busca en nombre y correo del monitor y en código y nombre de
+          la asignatura.
+      - in: query
+        name: subject
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de asignatura.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - monitor-assignments
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMonitorAssignmentList'
+          description: ''
+    post:
+      operationId: monitor_assignments_create
+      description: Monitor assignments of one term; administrators authorize monitors
+        (RF-023).
+      tags:
+      - monitor-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonitorAssignmentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MonitorAssignmentCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MonitorAssignmentCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitorAssignment'
+          description: ''
+  /api/v1/monitor-assignments/{id}/:
+    delete:
+      operationId: monitor_assignments_destroy
+      description: Administrators withdraw a monitor's authorization.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - monitor-assignments
+      security:
+      - cookieJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/monitor-assignments/mine/:
+    get:
+      operationId: monitor_assignments_mine_list
+      description: The requesting monitor's own assignments and their subjects' teachers
+        (RN-009.1).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - monitor-assignments
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMonitorOwnAssignmentList'
+          description: ''
+  /api/v1/reservations/:
+    post:
+      operationId: reservations_create
+      description: A student books a seat in a slot (HU-03, CA-HU03-1 to CA-HU03-6).
+      tags:
+      - reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '409':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/reservations/{id}/:
+    get:
+      operationId: reservations_retrieve
+      description: A reservation, for its participants and administrators.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reservations
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '404':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/reservations/{id}/cancel/:
+    post:
+      operationId: reservations_cancel_create
+      description: The student, the slot's monitor or an administrator cancel (HU-04,
+        ADR-011).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCancel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReservationCancel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationCancel'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '409':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/reservations/mine/:
+    get:
+      operationId: reservations_mine_list
+      description: The student's own reservations and the monitor's reservations on
+        their slots.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          enum:
+          - student
+          - monitor
+          type: string
+          minLength: 1
+        description: |-
+          student: reservas hechas por el usuario; monitor: reservas en sus franjas. Sin valor, ambas.
+
+          * `student` - student
+          * `monitor` - monitor
+      - in: query
+        name: status
+        schema:
+          enum:
+          - CONFIRMED
+          - CANCELLED
+          - COMPLETED
+          - NO_SHOW
+          type: string
+          minLength: 1
+        description: |-
+          * `CONFIRMED` - CONFIRMED
+          * `CANCELLED` - CANCELLED
+          * `COMPLETED` - COMPLETED
+          * `NO_SHOW` - NO_SHOW
+      - in: query
+        name: when
+        schema:
+          enum:
+          - upcoming
+          - past
+          type: string
+          minLength: 1
+        description: |-
+          upcoming: por empezar, la más próxima primero; past: ya iniciadas.
+
+          * `upcoming` - upcoming
+          * `past` - past
+      tags:
+      - reservations
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReservationList'
+          description: ''
+  /api/v1/slot-templates/:
+    post:
+      operationId: slot_templates_create
+      description: A monitor creates a weekly template; its slots are generated all
+        or nothing (ADR-010).
+      tags:
+      - slot-templates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotTemplateCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SlotTemplateCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SlotTemplateCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotTemplate'
+          description: ''
+  /api/v1/slot-templates/{id}/:
+    delete:
+      operationId: slot_templates_destroy
+      description: The owner deactivates a template and withdraws its future unreserved
+        slots.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - slot-templates
+      security:
+      - cookieJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/slot-templates/mine/:
+    get:
+      operationId: slot_templates_mine_list
+      description: The requesting monitor's templates of one term (the current one
+        by default).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: subject
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de asignatura.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - slot-templates
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSlotTemplateList'
+          description: ''
+  /api/v1/subjects/:
+    get:
+      operationId: subjects_list
+      description: The subject catalog with its filters; administrators create subjects
+        (RF-022).
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Solo administradores.
+      - in: query
+        name: credits
+        schema:
+          type: integer
+          minimum: 1
+      - in: query
+        name: department
+        schema:
+          type: string
+          maxLength: 20
+          minLength: 1
+        description: Id o código del departamento.
+      - in: query
+        name: has_monitors
+        schema:
+          type: boolean
+      - in: query
+        name: ordering
+        schema:
+          enum:
+          - code
+          - name
+          - -monitor_count
+          type: string
+          default: name
+          minLength: 1
+        description: |-
+          * `code` - code
+          * `name` - name
+          * `-monitor_count` - -monitor_count
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 100
+        description: Busca en código y nombre.
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - subjects
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubjectList'
+          description: ''
+    post:
+      operationId: subjects_create
+      description: The subject catalog with its filters; administrators create subjects
+        (RF-022).
+      tags:
+      - subjects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubjectWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubjectWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubjectWrite'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subject'
+          description: ''
+  /api/v1/subjects/{id}/:
+    get:
+      operationId: subjects_retrieve
+      description: Read one subject; administrators edit or deactivate it (T-02.7).
+        PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - subjects
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subject'
+          description: ''
+    patch:
+      operationId: subjects_partial_update
+      description: Read one subject; administrators edit or deactivate it (T-02.7).
+        PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - subjects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSubjectWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSubjectWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSubjectWrite'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subject'
+          description: ''
+  /api/v1/subjects/{id}/monitors/:
+    get:
+      operationId: subjects_monitors_list
+      description: The monitors of one subject in a term (the current one by default),
+        for students.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - subjects
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubjectMonitor'
+          description: ''
+  /api/v1/terms/:
+    get:
+      operationId: terms_list
+      description: Every authenticated user lists terms (term switcher); administrators
+        create them.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      tags:
+      - terms
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAcademicTermList'
+          description: ''
+    post:
+      operationId: terms_create
+      description: Every authenticated user lists terms (term switcher); administrators
+        create them.
+      tags:
+      - terms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicTerm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AcademicTerm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcademicTerm'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicTerm'
+          description: ''
+  /api/v1/terms/{id}/:
+    get:
+      operationId: terms_retrieve
+      description: Read one term; administrators correct its code or dates. Neither
+        PUT nor DELETE.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - terms
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicTerm'
+          description: ''
+    patch:
+      operationId: terms_partial_update
+      description: Read one term; administrators correct its code or dates. Neither
+        PUT nor DELETE.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - terms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAcademicTerm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAcademicTerm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAcademicTerm'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicTerm'
+          description: ''
+  /api/v1/terms/current/:
+    get:
+      operationId: terms_current_retrieve
+      description: The term containing today; else the latest past one; else the nearest
+        upcoming one.
+      tags:
+      - terms
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicTerm'
+          description: ''
+        '404':
+          description: No terms yet
+  /api/v1/users/:
+    get:
+      operationId: users_list
+      description: Administrators list, search and filter accounts and create new
+        ones (RF-020, RF-021).
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          enum:
+          - STUDENT
+          - MONITOR
+          - TEACHER
+          - ADMIN
+          type: string
+          minLength: 1
+        description: |-
+          * `STUDENT` - Estudiante
+          * `MONITOR` - Monitor
+          * `TEACHER` - Docente
+          * `ADMIN` - Administrador
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 254
+        description: Busca en correo, nombres, apellidos y nombre completo.
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminUserList'
+          description: ''
+    post:
+      operationId: users_create
+      description: Administrators list, search and filter accounts and create new
+        ones (RF-020, RF-021).
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+  /api/v1/users/{id}/:
+    get:
+      operationId: users_retrieve
+      description: Administrators read and edit one account; PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      description: Administrators read and edit one account; PUT is not offered.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+  /api/v1/users/{id}/deactivate/:
+    post:
+      operationId: users_deactivate_create
+      description: Reports the impact first; deactivates only with confirm=true (CA-HU11-2,
+        CA-HU11-3).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeactivationRequest'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeactivationResult'
+          description: ''
+  /api/v1/users/{id}/roles/:
+    post:
+      operationId: users_roles_create
+      description: Replaces the roles of one account (RF-021).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAssignment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleAssignment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleAssignment'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+  /api/v1/users/export/:
+    get:
+      operationId: users_export_retrieve
+      description: Every account matching the list filters as an .xlsx download, without
+        pagination.
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: role
+        schema:
+          enum:
+          - STUDENT
+          - MONITOR
+          - TEACHER
+          - ADMIN
+          type: string
+          minLength: 1
+        description: |-
+          * `STUDENT` - Estudiante
+          * `MONITOR` - Monitor
+          * `TEACHER` - Docente
+          * `ADMIN` - Administrador
+      - in: query
+        name: search
+        schema:
+          type: string
+          maxLength: 254
+        description: Busca en correo, nombres, apellidos y nombre completo.
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          description: Excel workbook
+  /api/v1/users/me/:
+    get:
+      operationId: users_me_retrieve
+      description: The authenticated user's own identity and roles (CA-HU01-5).
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/summary/:
+    get:
+      operationId: users_summary_retrieve
+      description: Headline numbers and the latest audit entries for the admin dashboard.
+      tags:
+      - users
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummary'
+          description: ''
+components:
+  schemas:
+    AcademicTerm:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          description: Formato AAAA-S, por ejemplo 2026-1.
+          maxLength: 6
+        start_date:
+          type: string
+          format: date
+          title: Fecha de inicio
+        end_date:
+          type: string
+          format: date
+          title: Fecha de fin
+      required:
+      - code
+      - end_date
+      - id
+      - start_date
+    ActionEnum:
+      enum:
+      - USER_CREATED
+      - USER_UPDATED
+      - USER_ACTIVATED
+      - USER_DEACTIVATED
+      - ROLES_CHANGED
+      type: string
+      description: |-
+        * `USER_CREATED` - Usuario creado
+        * `USER_UPDATED` - Usuario editado
+        * `USER_ACTIVATED` - Usuario activado
+        * `USER_DEACTIVATED` - Usuario desactivado
+        * `ROLES_CHANGED` - Roles modificados
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Correo
+        first_name:
+          type: string
+          readOnly: true
+          title: Nombre
+        last_name:
+          type: string
+          readOnly: true
+          title: Apellido
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - date_joined
+      - email
+      - first_name
+      - id
+      - is_active
+      - last_name
+      - roles
+    AssignedMonitor:
+      type: object
+      description: A monitor of one of the teacher's courses; `id` is the monitor's
+        user id.
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+        committed_hours:
+          type: integer
+      required:
+      - committed_hours
+      - email
+      - full_name
+      - id
+    AuditEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        created_at:
+          type: string
+          format: date-time
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/UserReference'
+          nullable: true
+        target:
+          allOf:
+          - $ref: '#/components/schemas/UserReference'
+          nullable: true
+      required:
+      - action
+      - actor
+      - created_at
+      - id
+      - target
+    AvailabilitySlot:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        monitor:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        template:
+          type: integer
+          readOnly: true
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Inicio
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Fin
+        capacity:
+          type: integer
+          readOnly: true
+          title: Capacidad
+        remaining_seats:
+          type: integer
+          readOnly: true
+          description: 'Cupos libres: capacidad menos reservas confirmadas.'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        modality:
+          allOf:
+          - $ref: '#/components/schemas/ModalityEnum'
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+          title: Lugar o enlace
+      required:
+      - capacity
+      - ends_at
+      - id
+      - location
+      - modality
+      - monitor
+      - remaining_seats
+      - starts_at
+      - status
+      - subject
+      - template
+      - term
+    CatalogSummary:
+      type: object
+      properties:
+        term:
+          type: string
+          nullable: true
+          description: Código del período resumido.
+        subjects_active:
+          type: integer
+        departments_active:
+          type: integer
+        courses:
+          type: integer
+        courses_without_teacher:
+          type: integer
+        courses_without_monitor:
+          type: integer
+        monitor_assignments:
+          type: integer
+        committed_hours_total:
+          type: integer
+      required:
+      - committed_hours_total
+      - courses
+      - courses_without_monitor
+      - courses_without_teacher
+      - departments_active
+      - monitor_assignments
+      - subjects_active
+      - term
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectSummary'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        group:
+          type: string
+          readOnly: true
+          title: Grupo
+        teacher:
+          allOf:
+          - $ref: '#/components/schemas/UserReference'
+          readOnly: true
+          nullable: true
+        monitor_count:
+          type: integer
+          readOnly: true
+          description: Monitores asignados a la asignatura en el período del curso.
+      required:
+      - group
+      - id
+      - monitor_count
+      - subject
+      - teacher
+      - term
+    CourseCreate:
+      type: object
+      properties:
+        subject:
+          type: integer
+        term:
+          type: string
+          title: Código
+        group:
+          type: string
+          maxLength: 10
+        teacher:
+          type: string
+          format: uuid
+          nullable: true
+          description: Id de un usuario Docente.
+      required:
+      - group
+      - subject
+      - term
+    CsrfToken:
+      type: object
+      properties:
+        csrfToken:
+          type: string
+      required:
+      - csrfToken
+    DeactivationImpact:
+      type: object
+      properties:
+        future_reservations:
+          type: integer
+      required:
+      - future_reservations
+    DeactivationRequest:
+      type: object
+      properties:
+        confirm:
+          type: boolean
+          default: false
+    DeactivationResult:
+      type: object
+      properties:
+        deactivated:
+          type: boolean
+        impact:
+          $ref: '#/components/schemas/DeactivationImpact'
+        user:
+          $ref: '#/components/schemas/AdminUser'
+      required:
+      - deactivated
+      - impact
+      - user
+    Department:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          maxLength: 10
+        name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+      required:
+      - code
+      - id
+      - name
+    DepartmentReference:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+          title: Código
+        name:
+          type: string
+          readOnly: true
+          title: Nombre
+      required:
+      - code
+      - id
+      - name
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+        database:
+          type: string
+      required:
+      - database
+      - status
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - password
+    Material:
+      type: object
+      description: A document carries its file data; a video, its YouTube id. The
+        rest is null.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/MaterialKindEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+          title: Título
+        description:
+          type: string
+          readOnly: true
+          title: Descripción
+        uploaded_by:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Creado
+        file_name:
+          type: string
+          nullable: true
+          readOnly: true
+        file_extension:
+          type: string
+          nullable: true
+          readOnly: true
+        content_type:
+          type: string
+          nullable: true
+          readOnly: true
+        size_bytes:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Tamaño
+        youtube_id:
+          type: string
+          nullable: true
+          readOnly: true
+        can_delete:
+          type: boolean
+          description: 'Whether the person reading may remove it: the author or an
+            administrator.'
+          readOnly: true
+      required:
+      - can_delete
+      - content_type
+      - created_at
+      - description
+      - file_extension
+      - file_name
+      - id
+      - kind
+      - size_bytes
+      - subject
+      - title
+      - uploaded_by
+      - youtube_id
+    MaterialCreate:
+      type: object
+      description: '`file` for a DOCUMENT (multipart), `video_url` for a VIDEO; the
+        author is the session.'
+      properties:
+        subject_id:
+          type: integer
+          description: Id de la asignatura a la que se agrega el material.
+        kind:
+          $ref: '#/components/schemas/MaterialKindEnum'
+        title:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+          maxLength: 1000
+        file:
+          type: string
+          format: uri
+          nullable: true
+          description: 'Documento (DOCUMENT): cualquier formato salvo ejecutables.'
+        video_url:
+          type: string
+          description: Enlace del video de YouTube (VIDEO).
+          maxLength: 500
+      required:
+      - kind
+      - subject_id
+      - title
+    MaterialKindEnum:
+      enum:
+      - DOCUMENT
+      - VIDEO
+      type: string
+      description: |-
+        * `DOCUMENT` - DOCUMENT
+        * `VIDEO` - VIDEO
+    ModalityEnum:
+      enum:
+      - IN_PERSON
+      - VIRTUAL
+      type: string
+      description: |-
+        * `IN_PERSON` - Presencial
+        * `VIRTUAL` - Virtual
+    MonitorAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        monitor:
+          allOf:
+          - $ref: '#/components/schemas/UserReference'
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        committed_hours:
+          type: integer
+          readOnly: true
+          title: Horas comprometidas
+      required:
+      - committed_hours
+      - id
+      - monitor
+      - subject
+      - term
+    MonitorAssignmentCreate:
+      type: object
+      properties:
+        monitor:
+          type: string
+          format: uuid
+          description: Id de un usuario Monitor.
+        subject:
+          type: integer
+        term:
+          type: string
+          title: Código
+        committed_hours:
+          type: integer
+          maximum: 32767
+          minimum: 1
+      required:
+      - committed_hours
+      - monitor
+      - subject
+      - term
+    MonitorOwnAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectSummary'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        committed_hours:
+          type: integer
+          readOnly: true
+          title: Horas comprometidas
+        teachers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubjectTeacher'
+          readOnly: true
+        upcoming_slots:
+          type: integer
+          readOnly: true
+          description: Franjas disponibles y futuras de la monitoría.
+        next_slot_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Inicio de la próxima; null si no hay.
+        active_templates:
+          type: integer
+          readOnly: true
+          description: Plantillas semanales activas de la monitoría.
+      required:
+      - active_templates
+      - committed_hours
+      - id
+      - next_slot_at
+      - subject
+      - teachers
+      - term
+      - upcoming_slots
+    MonitorReference:
+      type: object
+      description: Only what a student needs to recognize the monitor; no email (RNF-SEC).
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+          readOnly: true
+      required:
+      - full_name
+      - id
+    PaginatedAcademicTermList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicTerm'
+    PaginatedAdminUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUser'
+    PaginatedAvailabilitySlotList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilitySlot'
+    PaginatedCourseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Course'
+    PaginatedDepartmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Department'
+    PaginatedMaterialList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Material'
+    PaginatedMonitorAssignmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonitorAssignment'
+    PaginatedMonitorOwnAssignmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonitorOwnAssignment'
+    PaginatedReservationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reservation'
+    PaginatedSlotTemplateList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotTemplate'
+    PaginatedSubjectList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subject'
+    PaginatedTeacherCourseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeacherCourse'
+    PatchedAcademicTerm:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          description: Formato AAAA-S, por ejemplo 2026-1.
+          maxLength: 6
+        start_date:
+          type: string
+          format: date
+          title: Fecha de inicio
+        end_date:
+          type: string
+          format: date
+          title: Fecha de fin
+    PatchedCourseUpdate:
+      type: object
+      properties:
+        group:
+          type: string
+          maxLength: 10
+        teacher:
+          type: string
+          format: uuid
+          nullable: true
+          description: Id de un usuario Docente.
+    PatchedDepartment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          maxLength: 10
+        name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+    PatchedSlotUpdate:
+      type: object
+      description: Fields a monitor sets on a slot; the end and the term are derived
+        (ADR-010).
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+          description: Inicio en ISO 8601 con zona; en punto o a la media, hora de
+            Bogotá.
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        location:
+          type: string
+          description: Aula o enlace de la sesión.
+          maxLength: 200
+        capacity:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          description: Cupos; por defecto 1.
+    PatchedSubjectWrite:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 20
+        name:
+          type: string
+          title: Nombre
+          maxLength: 200
+        credits:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          title: Créditos
+        department:
+          type: integer
+        is_active:
+          type: boolean
+    PatchedUserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+    Register:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - email
+      - first_name
+      - last_name
+      - password
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slot:
+          allOf:
+          - $ref: '#/components/schemas/ReservationSlot'
+          readOnly: true
+        student:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReservationStatusEnum'
+          readOnly: true
+        student_note:
+          type: string
+          readOnly: true
+          title: Nota del estudiante
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Creada
+        cancelled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Cancelada
+        cancelled_by:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+          nullable: true
+        cancellation_reason:
+          type: string
+          readOnly: true
+          title: Justificación
+      required:
+      - cancellation_reason
+      - cancelled_at
+      - cancelled_by
+      - created_at
+      - id
+      - slot
+      - status
+      - student
+      - student_note
+    ReservationCancel:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Justificación; obligatoria si cancela el monitor o un administrador.
+          maxLength: 500
+    ReservationCreate:
+      type: object
+      description: 'Only the slot: the student is always the authenticated user (FASE-04
+        §5).'
+      properties:
+        slot_id:
+          type: integer
+          description: Id de la franja a reservar.
+        note:
+          type: string
+          description: Nota opcional para el monitor; no se puede editar después (RF-047).
+          maxLength: 500
+      required:
+      - slot_id
+    ReservationSlot:
+      type: object
+      description: 'The booked slot: when, where, with whom and for which subject.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        monitor:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Inicio
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Fin
+        capacity:
+          type: integer
+          readOnly: true
+          title: Capacidad
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        modality:
+          allOf:
+          - $ref: '#/components/schemas/ModalityEnum'
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+          title: Lugar o enlace
+      required:
+      - capacity
+      - ends_at
+      - id
+      - location
+      - modality
+      - monitor
+      - starts_at
+      - status
+      - subject
+      - term
+    ReservationStatusEnum:
+      enum:
+      - CONFIRMED
+      - CANCELLED
+      - COMPLETED
+      - NO_SHOW
+      type: string
+      description: |-
+        * `CONFIRMED` - CONFIRMED
+        * `CANCELLED` - CANCELLED
+        * `COMPLETED` - COMPLETED
+        * `NO_SHOW` - NO_SHOW
+    RoleAssignment:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+      required:
+      - roles
+    RoleCounts:
+      type: object
+      properties:
+        STUDENT:
+          type: integer
+        MONITOR:
+          type: integer
+        TEACHER:
+          type: integer
+        ADMIN:
+          type: integer
+      required:
+      - ADMIN
+      - MONITOR
+      - STUDENT
+      - TEACHER
+    RolesEnum:
+      enum:
+      - STUDENT
+      - MONITOR
+      - TEACHER
+      - ADMIN
+      type: string
+      description: |-
+        * `STUDENT` - Estudiante
+        * `MONITOR` - Monitor
+        * `TEACHER` - Docente
+        * `ADMIN` - Administrador
+    SlotCreate:
+      type: object
+      description: Fields a monitor sets on a slot; the end and the term are derived
+        (ADR-010).
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+          description: Inicio en ISO 8601 con zona; en punto o a la media, hora de
+            Bogotá.
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        location:
+          type: string
+          description: Aula o enlace de la sesión.
+          maxLength: 200
+        capacity:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          description: Cupos; por defecto 1.
+        subject:
+          type: integer
+      required:
+      - location
+      - modality
+      - starts_at
+      - subject
+    SlotTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        weekday:
+          type: integer
+          readOnly: true
+          title: Día de la semana
+        start_time:
+          type: string
+          format: time
+          readOnly: true
+          title: Hora de inicio
+        capacity:
+          type: integer
+          readOnly: true
+          title: Capacidad
+        modality:
+          allOf:
+          - $ref: '#/components/schemas/ModalityEnum'
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+          title: Lugar o enlace
+        is_active:
+          type: boolean
+          readOnly: true
+        slots_created:
+          type: integer
+          readOnly: true
+          description: Franjas que generó la plantilla.
+      required:
+      - capacity
+      - id
+      - is_active
+      - location
+      - modality
+      - slots_created
+      - start_time
+      - subject
+      - term
+      - weekday
+    SlotTemplateCreate:
+      type: object
+      properties:
+        subject:
+          type: integer
+        term:
+          type: string
+          title: Código
+          description: Código del período, por ejemplo 2026-2.
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
+          description: 'Día de la semana: 0 lunes … 6 domingo.'
+        start_time:
+          type: string
+          format: time
+          description: Hora local de Bogotá, en punto o a la media (por ejemplo 10:00).
+        modality:
+          $ref: '#/components/schemas/ModalityEnum'
+        location:
+          type: string
+          description: Aula o enlace de la sesión.
+          maxLength: 200
+        capacity:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          description: Cupos; por defecto 1.
+      required:
+      - location
+      - modality
+      - start_time
+      - subject
+      - term
+      - weekday
+    StatusEnum:
+      enum:
+      - AVAILABLE
+      - RESERVED
+      - CANCELLED
+      - EXPIRED
+      type: string
+      description: |-
+        * `AVAILABLE` - AVAILABLE
+        * `RESERVED` - RESERVED
+        * `CANCELLED` - CANCELLED
+        * `EXPIRED` - EXPIRED
+    Subject:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+          title: Código
+        name:
+          type: string
+          readOnly: true
+          title: Nombre
+        credits:
+          type: integer
+          readOnly: true
+          title: Créditos
+        is_active:
+          type: boolean
+          readOnly: true
+        department:
+          allOf:
+          - $ref: '#/components/schemas/DepartmentReference'
+          readOnly: true
+        monitor_count:
+          type: integer
+          readOnly: true
+          description: Asignaciones de monitoría de la asignatura en el período.
+      required:
+      - code
+      - credits
+      - department
+      - id
+      - is_active
+      - monitor_count
+      - name
+    SubjectMonitor:
+      type: object
+      description: 'A monitor of a subject as students see it: no email (RNF-SEC).'
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+          readOnly: true
+        upcoming_slots:
+          type: integer
+          description: Franjas disponibles y futuras del monitor en la asignatura
+            y el período.
+        next_slot_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Inicio de la próxima de esas franjas; null si no hay.
+      required:
+      - full_name
+      - id
+      - next_slot_at
+      - upcoming_slots
+    SubjectReference:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+          title: Código
+        name:
+          type: string
+          readOnly: true
+          title: Nombre
+      required:
+      - code
+      - id
+      - name
+    SubjectSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+          title: Código
+        name:
+          type: string
+          readOnly: true
+          title: Nombre
+        credits:
+          type: integer
+          readOnly: true
+          title: Créditos
+        department:
+          allOf:
+          - $ref: '#/components/schemas/DepartmentReference'
+          readOnly: true
+      required:
+      - code
+      - credits
+      - department
+      - id
+      - name
+    SubjectTeacher:
+      type: object
+      description: A teacher of the monitor's subject in the term; `id` is the teacher's
+        user id.
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+        group:
+          type: string
+      required:
+      - email
+      - full_name
+      - group
+      - id
+    SubjectWrite:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 20
+        name:
+          type: string
+          title: Nombre
+          maxLength: 200
+        credits:
+          type: integer
+          maximum: 32767
+          minimum: 1
+          title: Créditos
+        department:
+          type: integer
+        is_active:
+          type: boolean
+      required:
+      - code
+      - credits
+      - department
+      - name
+    TeacherCourse:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectSummary'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        group:
+          type: string
+          readOnly: true
+          title: Grupo
+        monitors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedMonitor'
+          readOnly: true
+      required:
+      - group
+      - id
+      - monitors
+      - subject
+      - term
+    UploadableSubject:
+      type: object
+      description: A subject where the user may add material, and why (ADR-012, item
+        5).
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        department:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+          description: MONITOR (asignado a la asignatura) y/o TEACHER (docente de
+            un curso).
+        document_count:
+          type: integer
+        video_count:
+          type: integer
+      required:
+      - code
+      - department
+      - document_count
+      - id
+      - name
+      - roles
+      - video_count
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Correo
+        first_name:
+          type: string
+          readOnly: true
+          title: Nombre
+        last_name:
+          type: string
+          readOnly: true
+          title: Apellido
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+          readOnly: true
+      required:
+      - email
+      - first_name
+      - id
+      - last_name
+      - roles
+    UserCreate:
+      type: object
+      description: Same rules as self-registration, but the administrator chooses
+        the roles.
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolesEnum'
+      required:
+      - email
+      - first_name
+      - last_name
+      - password
+      - roles
+    UserReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+          readOnly: true
+      required:
+      - email
+      - full_name
+      - id
+    UserSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        inactive:
+          type: integer
+        joined_last_30_days:
+          type: integer
+        by_role:
+          $ref: '#/components/schemas/RoleCounts'
+        recent_activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+      required:
+      - active
+      - by_role
+      - inactive
+      - joined_last_30_days
+      - recent_activity
+      - total
+  securitySchemes:
+    cookieJWT:
+      type: apiKey
+      in: cookie
+      name: access_token

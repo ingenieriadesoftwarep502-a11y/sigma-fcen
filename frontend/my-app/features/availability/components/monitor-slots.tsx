@@ -1,0 +1,421 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import Alert from "@/components/ui/alert";
+import Button, { ButtonLink } from "@/components/ui/button";
+import EmptyState from "@/components/ui/empty-state";
+import Icon from "@/components/ui/icon";
+import ToggleChip from "@/components/ui/toggle-chip";
+import { requestErrorMessage } from "@/lib/api-client";
+import {
+  bogotaDateTime,
+  isGroupSession,
+  type Modality,
+  NO_SLOT_SEARCH_FILTERS,
+  type Slot,
+  searchSlots,
+} from "@/lib/availability";
+import { MY_RESERVATIONS_PATH } from "@/lib/auth";
+import {
+  isReservationConflict,
+  MAX_NOTE_LENGTH,
+  problemType,
+  reserveSlot,
+} from "@/lib/reservations";
+
+import {
+  availableSlotsLabel,
+  durationLabel,
+  MODALITY_LABELS,
+  relativeDayLabel,
+  seatsLabel,
+  slotDayLabel,
+  slotTimeRange,
+} from "../labels";
+import styles from "./monitor-slots.module.css";
+
+const SKELETON_ROWS = 3;
+const MODALITIES = Object.keys(MODALITY_LABELS) as Modality[];
+
+type MonitorSlotsProps = {
+  subject: { id: number; code: string; name: string };
+  monitor: { id: string; name: string };
+  /** Term code; null searches every term. */
+  term: string | null;
+};
+
+type Loaded = {
+  slots: Slot[];
+  count: number;
+  /** The last page read; the next "Ver más" asks for the one after it. */
+  page: number;
+  hasMore: boolean;
+};
+
+type DayGroup = { date: string; slots: Slot[] };
+
+/** Consecutive slots of the same Bogotá day; the API already orders them by start. */
+function byDay(slots: Slot[]): DayGroup[] {
+  const groups: DayGroup[] = [];
+  for (const slot of slots) {
+    const date = bogotaDateTime(slot.starts_at).date;
+    const last = groups.at(-1);
+    if (last?.date === date) last.slots.push(slot);
+    else groups.push({ date, slots: [slot] });
+  }
+  return groups;
+}
+
+const TAKEN_MESSAGE =
+  "Otra persona la reservó hace un momento; te mostramos las franjas actualizadas.";
+
+/** One seat less: an individual slot, or the last seat of a group, leaves the list. */
+function afterBooking(loaded: Loaded, booked: Slot): Loaded {
+  const full = booked.remaining_seats <= 1;
+  return {
+    ...loaded,
+    count: full ? loaded.count - 1 : loaded.count,
+    slots: loaded.slots.flatMap((slot) => {
+      if (slot.id !== booked.id) return [slot];
+      return full ? [] : [{ ...slot, remaining_seats: slot.remaining_seats - 1 }];
+    }),
+  };
+}
+
+/**
+ * The upcoming slots one monitor offers for a subject, grouped by day in Bogotá time, with a
+ * modality filter and more pages on demand (HU-02, CA-HU02-1), and booking a seat in one
+ * (HU-03, T-04.19). Container: owns the filter, the pages read so far and the booking.
+ */
+export default function MonitorSlots({ subject, monitor, term }: MonitorSlotsProps) {
+  const { id: subjectId, code: subjectCode, name: subjectName } = subject;
+  const { id: monitorId, name: monitorName } = monitor;
+  const firstName = monitorName.split(" ")[0] || monitorName;
+  const [modality, setModality] = useState<Modality | null>(null);
+  const [page, setPage] = useState(1);
+  const [attempt, setAttempt] = useState(0);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  // Each request is known by its key; what settled for an older key is no longer current.
+  const requestKey = `${term}|${modality}|${page}|${attempt}`;
+  const [settled, setSettled] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{
+    key: string;
+    message: string;
+  } | null>(null);
+  // The slot whose booking is being confirmed, with the optional note (RF-047).
+  const [confirming, setConfirming] = useState<{ slotId: number; note: string } | null>(null);
+  const [booking, setBooking] = useState<number | null>(null);
+  const [booked, setBooked] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    searchSlots(
+      page,
+      {
+        ...NO_SLOT_SEARCH_FILTERS,
+        term,
+        subject: { id: subjectId, code: subjectCode, name: subjectName },
+        monitor: { id: monitorId, name: monitorName },
+        modality,
+      },
+      controller.signal,
+    ).then(
+      (result) => {
+        if (controller.signal.aborted) return;
+        setLoaded((previous) => ({
+          slots: page === 1 || !previous ? result.results : [...previous.slots, ...result.results],
+          count: result.count,
+          page,
+          hasMore: result.next !== null,
+        }));
+        setSettled(requestKey);
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted) return;
+        setFailure({ key: requestKey, message: requestErrorMessage(error) });
+      },
+    );
+    return () => controller.abort();
+  }, [
+    requestKey,
+    page,
+    modality,
+    term,
+    subjectId,
+    subjectCode,
+    subjectName,
+    monitorId,
+    monitorName,
+  ]);
+
+  const error = failure?.key === requestKey ? failure.message : null;
+  const loading = settled !== requestKey && error === null;
+
+  function ask(slot: Slot) {
+    setBooked(null);
+    setBookingError(null);
+    setConfirming({ slotId: slot.id, note: "" });
+  }
+
+  async function reserve(slot: Slot, note: string) {
+    setBooking(slot.id);
+    setBooked(null);
+    setBookingError(null);
+    try {
+      await reserveSlot(slot.id, note);
+    } catch (error) {
+      setBooking(null);
+      if (isReservationConflict(error) && problemType(error) !== "already_reserved") {
+        // The seat went to someone else between the search and the click: read again.
+        setConfirming(null);
+        setBookingError(`${requestErrorMessage(error)} ${TAKEN_MESSAGE}`);
+        setPage(1);
+        setAttempt((value) => value + 1);
+      } else {
+        // A rule to fix, e.g. an overlap: the confirmation and its note stay open.
+        setBookingError(requestErrorMessage(error));
+      }
+      return;
+    }
+    setBooking(null);
+    setConfirming(null);
+    setLoaded((previous) => previous && afterBooking(previous, slot));
+    setBooked(
+      `Reservaste la monitoría del ${slotDayLabel(slot.starts_at)}, ${slotTimeRange(slot.starts_at, slot.ends_at)}, con ${firstName}.`,
+    );
+  }
+
+  function chooseModality(next: Modality | null) {
+    if (next === modality) return;
+    setLoaded(null);
+    setPage(1);
+    setModality(next);
+  }
+
+  const firstLoad = loaded === null && error === null;
+
+  let status = "";
+  if (firstLoad) status = "Buscando franjas…";
+  else if (loaded) status = availableSlotsLabel(loaded.count);
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.toolbar}>
+        <div className={styles.chips} role="group" aria-label="Modalidad">
+          <ToggleChip pressed={modality === null} onClick={() => chooseModality(null)}>
+            Todas
+          </ToggleChip>
+          {MODALITIES.map((value) => (
+            <ToggleChip
+              key={value}
+              pressed={modality === value}
+              onClick={() => chooseModality(value)}
+            >
+              <Icon name={value === "VIRTUAL" ? "video" : "place"} size={16} />
+              {MODALITY_LABELS[value]}
+            </ToggleChip>
+          ))}
+        </div>
+        <p role="status" className={styles.status}>
+          {status}
+        </p>
+      </div>
+
+      {booked && (
+        <div className={styles.booked}>
+          <Alert tone="success">{booked}</Alert>
+          <ButtonLink href={MY_RESERVATIONS_PATH} variant="ghost" size="sm">
+            Ver mis reservas
+          </ButtonLink>
+        </div>
+      )}
+      {bookingError && <Alert tone="error">{bookingError}</Alert>}
+
+      {error && (
+        <div className={styles.failure}>
+          <Alert tone="error">{error}</Alert>
+          <Button variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
+            <Icon name="refresh" />
+            Intentar de nuevo
+          </Button>
+        </div>
+      )}
+
+      {firstLoad && (
+        <div className={styles.skeletons} aria-hidden="true">
+          {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+            <div key={index} className={styles.skeleton} />
+          ))}
+        </div>
+      )}
+
+      {loaded && loaded.slots.length === 0 && !error && (
+        <div className={styles.empty}>
+          {modality ? (
+            <EmptyState
+              title={`${firstName} no tiene franjas ${modality === "VIRTUAL" ? "virtuales" : "presenciales"}.`}
+              action={
+                <Button variant="ghost" size="sm" onClick={() => chooseModality(null)}>
+                  Ver todas
+                </Button>
+              }
+            >
+              <p>Prueba con la otra modalidad.</p>
+            </EmptyState>
+          ) : (
+            <EmptyState title={`${firstName} no tiene franjas disponibles por ahora.`}>
+              <p>Cuando publique su disponibilidad en {subjectName}, aparecerá aquí.</p>
+            </EmptyState>
+          )}
+        </div>
+      )}
+
+      {loaded && loaded.slots.length > 0 && (
+        <div className={styles.days} aria-busy={loading}>
+          {byDay(loaded.slots).map((group) => {
+            const first = group.slots[0] as Slot;
+            const relative = relativeDayLabel(first.starts_at);
+            const headingId = `day-${group.date}`;
+            return (
+              <section key={group.date} className={styles.day} aria-labelledby={headingId}>
+                <h3 id={headingId} className={styles.dayHeading}>
+                  <span className={styles.dayName}>{slotDayLabel(first.starts_at)}</span>
+                  {relative && <span className={styles.relative}>{relative}</span>}
+                </h3>
+                <ul className={styles.slots}>
+                  {group.slots.map((slot) => {
+                    const note = confirming?.slotId === slot.id ? confirming.note : null;
+                    return (
+                      <li key={slot.id}>
+                        <SlotRow
+                          slot={slot}
+                          note={note}
+                          reserving={booking === slot.id}
+                          busy={booking !== null}
+                          onAsk={() => ask(slot)}
+                          onNoteChange={(value) => setConfirming({ slotId: slot.id, note: value })}
+                          onConfirm={() => reserve(slot, note ?? "")}
+                          onBack={() => setConfirming(null)}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {loaded?.hasMore && !error && (
+        <Button
+          variant="ghost"
+          className={styles.more}
+          softDisabled={loading}
+          onClick={() => setPage(loaded.page + 1)}
+        >
+          {loading ? "Cargando…" : "Ver más franjas"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+type SlotRowProps = {
+  slot: Slot;
+  /** The note being written while the booking is confirmed; null when not confirming. */
+  note: string | null;
+  /** This slot is being booked. */
+  reserving: boolean;
+  /** Some booking is in flight: no second one starts meanwhile. */
+  busy: boolean;
+  onAsk: () => void;
+  onNoteChange: (note: string) => void;
+  onConfirm: () => void;
+  onBack: () => void;
+};
+
+/**
+ * One slot: its hours, how long it lasts, where, its free seats and "Reservar", which opens a
+ * confirmation with an optional note for the monitor (RF-047). Presentational.
+ */
+function SlotRow({
+  slot,
+  note,
+  reserving,
+  busy,
+  onAsk,
+  onNoteChange,
+  onConfirm,
+  onBack,
+}: SlotRowProps) {
+  const virtual = slot.modality === "VIRTUAL";
+  const group = isGroupSession(slot.capacity);
+  const range = slotTimeRange(slot.starts_at, slot.ends_at);
+  const noteId = `note-${slot.id}`;
+
+  return (
+    <article className={styles.slot} aria-label={range}>
+      <div className={styles.time}>
+        <span className={styles.range}>{slotTimeRange(slot.starts_at, slot.ends_at)}</span>
+        <span className={styles.duration}>
+          <Icon name="clock" size={14} />
+          {durationLabel(slot.starts_at, slot.ends_at)}
+        </span>
+      </div>
+      <div className={styles.where}>
+        <span className={styles.modality} data-virtual={virtual || undefined}>
+          <Icon name={virtual ? "video" : "place"} size={16} />
+          {MODALITY_LABELS[slot.modality]}
+        </span>
+        <span className={styles.location} title={slot.location}>
+          {slot.location}
+        </span>
+      </div>
+      <span className={styles.session} data-group={group || undefined}>
+        <Icon name="users" size={14} />
+        {seatsLabel(slot.capacity, slot.remaining_seats)}
+      </span>
+      {note === null ? (
+        <Button
+          size="sm"
+          className={styles.reserve}
+          aria-label={`Reservar ${range}`}
+          softDisabled={busy}
+          onClick={onAsk}
+        >
+          Reservar
+        </Button>
+      ) : (
+        <div className={styles.confirm} role="group" aria-label="Confirmar reserva">
+          <label htmlFor={noteId} className={styles.noteLabel}>
+            Nota para el monitor (opcional)
+          </label>
+          <textarea
+            id={noteId}
+            className={styles.note}
+            rows={2}
+            maxLength={MAX_NOTE_LENGTH}
+            value={note}
+            placeholder="Por ejemplo, el tema que quieres repasar."
+            aria-describedby={`${noteId}-count`}
+            onChange={(event) => onNoteChange(event.target.value)}
+          />
+          <div className={styles.confirmFooter}>
+            <span id={`${noteId}-count`} className={styles.noteCount}>
+              {`${note.length}/${MAX_NOTE_LENGTH}`}
+            </span>
+            <Button variant="ghost" size="sm" softDisabled={reserving} onClick={onBack}>
+              Volver
+            </Button>
+            <Button size="sm" softDisabled={busy} onClick={onConfirm}>
+              {reserving ? "Reservando…" : "Confirmar reserva"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
