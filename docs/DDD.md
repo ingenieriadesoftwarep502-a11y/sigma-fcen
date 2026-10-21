@@ -303,9 +303,11 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 | `subject` | FK a `Subject` | — |
 | `uploaded_by` | FK a `User` | Monitor o docente |
 | `title`, `description` | Texto | — |
-| `file` | Archivo | `[PENDIENTE]` ADR-012 |
+| `kind` | `DOCUMENT` · `VIDEO` | ADR-012: un documento lleva archivo; un video, solo `youtube_id` (restricción en base de datos) |
+| `file`, `original_name` | Archivo, texto | Nombre en disco generado; el original se sanitiza y se guarda aparte |
+| `youtube_id` | Texto (11) | Solo `VIDEO` |
 | `content_type`, `size_bytes` | Texto, entero | Validados al subir |
-| `is_active` | Booleano | Borrado lógico |
+| `is_active`, `removed_at`, `removed_by` | Booleano, fecha, FK a `User` | Borrado lógico con autor y fecha |
 
 ---
 
@@ -387,15 +389,15 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 | 007.4 | La calificación está dentro de la escala confirmada | `[PENDIENTE]` |
 | 007.5 | Mínimo de evaluaciones para publicar el promedio de un monitor | `[PENDIENTE]` |
 
-### RN-008 · Materiales · `[PENDIENTE]` ADR-012
+### RN-008 · Materiales · `[CONFIRMADO]` ADR-012
 
 | # | Regla | Estado |
 |---|---|---|
-| 008.1 | Solo monitores y docentes suben material | `[PENDIENTE]` |
-| 008.2 | El formato debe estar en la lista permitida | `[PENDIENTE]` |
-| 008.3 | El tamaño no excede el máximo | `[PENDIENTE]` |
-| 008.4 | Todo material se asocia a una asignatura existente | `[PROPUESTA]` |
-| 008.5 | Solo el autor o un administrador elimina material | `[PROPUESTA]` |
+| 008.1 | Solo el monitor asignado a la asignatura y el docente de uno de sus cursos, en el período actual, suben material | `[CONFIRMADO]` |
+| 008.2 | Se acepta cualquier documento salvo ejecutables; el contenido real de los formatos conocidos coincide con su extensión; los videos son enlaces de YouTube | `[CONFIRMADO]` |
+| 008.3 | Un documento no excede 20 MB (`MATERIAL_MAX_FILE_BYTES`) | `[CONFIRMADO]` |
+| 008.4 | Todo material se asocia a una asignatura existente | `[CONFIRMADO]` |
+| 008.5 | Solo el autor o un administrador elimina material (borrado lógico) | `[CONFIRMADO]` |
 
 ### RN-009 · Seguimiento docente
 

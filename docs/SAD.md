@@ -60,7 +60,7 @@ Lo que realmente condiciona el diseño. Todo lo demás es consecuencia.
 | Web | Next.js 16 · React 19 · TypeScript 5 | Interfaz, enrutamiento, renderizado, sesión de cliente | `[PENDIENTE]` ADR-014 |
 | API | Django 5.2 · Django REST Framework | Reglas de negocio, autorización, persistencia | `[PENDIENTE]` ADR-014 |
 | Base de datos | PostgreSQL 16 | Almacenamiento transaccional e invariantes | Desarrollo: PostgreSQL local `[CONFIRMADO]` ADR-005 · Producción: `[PENDIENTE]` ADR-014 |
-| Archivos | `[PENDIENTE]` ADR-012 | Material académico | `[PENDIENTE]` ADR-012 |
+| Archivos | Django storages sobre disco local (`MEDIA_ROOT`) `[CONFIRMADO]` ADR-012 | Documentos del material académico; los videos son enlaces de YouTube | Disco local con volumen persistente; S3 sin cambiar código · `[PENDIENTE]` ADR-014 |
 
 **Comunicación:** Web → API mediante HTTPS + JSON bajo `/api/v1/`. API → Base de datos mediante Django ORM.
 
@@ -274,8 +274,10 @@ Todos en `[PROPUESTA]`, salvo los de la fase 01, implementados en FASE-01 (permi
 | `GET` | `/api/v1/tutoring-sessions/history/` | estudiante | HU-12 | 05 |
 | `POST` | `/api/v1/evaluations/` | estudiante | HU-07 | 06 |
 | `GET` | `/api/v1/monitors/{id}/rating/` | autenticado | HU-07 | 06 |
-| `GET/POST` | `/api/v1/materials/` | monitor o docente (escritura) | HU-08 | 07 |
-| `DELETE` | `/api/v1/materials/{id}/` | autor | HU-08 | 07 |
+| `GET/POST` | `/api/v1/materials/` | autenticado (lectura) · monitor asignado o docente de la asignatura (escritura) | HU-08 | 07 |
+| `GET` | `/api/v1/materials/subjects/` | autenticado: asignaturas donde puede subir | HU-08 | 07 |
+| `GET` | `/api/v1/materials/{id}/download/` | autenticado | HU-08 | 07 |
+| `DELETE` | `/api/v1/materials/{id}/` | autor o admin | HU-08 | 07 |
 | `GET` | `/api/v1/teaching/monitors/` | docente | HU-09 | 08 |
 | `GET` | `/api/v1/teaching/sessions/` | docente | HU-09 | 08 |
 | `GET` | `/api/v1/analytics/dashboard/` | admin | HU-10 | 09 |

@@ -318,15 +318,15 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 
 > Como monitor o docente, quiero cargar y organizar material de apoyo asociado a una asignatura, de tal manera que los estudiantes puedan consultarlo desde el sistema sin depender de medios externos.
 
-**Requisitos:** RF-070 a RF-073 · **Fase:** FASE-07 · **Bloqueado por:** ADR-012
+**Requisitos:** RF-070 a RF-073 · **Fase:** FASE-07 · **ADR:** ADR-012 (confirmado el 2026-10-20)
 
 | ID | Criterio | Estado |
 |---|---|---|
-| CA-HU08-1 | **Dado** un archivo de formato y tamaño permitidos, **cuando** lo subo asociado a una asignatura, **entonces** queda disponible en el repositorio | `[PENDIENTE]` ADR-012 |
-| CA-HU08-2 | **Dado** un formato no permitido, **cuando** lo subo, **entonces** recibo `400` | `[PENDIENTE]` ADR-012 |
-| CA-HU08-3 | **Dado** un archivo que excede el tamaño máximo, **cuando** lo subo, **entonces** recibo `413` | `[PENDIENTE]` ADR-012 |
-| CA-HU08-4 | **Dado** un estudiante autenticado, **cuando** consulta el material de una asignatura, **entonces** puede listarlo y descargarlo | `[PENDIENTE]` ADR-012 |
-| CA-HU08-5 | **Dado** un material que no subí yo, **cuando** intento eliminarlo, **entonces** recibo `403` | `[PENDIENTE]` ADR-012 |
+| CA-HU08-1 | **Dado** un archivo de formato y tamaño permitidos, **cuando** lo subo asociado a una asignatura, **entonces** queda disponible en el repositorio | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-2 | **Dado** un formato no permitido, **cuando** lo subo, **entonces** recibo `400` | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-3 | **Dado** un archivo que excede el tamaño máximo, **cuando** lo subo, **entonces** recibo `413` | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-4 | **Dado** un estudiante autenticado, **cuando** consulta el material de una asignatura, **entonces** puede listarlo y descargarlo | `[CONFIRMADO]` ADR-012 |
+| CA-HU08-5 | **Dado** un material que no subí yo, **cuando** intento eliminarlo, **entonces** recibo `403` | `[CONFIRMADO]` ADR-012 |
 
 ---
 
@@ -439,7 +439,7 @@ Cada requisito se conecta con su historia, su fase y su regla de negocio. Un req
 | RF-047 | HU-03 | FASE-04 | — | En revisión |
 | RF-050 a RF-053 | HU-06, HU-12 | FASE-05 | RN-006 | Bloqueado |
 | RF-060 a RF-063 | HU-07 | FASE-06 | RN-007 | Bloqueado |
-| RF-070 a RF-073 | HU-08 | FASE-07 | RN-008 | Bloqueado |
+| RF-070 a RF-073 | HU-08 | FASE-07 | RN-008 | En curso |
 | RF-080 a RF-083 | HU-09 | FASE-08 | RN-009 | Bloqueado |
 | RF-090 a RF-092 | HU-10 | FASE-09 | RN-010 | Bloqueado |
 

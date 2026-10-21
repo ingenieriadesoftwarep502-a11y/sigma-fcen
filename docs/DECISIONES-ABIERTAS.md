@@ -36,24 +36,6 @@ ADR-010 cerrado el 2026-10-11 y ADR-011 cerrado el 2026-10-19; ambos registrados
 
 ---
 
-#### ADR-012 · Repositorio de materiales: almacenamiento y límites
-
-- **Estado:** `[PENDIENTE]`
-- **Bloquea:** FASE-07, HU-08
-- **Contexto:** el documento base no define formatos, tamaños ni destino de almacenamiento.
-
-| # | Pregunta | Propuesta a validar |
-|---|---|---|
-| 1 | ¿Dónde se guardan los archivos? | Sistema de archivos local en v1, con abstracción de Django storages para migrar a S3 |
-| 2 | Formatos permitidos | `pdf`, `docx`, `pptx`, `png`, `jpg`, `zip` |
-| 3 | Tamaño máximo por archivo | 20 MB |
-| 4 | ¿Quién puede subir? ¿Quién puede ver? | Suben monitores y docentes; ven todos los usuarios autenticados |
-| 5 | ¿Se validan los archivos contra malware? | No en v1; se registra como deuda técnica |
-
-- **Pregunta:** ¿Se aprueban las cinco propuestas de la tabla?
-
----
-
 #### ADR-013 · Definición exacta de las métricas administrativas
 
 - **Estado:** `[PENDIENTE]`
@@ -112,6 +94,7 @@ Se registran aquí al confirmarse. Formato obligatorio:
 | ADR-009 | Política de registro: (1) registro restringido al dominio `@unal.edu.co`; (2) el auto-registro asigna únicamente el rol Estudiante; (3) sin verificación por correo — la cuenta queda activa al registrarse y no se requiere SMTP en v1; (4) los roles Monitor, Docente y Administrador los asigna un administrador. | `[CONFIRMADO]` | Nicolás García Orozco | 2026-09-27 | FASE-01, DDD §4.1 y §5, TRD §4.1 y §6 |
 | ADR-010 | Granularidad de franjas: (1) sesión de 60 min; (2) bloques fijos de 60 min; (3) capacidad configurable, por defecto 1; (4) máximo 1 reserva activa por estudiante, asignatura y semana; (5) plantilla semanal recurrente que genera franjas concretas; (6) anticipación mínima de 2 h para reservar. Capacidad, límite y anticipación son parámetros configurables; cada franja guarda inicio y fin explícitos. **Ampliación 2026-10-15:** la capacidad de cada franja o plantilla la elige el monitor (1 = individual, >1 = grupal); semántica de cupos R1–R4 en el detalle. | `[CONFIRMADO]` | Nicolás García Orozco (2026-10-11) · Alejandro Puerta Loaiza (ampliación) | 2026-10-11 · 2026-10-15 | FASE-03, FASE-04, DDD §4.3, §4.4, §5 y §6.1, SAD §4.4, TRD §3 |
 | ADR-011 | Política de cancelación: (1) el estudiante cancela con al menos 4 h de anticipación al inicio de la franja; (2) si cancela fuera de esa ventana, la reserva queda como inasistencia (`NO_SHOW`) en su historial y el cupo se libera igualmente; (3) el monitor puede cancelar una reserva con justificación obligatoria y queda registrado el autor (la notificación se documenta como evento de dominio, no se implementa en v1); (4) sin penalización por inasistencias reiteradas en v1: solo se miden y se reportan. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-10-19 | FASE-04, DDD §4.4, §5 (RN-005) y §6.2, TRD §3 (HU-04) |
+| ADR-012 | Repositorio de materiales: (1) disco local tras Django storages; (2) cualquier documento salvo ejecutables, con verificación del contenido real en formatos conocidos; (3) videos solo como enlace de YouTube embebido; (4) 20 MB por documento, configurable; (5) suben el monitor asignado y el docente de la asignatura en el período actual, ven todos los autenticados; (6) sin antivirus en v1, como deuda técnica. | `[CONFIRMADO]` | Alejandro Puerta Loaiza | 2026-10-20 | FASE-07, DDD §4.7 y §5 (RN-008), TRD §3 (HU-08), SAD |
 
 ---
 
@@ -231,6 +214,25 @@ Se conserva el contexto original de cada ADR para trazabilidad.
 
 ---
 
+#### ADR-012 · Repositorio de materiales: almacenamiento y límites
+
+- **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-10-20
+- **Decisión:** (1) los archivos se guardan en el disco del servidor (`MEDIA_ROOT`) detrás de la abstracción de *storages* de Django, para migrar a S3 sin tocar el código de negocio; (2) se acepta **cualquier formato de documento** salvo los ejecutables y los que el navegador puede ejecutar (`exe`, `msi`, `bat`, `cmd`, `sh`, `ps1`, `js`, `html`, `svg`, `jar`, `apk`…), y se verifica que el contenido real coincida con la extensión en los formatos conocidos; (3) **los videos no se suben**: se agregan como enlace de YouTube y se ven embebidos en la plataforma, separados de los documentos; (4) tamaño máximo por documento de 20 MB (`MATERIAL_MAX_FILE_BYTES`, configurable); (5) suben material el monitor asignado a la asignatura y el docente con un curso de la asignatura, ambos en el período actual; lo ven todos los usuarios autenticados; (6) sin antivirus en v1: se registra como deuda técnica.
+- **Bloqueaba:** FASE-07, HU-08, RN-008
+- **Contexto:** el documento base no define formatos, tamaños ni destino de almacenamiento.
+
+| # | Pregunta | Propuesta a validar | Respuesta |
+|---|---|---|---|
+| 1 | ¿Dónde se guardan los archivos? | Sistema de archivos local en v1, con abstracción de Django storages para migrar a S3 | Aprobada |
+| 2 | Formatos permitidos | `pdf`, `docx`, `pptx`, `png`, `jpg`, `zip` | Cualquier formato, bloqueando ejecutables |
+| 3 | Tamaño máximo por archivo | 20 MB | Aprobada; los videos van por YouTube |
+| 4 | ¿Quién puede subir? ¿Quién puede ver? | Suben monitores y docentes; ven todos los usuarios autenticados | Aprobada, limitada a la asignatura propia |
+| 5 | ¿Se validan los archivos contra malware? | No en v1; se registra como deuda técnica | Aprobada |
+
+- **Pregunta:** ¿Se aprueban las cinco propuestas de la tabla? — Sí, con los cambios de la columna «Respuesta» (2026-10-20).
+
+---
+
 #### ADR-011 · Política de cancelación
 
 - **Estado:** `[CONFIRMADO]` — Alejandro Puerta Loaiza, 2026-10-19
@@ -346,9 +348,9 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-04 | Ninguno (ADR-010 confirmado el 2026-10-11 y ADR-011 el 2026-10-19) |
 | FASE-05 | Ninguno por ADR (ADR-010 confirmado) |
 | FASE-06 | ADR-013 (escala de calificación) |
-| FASE-07 | ADR-012 |
+| FASE-07 | Ninguno (ADR-012 confirmado el 2026-10-20) |
 | FASE-08 | Ninguno por ADR (ADR-008 confirmado); sigue abierta la definición de RF-083 |
 | FASE-09 | ADR-013 |
 | FASE-10 | ADR-014, ADR-015 |
 
-> **4 decisiones abiertas. 11 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**
+> **3 decisiones abiertas. 12 cerradas. FASE-01 ya no tiene ADR bloqueantes; su inicio depende del DoD de FASE-00 y de confirmar sus contratos y criterios (gate G1).**

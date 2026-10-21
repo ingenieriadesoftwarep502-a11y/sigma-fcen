@@ -30,7 +30,7 @@
 | [04](FASE-04-reservas.md) | Reservas y cancelación | HU-03, HU-04 | 11 | 010, 011 | Bloqueada |
 | [05](FASE-05-sesiones.md) | Sesiones e historial | HU-06, HU-12 | 11 | 010 | Bloqueada |
 | [06](FASE-06-evaluaciones.md) | Evaluación del servicio | HU-07 | 5 | 013 | Bloqueada |
-| [07](FASE-07-materiales.md) | Repositorio académico | HU-08 | 8 | 012 | Bloqueada |
+| [07](FASE-07-materiales.md) | Repositorio académico | HU-08 | 8 | 012 (confirmado) | En curso |
 | [08](FASE-08-seguimiento-docente.md) | Seguimiento docente | HU-09 | 8 | 008 | Bloqueada |
 | [09](FASE-09-metricas.md) | Métricas administrativas | HU-10 | 13 | 013 | Bloqueada |
 | [10](FASE-10-hardening-despliegue.md) | Endurecimiento y despliegue | — | 0 | 014, 015 | Bloqueada |
@@ -179,7 +179,7 @@ Se actualiza al cerrar cada fase.
 | FASE-04 | Bloqueado | No iniciada | — | — |
 | FASE-05 | Bloqueado | No iniciada | — | — |
 | FASE-06 | Bloqueado | No iniciada | — | — |
-| FASE-07 | Bloqueado | No iniciada | — | — |
+| FASE-07 | Abierto (ADR-012 confirmado el 2026-10-20) | En curso — adelantada por capacidad libre | — | — |
 | FASE-08 | Bloqueado | No iniciada | — | — |
 | FASE-09 | Bloqueado | No iniciada | — | — |
 | FASE-10 | Bloqueado | No iniciada | — | — |
