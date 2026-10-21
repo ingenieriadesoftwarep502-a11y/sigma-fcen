@@ -110,6 +110,17 @@ describe("AppNavigation", () => {
     expect(screen.queryByRole("link", { name: "Mis reservas" })).not.toBeInTheDocument();
   });
 
+  it("links monitors and teachers to the material they publish (FASE-07)", async () => {
+    await renderFor(["MONITOR"]);
+    expect(screen.getByRole("link", { name: "Material" })).toHaveAttribute("href", "/material");
+  });
+
+  it("offers no material link to students, who find it inside each subject", async () => {
+    await renderFor(["STUDENT"]);
+
+    expect(screen.queryByRole("link", { name: "Material" })).not.toBeInTheDocument();
+  });
+
   it("links teachers to their courses", async () => {
     await renderFor(["TEACHER"]);
 

@@ -1,0 +1,198 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.empty {
+  padding: var(--space-7) var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-4);
+}
+
+.grid > li {
+  display: flex;
+  animation: enter 520ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    border-color var(--duration) var(--ease-out-expo),
+    box-shadow var(--duration) var(--ease-out-expo),
+    transform var(--duration) var(--ease-out-expo);
+}
+
+/* A lime rule along the top edge grows on hover: this card is a way in. */
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--space-5);
+  width: 2.5rem;
+  height: 2px;
+  background: var(--accent);
+  transition: width var(--duration) var(--ease-out-expo);
+}
+
+.card:hover {
+  border-color: var(--accent-line);
+  box-shadow: 0 16px 32px -20px rgb(0 0 0 / 0.85);
+  transform: translateY(-2px);
+}
+
+.card:hover::before {
+  width: calc(100% - 2 * var(--space-5));
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.code {
+  padding: 0.0625rem var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.roles {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.role {
+  --role: var(--role-monitor);
+
+  padding: 0.0625rem var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--role) 18%, transparent);
+  color: color-mix(in srgb, var(--role) 70%, white);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.role[data-role="TEACHER"] {
+  --role: var(--role-teacher);
+}
+
+.name {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.department {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-5);
+  font-size: 0.875rem;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.go {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.arrow {
+  transform: rotate(-90deg);
+  transition: transform var(--duration) var(--ease-out-expo);
+}
+
+.card:hover .arrow {
+  transform: rotate(-90deg) translateY(3px);
+}
+
+.skeleton {
+  height: 11rem;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg, var(--surface-1) 0%, var(--shimmer) 50%, var(--surface-1) 100%)
+    0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid > li {
+    animation: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}

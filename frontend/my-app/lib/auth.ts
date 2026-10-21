@@ -39,6 +39,12 @@ export function myAssignmentPath(id: number, term: string): string {
 }
 /** A student's reservations, and the reservations on a monitor's slots (FASE-04). */
 export const MY_RESERVATIONS_PATH = "/mis-reservas";
+/** Where monitors and teachers pick the subject they add study material to (FASE-07). */
+export const MATERIALS_PATH = "/material";
+/** The repository of one subject, with the upload actions. */
+export function materialSubjectPath(id: number): string {
+  return `${MATERIALS_PATH}/${id}`;
+}
 /** Catalog administration, for the ADMIN role only (FASE-02). */
 export const CATALOG_ADMIN_PATH = "/admin/catalogo";
 
