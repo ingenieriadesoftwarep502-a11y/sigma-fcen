@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api-client";
 import { getCurrentUser } from "@/lib/auth";
 import { NO_SLOT_SEARCH_FILTERS, searchSlots } from "@/lib/availability";
 import { getCurrentTerm, getSubject, listAllTerms, listSubjectMonitors } from "@/lib/catalog";
+import { listMaterials } from "@/lib/materials";
 
 import { CALCULO_REF, INDIVIDUAL_SLOT, pageOf, TERM_1, TERM_2 } from "../../availability/fixtures";
 
@@ -26,6 +27,10 @@ vi.mock("@/lib/catalog", async (importOriginal) => ({
   listSubjectMonitors: vi.fn(),
   listAllTerms: vi.fn(),
   getCurrentTerm: vi.fn(),
+}));
+vi.mock("@/lib/materials", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/materials")>()),
+  listMaterials: vi.fn(),
 }));
 vi.mock("@/lib/availability", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/availability")>()),
@@ -101,6 +106,21 @@ describe("SubjectDetail", () => {
       "/asignaturas",
     );
     expect(getSubjectMock).toHaveBeenCalledWith(1, null, expect.any(AbortSignal));
+  });
+
+  it("keeps the material of the subject in its own section (FASE-07)", async () => {
+    vi.mocked(listMaterials).mockResolvedValue(pageOf([]));
+    renderDetail();
+
+    const tab = await screen.findByRole("tab", { name: "Material" });
+    expect(screen.getByRole("tab", { name: "Monitorías" })).toHaveAttribute("aria-selected", "true");
+    expect(listMaterials).not.toHaveBeenCalled();
+    fireEvent.click(tab);
+
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("heading", { name: "Material de apoyo" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Subir documento/ })).not.toBeInTheDocument();
+    expect(listMaterials).toHaveBeenCalledWith(1, "DOCUMENT", 1, expect.any(AbortSignal));
   });
 
   it("lists the monitors of the current term, soonest available first", async () => {

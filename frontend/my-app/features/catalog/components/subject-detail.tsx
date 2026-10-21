@@ -10,9 +10,11 @@ import Drawer from "@/components/ui/drawer";
 import EmptyState from "@/components/ui/empty-state";
 import Icon from "@/components/ui/icon";
 import SearchField from "@/components/ui/search-field";
+import TabList, { panelId, tabId } from "@/components/ui/tabs";
 import MonitorSlots from "@/features/availability/components/monitor-slots";
 import { availableSlotsLabel, nextSlotLabel } from "@/features/availability/labels";
 import { useSession } from "@/features/auth/session/session-provider";
+import MaterialLibrary from "@/features/materials/components/material-library";
 import { ApiError, requestErrorMessage } from "@/lib/api-client";
 import { SUBJECTS_PATH } from "@/lib/auth";
 import { getSubject, listSubjectMonitors, type Subject, type SubjectMonitor } from "@/lib/catalog";
@@ -65,6 +67,13 @@ function useSubjectData<T>(
 // Module-level so the effects above do not run again on every render.
 const loadSubject = (id: number, signal: AbortSignal) => getSubject(id, null, signal);
 const loadMonitors = listSubjectMonitors;
+
+type Section = "monitorias" | "material";
+
+const SECTIONS = [
+  { key: "monitorias", label: "Monitorías" },
+  { key: "material", label: "Material" },
+] as const satisfies readonly { key: Section; label: string }[];
 
 /** Past this many monitors, the roster offers a search by name. */
 const SEARCHABLE_FROM = 6;
@@ -243,9 +252,10 @@ function MonitorRoster({ subject, term }: RosterProps) {
 }
 
 /**
- * One subject as a student sees it: what it is and its monitors of the current term, each
- * opening its upcoming slots on demand (they took the place of the old standalone search),
- * where a seat can be booked (FASE-04). Container: owns the subject and the current term.
+ * One subject as a student sees it: what it is and two sections. Monitorías lists its
+ * monitors of the current term, each opening its upcoming slots on demand, where a seat can
+ * be booked (FASE-04). Material holds the documents and videos its monitors and teachers
+ * published (FASE-07). Container: owns the subject and the current term.
  */
 export default function SubjectDetail({ subjectId }: { subjectId: number }) {
   const { session } = useSession();
@@ -257,6 +267,7 @@ function Detail({ subjectId, userId }: { subjectId: number; userId: string }) {
   const { state, retry } = useSubjectData<Subject>(subjectId, loadSubject);
   const { terms, current, error: termsError } = useTerms();
   const pins = usePinnedSubjects(userId);
+  const [section, setSection] = useState<Section>("monitorias");
   // The roster waits for the current term, so its slots never show another term's first.
   const termKnown = terms !== null || termsError !== null;
   const term = current?.code ?? null;
@@ -334,7 +345,30 @@ function Detail({ subjectId, userId }: { subjectId: number; userId: string }) {
             </button>
           </header>
 
-          {termKnown && <MonitorRoster key={term ?? "all"} subject={state.data} term={term} />}
+          <TabList
+            label="Secciones de la asignatura"
+            idPrefix="subject-section"
+            tabs={SECTIONS}
+            selected={section}
+            onSelect={setSection}
+          />
+          <div
+            role="tabpanel"
+            id={panelId("subject-section", section)}
+            aria-labelledby={tabId("subject-section", section)}
+            className={styles.section}
+          >
+            {section === "monitorias" && termKnown && (
+              <MonitorRoster key={term ?? "all"} subject={state.data} term={term} />
+            )}
+            {section === "material" && (
+              <MaterialLibrary
+                subject={{ id: state.data.id, code: state.data.code, name: state.data.name }}
+                canUpload={false}
+                audience="student"
+              />
+            )}
+          </div>
         </>
       )}
     </article>

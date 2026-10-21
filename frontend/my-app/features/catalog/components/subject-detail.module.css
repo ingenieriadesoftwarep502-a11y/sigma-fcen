@@ -140,6 +140,11 @@
   background: var(--surface-1);
 }
 
+/* The selected section sits a step below its tab. */
+.section {
+  margin-top: calc(-1 * var(--space-2));
+}
+
 /* --- Monitors ------------------------------------------------------------------------- */
 
 .roster {
