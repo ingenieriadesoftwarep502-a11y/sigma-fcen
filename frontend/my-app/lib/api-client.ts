@@ -24,7 +24,7 @@ export class ApiError extends Error {
 }
 
 export type ApiRequestOptions = Omit<RequestInit, "body"> & {
-  /** Plain value serialized as JSON. */
+  /** Plain value serialized as JSON, or a FormData sent as is (multipart, e.g. a file). */
   body?: unknown;
   /** Milliseconds for the whole operation, CSRF and session renewal included (default 15 s). */
   timeoutMs?: number;
@@ -132,7 +132,9 @@ async function exchange<T>(
   if (reading.accept) {
     requestHeaders.set("Accept", reading.accept);
   }
-  if (body !== undefined) {
+  // The browser writes the multipart Content-Type itself, with its boundary.
+  const form = body instanceof FormData ? body : null;
+  if (body !== undefined && !form) {
     requestHeaders.set("Content-Type", "application/json");
   }
   if (csrfToken) {
@@ -144,7 +146,7 @@ async function exchange<T>(
     // The session lives in HttpOnly cookies (ADR-007): they must always travel.
     credentials: "include",
     headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: form ?? (body === undefined ? undefined : JSON.stringify(body)),
     signal,
   });
   if (!response.ok) {
