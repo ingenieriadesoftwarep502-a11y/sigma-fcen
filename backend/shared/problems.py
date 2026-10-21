@@ -24,6 +24,7 @@ TITLES = {
     status.HTTP_404_NOT_FOUND: "No encontrado",
     status.HTTP_405_METHOD_NOT_ALLOWED: "Método no permitido",
     status.HTTP_409_CONFLICT: "Conflicto",
+    status.HTTP_413_REQUEST_ENTITY_TOO_LARGE: "Archivo demasiado grande",
     status.HTTP_429_TOO_MANY_REQUESTS: "Demasiadas peticiones",
 }
 VALIDATION_TYPE = "validation_error"

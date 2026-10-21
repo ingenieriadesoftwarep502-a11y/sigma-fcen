@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "apps.academics",
     "apps.availability",
     "apps.reservations",
+    "apps.materials",
 ]
 
 MIDDLEWARE = [
@@ -159,6 +160,7 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "StatusEnum": "apps.availability.domain.rules.SlotStatus",
         "ReservationStatusEnum": "apps.reservations.domain.rules.ReservationStatus",
+        "MaterialKindEnum": "apps.materials.domain.rules.MaterialKind",
     },
 }
 
@@ -172,6 +174,14 @@ RESERVATION_MIN_ADVANCE_HOURS = 2
 RESERVATION_MAX_ACTIVE_PER_SUBJECT_WEEK = 1
 # ADR-011: a student cancels at least this many hours ahead; later counts as a no-show.
 RESERVATION_CANCEL_WINDOW_HOURS = 4
+
+# --- Study material (ADR-012) ---------------------------------------------------------------
+
+# Uploaded documents live on local disk behind Django's storage API, so moving them to S3 is
+# a settings change. MEDIA_ROOT is never served as is: documents go out through the API only.
+MEDIA_ROOT = env.path("MEDIA_ROOT", default=BASE_DIR / "media")
+MEDIA_URL = "media/"
+MATERIAL_MAX_FILE_BYTES = 20 * 1024 * 1024
 
 # --- Logging --------------------------------------------------------------------------------
 

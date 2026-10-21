@@ -17,6 +17,8 @@ api_v1_patterns: list[URLPattern | URLResolver] = [
     path("", include("apps.availability.urls")),
     # Reservations (FASE-04): reserve, list and cancel.
     path("", include("apps.reservations.urls")),
+    # Study material (FASE-07): documents and YouTube videos of each subject.
+    path("", include("apps.materials.urls")),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]
