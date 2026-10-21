@@ -290,6 +290,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/materials/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The repository of a subject (CA-HU08-4) and the upload into it (CA-HU08-1). */
+        get: operations["materials_list"];
+        put?: never;
+        /** @description The repository of a subject (CA-HU08-4) and the upload into it (CA-HU08-1). */
+        post: operations["materials_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description The author or an administrator removes material; it only stops being listed. */
+        delete: operations["materials_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{id}/download/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A document, for anyone signed in (CA-HU08-4, RNF-SEC-003). Videos play from YouTube. */
+        get: operations["materials_download_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/subjects/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Where the signed-in user may add material, with what each subject already holds. */
+        get: operations["materials_subjects_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/monitor-assignments/": {
         parameters: {
             query?: never;
@@ -846,6 +915,52 @@ export interface components {
             email: string;
             password: string;
         };
+        /** @description A document carries its file data; a video, its YouTube id. The rest is null. */
+        Material: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly subject: components["schemas"]["SubjectReference"];
+            readonly kind: components["schemas"]["MaterialKindEnum"];
+            /** Título */
+            readonly title: string;
+            /** Descripción */
+            readonly description: string;
+            readonly uploaded_by: components["schemas"]["MonitorReference"];
+            /**
+             * Creado
+             * Format: date-time
+             */
+            readonly created_at: string;
+            readonly file_name: string | null;
+            readonly file_extension: string | null;
+            readonly content_type: string | null;
+            /** Tamaño */
+            readonly size_bytes: number | null;
+            readonly youtube_id: string | null;
+            /** @description Whether the person reading may remove it: the author or an administrator. */
+            readonly can_delete: boolean;
+        };
+        /** @description `file` for a DOCUMENT (multipart), `video_url` for a VIDEO; the author is the session. */
+        MaterialCreate: {
+            /** @description Id de la asignatura a la que se agrega el material. */
+            subject_id: number;
+            kind: components["schemas"]["MaterialKindEnum"];
+            title: string;
+            description?: string;
+            /**
+             * Format: uri
+             * @description Documento (DOCUMENT): cualquier formato salvo ejecutables.
+             */
+            file?: string | null;
+            /** @description Enlace del video de YouTube (VIDEO). */
+            video_url?: string;
+        };
+        /**
+         * @description * `DOCUMENT` - DOCUMENT
+         *     * `VIDEO` - VIDEO
+         * @enum {string}
+         */
+        MaterialKindEnum: "DOCUMENT" | "VIDEO";
         /**
          * @description * `IN_PERSON` - Presencial
          *     * `VIRTUAL` - Virtual
@@ -970,6 +1085,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Department"][];
+        };
+        PaginatedMaterialList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Material"][];
         };
         PaginatedMonitorAssignmentList: {
             /** @example 123 */
@@ -1340,6 +1470,17 @@ export interface components {
             /** Grupo */
             readonly group: string;
             readonly monitors: components["schemas"]["AssignedMonitor"][];
+        };
+        /** @description A subject where the user may add material, and why (ADR-012, item 5). */
+        UploadableSubject: {
+            id: number;
+            code: string;
+            name: string;
+            department: string;
+            /** @description MONITOR (asignado a la asignatura) y/o TEACHER (docente de un curso). */
+            roles: string[];
+            document_count: number;
+            video_count: number;
         };
         User: {
             /** Format: uuid */
@@ -1952,6 +2093,170 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    materials_list: {
+        parameters: {
+            query: {
+                /**
+                 * @description * `DOCUMENT` - DOCUMENT
+                 *     * `VIDEO` - VIDEO
+                 */
+                kind?: "DOCUMENT" | "VIDEO";
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Id de la asignatura. */
+                subject: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedMaterialList"];
+                };
+            };
+        };
+    };
+    materials_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["MaterialCreate"];
+                "application/json": components["schemas"]["MaterialCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Material"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    materials_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    materials_download_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    materials_subjects_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadableSubject"][];
                 };
             };
         };
