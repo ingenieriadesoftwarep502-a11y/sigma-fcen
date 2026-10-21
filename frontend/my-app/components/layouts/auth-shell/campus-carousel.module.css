@@ -163,9 +163,16 @@
   }
 }
 
+/* !important outranks the global reduced-motion net in globals.css, which would cut these to 1ms. */
 @media (prefers-reduced-motion: reduce) {
   .slide[data-active="true"] {
     animation: fade-in 0.8s ease-out both;
+    animation-duration: 0.8s !important;
+  }
+
+  /* The progress bar times the rotation: at 1ms the photos would flash by nonstop. */
+  .dot[aria-current="true"] .fill {
+    animation-duration: var(--slide-duration, 7s) !important;
   }
 
   .slide img,
