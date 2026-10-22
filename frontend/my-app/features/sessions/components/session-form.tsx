@@ -292,6 +292,7 @@ export default function SessionForm({ mode, onSaved, onBusyChange }: SessionForm
             onChange={(event) => setNewTopic(event.target.value)}
             onKeyDown={handleNewTopicKey}
             errors={topicProblem ? [topicProblem] : []}
+            variant="glass"
           />
           <Button
             type="button"
@@ -354,6 +355,7 @@ export default function SessionForm({ mode, onSaved, onBusyChange }: SessionForm
         value={duration}
         onChange={(event) => setDuration(event.target.value)}
         errors={errors.duration_minutes}
+        variant="glass"
       />
 
       <Button type="submit" softDisabled={submitting} className={styles.submit}>
