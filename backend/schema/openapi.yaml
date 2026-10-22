@@ -1527,6 +1527,260 @@ paths:
           description: ''
         '404':
           description: No terms yet
+  /api/v1/topics/:
+    get:
+      operationId: topics_list
+      description: A subject's topic catalog; the assigned monitor or an admin add
+        to it (T-05.21).
+      parameters:
+      - in: query
+        name: subject
+        schema:
+          type: integer
+        description: Id de la asignatura.
+        required: true
+      tags:
+      - topics
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Topic'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+    post:
+      operationId: topics_create
+      description: A subject's topic catalog; the assigned monitor or an admin add
+        to it (T-05.21).
+      tags:
+      - topics
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TopicCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TopicCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/tutoring-sessions/:
+    post:
+      operationId: tutoring_sessions_create
+      description: The slot's monitor records the session and closes its reservations
+        (HU-06).
+      tags:
+      - tutoring-sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SessionCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SessionCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutoringSession'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '409':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/tutoring-sessions/{id}/:
+    get:
+      operationId: tutoring_sessions_retrieve
+      description: Read a session as a participant, teacher or admin; the monitor
+        corrects it for 48 h.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tutoring-sessions
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutoringSession'
+          description: ''
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '404':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+    patch:
+      operationId: tutoring_sessions_partial_update
+      description: Read a session as a participant, teacher or admin; the monitor
+        corrects it for 48 h.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tutoring-sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionUpdate'
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutoringSession'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '409':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/tutoring-sessions/history/:
+    get:
+      operationId: tutoring_sessions_history_list
+      description: 'HU-12: a student''s closed reservations, with the session they
+        attended.'
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          enum:
+          - COMPLETED
+          - NO_SHOW
+          type: string
+          minLength: 1
+        description: |-
+          * `COMPLETED` - COMPLETED
+          * `NO_SHOW` - NO_SHOW
+      - in: query
+        name: student
+        schema:
+          type: string
+          format: uuid
+        description: Solo el propio estudiante o un administrador.
+      - in: query
+        name: subject
+        schema:
+          type: integer
+        description: Id de la asignatura.
+      tags:
+      - tutoring-sessions
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHistoryItemList'
+          description: ''
+  /api/v1/tutoring-sessions/mine/:
+    get:
+      operationId: tutoring_sessions_mine_list
+      description: The sessions of the monitor's slots, latest recorded first.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: subject
+        schema:
+          type: integer
+        description: Id de la asignatura.
+      - in: query
+        name: term
+        schema:
+          type: string
+          minLength: 1
+        description: Código del período, p. ej. 2026-2.
+      tags:
+      - tutoring-sessions
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTutoringSessionList'
+          description: ''
   /api/v1/users/:
     get:
       operationId: users_list
@@ -1903,6 +2157,44 @@ components:
       - email
       - full_name
       - id
+    AttendanceEnum:
+      enum:
+      - ATTENDED
+      - NO_SHOW
+      type: string
+      description: |-
+        * `ATTENDED` - ATTENDED
+        * `NO_SHOW` - NO_SHOW
+    AttendanceMark:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        attendance:
+          $ref: '#/components/schemas/AttendanceEnum'
+      required:
+      - attendance
+      - reservation_id
+    AttendanceRow:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+          readOnly: true
+        student:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        attendance:
+          allOf:
+          - $ref: '#/components/schemas/AttendanceEnum'
+          readOnly: true
+      required:
+      - attendance
+      - reservation_id
+      - student
     AuditEntry:
       type: object
       properties:
@@ -2155,6 +2447,71 @@ components:
       required:
       - database
       - status
+    HistoryItem:
+      type: object
+      description: One closed reservation of the student (HU-12, CA-HU12-1).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slot:
+          allOf:
+          - $ref: '#/components/schemas/ReservationSlot'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/HistoryItemStatusEnum'
+          readOnly: true
+        session:
+          allOf:
+          - $ref: '#/components/schemas/HistorySession'
+          nullable: true
+          readOnly: true
+        evaluation:
+          nullable: true
+          readOnly: true
+      required:
+      - evaluation
+      - id
+      - session
+      - slot
+      - status
+    HistoryItemStatusEnum:
+      enum:
+      - COMPLETED
+      - NO_SHOW
+      type: string
+      description: |-
+        * `COMPLETED` - COMPLETED
+        * `NO_SHOW` - NO_SHOW
+    HistorySession:
+      type: object
+      description: 'What a student keeps of a session in the history: no notes (RN-006.9).'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Topic'
+          readOnly: true
+        duration_minutes:
+          type: integer
+          readOnly: true
+          title: Duración en minutos
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Registrada
+      required:
+      - duration_minutes
+      - id
+      - recorded_at
+      - topics
     Login:
       type: object
       properties:
@@ -2509,6 +2866,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Department'
+    PaginatedHistoryItemList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryItem'
     PaginatedMaterialList:
       type: object
       required:
@@ -2670,6 +3050,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TeacherCourse'
+    PaginatedTutoringSessionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TutoringSession'
     PatchedAcademicTerm:
       type: object
       properties:
@@ -2713,6 +3116,32 @@ components:
           maxLength: 150
         is_active:
           type: boolean
+    PatchedSessionUpdate:
+      type: object
+      description: 'RN-006.8: attendance and slot are final; the rest changes for
+        48 hours.'
+      properties:
+        topic_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Temas de la asignatura trabajados.
+        material_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Material de la asignatura usado.
+        notes:
+          type: string
+          description: Observaciones del monitor; el estudiante no las ve.
+          maxLength: 2000
+        duration_minutes:
+          type: integer
+          maximum: 180
+          minimum: 1
+          description: Duración real.
     PatchedSlotUpdate:
       type: object
       description: Fields a monitor sets on a slot; the end and the term are derived
@@ -2966,6 +3395,62 @@ components:
         * `MONITOR` - Monitor
         * `TEACHER` - Docente
         * `ADMIN` - Administrador
+    SessionCreate:
+      type: object
+      description: The monitor is always the authenticated user, never a field of
+        the body.
+      properties:
+        slot_id:
+          type: integer
+          description: Id de la franja ya iniciada.
+        attendance:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceMark'
+          description: Asistencia de cada reserva confirmada de la franja.
+        topic_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Temas de la asignatura trabajados.
+        material_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Material de la asignatura usado.
+        notes:
+          type: string
+          description: Observaciones del monitor; el estudiante no las ve.
+          maxLength: 2000
+        duration_minutes:
+          type: integer
+          maximum: 180
+          minimum: 1
+          description: Duración real; por defecto, la de la franja.
+      required:
+      - attendance
+      - slot_id
+    SessionMaterial:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+          title: Título
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/MaterialKindEnum'
+          readOnly: true
+      required:
+      - id
+      - kind
+      - title
     SlotCreate:
       type: object
       description: Fields a monitor sets on a slot; the end and the term are derived
@@ -3276,6 +3761,92 @@ components:
       - monitors
       - subject
       - term
+    Topic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          title: Nombre
+      required:
+      - id
+      - name
+    TopicCreate:
+      type: object
+      properties:
+        subject_id:
+          type: integer
+        name:
+          type: string
+          maxLength: 200
+      required:
+      - name
+      - subject_id
+    TutoringSession:
+      type: object
+      description: A session; a student reading it gets no notes and only their own
+        attendance (RN-006.9).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slot:
+          allOf:
+          - $ref: '#/components/schemas/ReservationSlot'
+          readOnly: true
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Topic'
+          readOnly: true
+        materials:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionMaterial'
+          readOnly: true
+        notes:
+          type: string
+          nullable: true
+          readOnly: true
+        duration_minutes:
+          type: integer
+          readOnly: true
+          title: Duración en minutos
+        attendance:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceRow'
+          readOnly: true
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Registrada
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Actualizada
+        editable_until:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - attendance
+      - duration_minutes
+      - editable_until
+      - id
+      - materials
+      - notes
+      - recorded_at
+      - slot
+      - topics
+      - updated_at
     UploadableSubject:
       type: object
       description: A subject where the user may add material, and why (ADR-012, item
