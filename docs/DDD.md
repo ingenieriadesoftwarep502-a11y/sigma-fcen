@@ -252,23 +252,30 @@ Contratos y modelo confirmados el 2026-09-29 (ficha de [FASE-02](fases/FASE-02-c
 
 ---
 
-### 4.5 Agregado `TutoringSession` · raíz, con `Topic`
+### 4.5 Agregado `TutoringSession` · raíz, con `SessionAttendance` y `Topic`
+
+> **Cambio confirmado 2026-10-22 (Nicolás García Orozco):** con las monitorías grupales (ADR-010, ampliación 2026-10-15) la sesión es **una por franja**, no una por reserva. Cada reserva recibe su propio registro de asistencia. Detalle en [FASE-05 §4](fases/FASE-05-sesiones.md).
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | `id` | UUID | — |
-| `reservation` | OneToOne a `Reservation` | Una reserva, a lo sumo una sesión |
-| `attendance` | `ATTENDED` · `NO_SHOW` | — |
+| `slot` | OneToOne a `AvailabilitySlot` | Una franja, a lo sumo una sesión |
+| `recorded_by` | FK a `User` | El monitor de la franja |
 | `topics` | M:N a `Topic` | Alimenta "dificultades frecuentes" (RF-083) |
-| `notes` | Texto | Observaciones del monitor |
-| `materials` | M:N a `Material` | Material usado en la sesión |
-| `recorded_at` | Marca de tiempo UTC | — |
-| `duration_minutes` | Entero | Duración real |
+| `notes` | Texto ≤ 2000 | Observaciones del monitor; no las ve el estudiante |
+| `materials` | M:N a `Material` | Material de la asignatura usado en la sesión |
+| `duration_minutes` | Entero 1–180 | Duración real |
+| `recorded_at` | Marca de tiempo UTC | Inicio del plazo de edición de 48 h |
+| `updated_at` | Marca de tiempo UTC | — |
+
+**`SessionAttendance`** (entidad del agregado): `session` FK, `reservation` OneToOne a `Reservation`, `attendance` `ATTENDED` · `NO_SHOW`.
+
+**`Topic`**: `subject` FK, `name` ≤ 80 único por asignatura sin distinguir mayúsculas, `created_by`, `created_at`. El monitor asignado crea temas nuevos al registrar.
 
 **Invariantes:**
 
-- La sesión solo se registra si `reservation.status == CONFIRMED` y `slot.starts_at` ya pasó (RN-006).
-- Relación uno a uno estricta con la reserva.
+- La sesión solo se registra si la franja ya empezó y tiene reservas `CONFIRMED`, y marca todas ellas (RN-006).
+- Uno a uno estricto con la franja y entre asistencia y reserva, garantizado en base de datos.
 - Una sesión con `NO_SHOW` no admite evaluación (RN-007.3).
 
 > **Decisión de modelado:** los temas son una entidad `Topic`, no texto libre. Con texto libre, la métrica de "dificultades frecuentes" (RF-083, HU-09) sería imposible de calcular sin procesamiento de lenguaje natural. Un catálogo de temas por asignatura, con opción de agregar nuevos, resuelve el problema desde el modelo.
@@ -372,12 +379,15 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 
 | # | Regla | Estado |
 |---|---|---|
-| 006.1 | Solo se registra sesión sobre reserva `CONFIRMED` | `[PROPUESTA]` |
-| 006.2 | Solo se registra sesión después de la hora de inicio de la franja | `[PROPUESTA]` |
-| 006.3 | Una reserva admite a lo sumo una sesión | `[PROPUESTA]` |
-| 006.4 | Solo el monitor de la franja registra la sesión | `[PROPUESTA]` |
-| 006.5 | Registrar una sesión cambia la reserva a `COMPLETED` o `NO_SHOW` | `[PROPUESTA]` |
-| 006.6 | Plazo máximo para editar una sesión registrada | `[PENDIENTE]` RF-052 |
+| 006.1 | Solo se registra sesión sobre una franja con al menos una reserva `CONFIRMED`; las canceladas y las cancelaciones tardías no se marcan | `[CONFIRMADO]` 2026-10-22 |
+| 006.2 | Solo se registra sesión después de la hora de inicio de la franja | `[CONFIRMADO]` 2026-10-22 |
+| 006.3 | Una franja admite a lo sumo una sesión, y una reserva a lo sumo un registro de asistencia | `[CONFIRMADO]` 2026-10-22 |
+| 006.4 | Solo el monitor de la franja registra y edita la sesión | `[CONFIRMADO]` 2026-10-22 |
+| 006.5 | El registro marca todas las reservas `CONFIRMED` de la franja: cada una pasa a `COMPLETED` (asistió) o `NO_SHOW` en la misma transacción | `[CONFIRMADO]` 2026-10-22 |
+| 006.6 | La sesión se edita hasta 48 h después de registrada (`SESSION_EDIT_WINDOW_HOURS`) | `[CONFIRMADO]` 2026-10-22 RF-052 |
+| 006.7 | Si al menos un estudiante asistió, la sesión lleva al menos un tema | `[CONFIRMADO]` 2026-10-22 |
+| 006.8 | La asistencia no se edita; dentro del plazo se corrigen temas, observaciones, material y duración | `[CONFIRMADO]` 2026-10-22 |
+| 006.9 | El estudiante ve de la sesión solo su propia asistencia, sin las observaciones del monitor | `[CONFIRMADO]` 2026-10-22 |
 
 ### RN-007 · Evaluación · `[PENDIENTE]` ADR-013
 
@@ -494,13 +504,11 @@ Se documentan ahora porque revelan acoplamientos. **No se implementa un bus de e
          │
          ├──< MonitorAssignment >── Subject
          │
-         ├──< AvailabilitySlot >─────────┐
-         │         │                     │
-         │         └──< Reservation      │
-         │                  │            │
-         │                  └──1:1── TutoringSession
-         │                                 │  │
-         │                                 │  └──< SessionTopic >── Topic
+         ├──< AvailabilitySlot ──1:1── TutoringSession ──< SessionTopic >── Topic >── Subject
+         │         │                       │    │
+         │         └──< Reservation        │    └──< SessionAttendance
+         │                  │              │              │
+         │                  └──────────────┼──── 1:1 ─────┘
          │                                 │
          ├──< Evaluation >─────────────────┘
          │

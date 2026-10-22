@@ -14,6 +14,7 @@ from apps.reservations.domain.rules import (
     ensure_has_seat,
     ensure_no_own_overlap,
     ensure_reason,
+    ensure_session_outcome,
     ensure_transition,
     student_cancellation_status,
     week_bounds,
@@ -130,6 +131,31 @@ def test_t_04_2_forbidden_transitions_are_rejected(
 ) -> None:
     with pytest.raises(ReservationConflictError) as exc:
         ensure_transition(current, target)
+
+    assert exc.value.code == "invalid_transition"
+
+
+@pytest.mark.parametrize("target", [ReservationStatus.COMPLETED, ReservationStatus.NO_SHOW])
+def test_t_05_8_rn_006_5_recording_the_session_closes_a_confirmed_reservation(
+    target: ReservationStatus,
+) -> None:
+    ensure_session_outcome(ReservationStatus.CONFIRMED, target)
+
+
+@pytest.mark.parametrize(
+    ("current", "target"),
+    [
+        (ReservationStatus.CANCELLED, ReservationStatus.COMPLETED),
+        (ReservationStatus.NO_SHOW, ReservationStatus.COMPLETED),
+        (ReservationStatus.COMPLETED, ReservationStatus.NO_SHOW),
+        (ReservationStatus.CONFIRMED, ReservationStatus.CANCELLED),
+    ],
+)
+def test_t_05_8_rn_006_5_the_session_only_closes_confirmed_reservations(
+    current: ReservationStatus, target: ReservationStatus
+) -> None:
+    with pytest.raises(ReservationConflictError) as exc:
+        ensure_session_outcome(current, target)
 
     assert exc.value.code == "invalid_transition"
 

@@ -45,14 +45,18 @@ class ReservationStatus(StrEnum):
     NO_SHOW = "NO_SHOW"
 
 
-# Cancel in time, or late (ADR-011: recorded as a no-show). Recording the session moves a
-# reservation to COMPLETED or NO_SHOW in FASE-05; until then COMPLETED is unreachable.
+# Cancel in time, or late (ADR-011: recorded as a no-show). COMPLETED is reachable only by
+# recording the session (SESSION_OUTCOMES), never through these transitions.
 ALLOWED_TRANSITIONS = frozenset(
     {
         (ReservationStatus.CONFIRMED, ReservationStatus.CANCELLED),
         (ReservationStatus.CONFIRMED, ReservationStatus.NO_SHOW),
     }
 )
+
+
+# RN-006.5: the session record closes each CONFIRMED reservation of its slot.
+SESSION_OUTCOMES = frozenset({ReservationStatus.COMPLETED, ReservationStatus.NO_SHOW})
 
 
 class ReservationRuleError(Exception):
@@ -126,6 +130,14 @@ def week_bounds(moment: datetime) -> tuple[datetime, datetime]:
 def ensure_transition(current: ReservationStatus, target: ReservationStatus) -> None:
     """States change only through the explicit transitions of DDD section 6.2."""
     if (current, target) not in ALLOWED_TRANSITIONS:
+        raise ReservationConflictError(
+            "invalid_transition", f"No se puede pasar una reserva de {current} a {target}."
+        )
+
+
+def ensure_session_outcome(current: ReservationStatus, target: ReservationStatus) -> None:
+    """DDD section 6.2: only the session record moves CONFIRMED to COMPLETED or NO_SHOW."""
+    if current != ReservationStatus.CONFIRMED or target not in SESSION_OUTCOMES:
         raise ReservationConflictError(
             "invalid_transition", f"No se puede pasar una reserva de {current} a {target}."
         )
