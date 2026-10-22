@@ -636,6 +636,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A subject's topic catalog; the assigned monitor or an admin add to it (T-05.21). */
+        get: operations["topics_list"];
+        put?: never;
+        /** @description A subject's topic catalog; the assigned monitor or an admin add to it (T-05.21). */
+        post: operations["topics_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tutoring-sessions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The slot's monitor records the session and closes its reservations (HU-06). */
+        post: operations["tutoring_sessions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tutoring-sessions/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read a session as a participant, teacher or admin; the monitor corrects it for 48 h. */
+        get: operations["tutoring_sessions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Read a session as a participant, teacher or admin; the monitor corrects it for 48 h. */
+        patch: operations["tutoring_sessions_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/tutoring-sessions/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description HU-12: a student's closed reservations, with the session they attended. */
+        get: operations["tutoring_sessions_history_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tutoring-sessions/mine/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The sessions of the monitor's slots, latest recorded first. */
+        get: operations["tutoring_sessions_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/": {
         parameters: {
             query?: never;
@@ -811,6 +898,23 @@ export interface components {
             email: string;
             committed_hours: number;
         };
+        /**
+         * @description * `ATTENDED` - ATTENDED
+         *     * `NO_SHOW` - NO_SHOW
+         * @enum {string}
+         */
+        AttendanceEnum: "ATTENDED" | "NO_SHOW";
+        AttendanceMark: {
+            /** Format: uuid */
+            reservation_id: string;
+            attendance: components["schemas"]["AttendanceEnum"];
+        };
+        AttendanceRow: {
+            /** Format: uuid */
+            readonly reservation_id: string;
+            readonly student: components["schemas"]["MonitorReference"];
+            readonly attendance: components["schemas"]["AttendanceEnum"];
+        };
         AuditEntry: {
             id: number;
             action: components["schemas"]["ActionEnum"];
@@ -909,6 +1013,34 @@ export interface components {
         Health: {
             status: string;
             database: string;
+        };
+        /** @description One closed reservation of the student (HU-12, CA-HU12-1). */
+        HistoryItem: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly slot: components["schemas"]["ReservationSlot"];
+            readonly status: components["schemas"]["HistoryItemStatusEnum"];
+            readonly session: components["schemas"]["HistorySession"] | null;
+            readonly evaluation: unknown;
+        };
+        /**
+         * @description * `COMPLETED` - COMPLETED
+         *     * `NO_SHOW` - NO_SHOW
+         * @enum {string}
+         */
+        HistoryItemStatusEnum: "COMPLETED" | "NO_SHOW";
+        /** @description What a student keeps of a session in the history: no notes (RN-006.9). */
+        HistorySession: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly topics: components["schemas"]["Topic"][];
+            /** Duración en minutos */
+            readonly duration_minutes: number;
+            /**
+             * Registrada
+             * Format: date-time
+             */
+            readonly recorded_at: string;
         };
         Login: {
             /** Format: email */
@@ -1086,6 +1218,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Department"][];
         };
+        PaginatedHistoryItemList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["HistoryItem"][];
+        };
         PaginatedMaterialList: {
             /** @example 123 */
             count: number;
@@ -1191,6 +1338,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["TeacherCourse"][];
         };
+        PaginatedTutoringSessionList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TutoringSession"][];
+        };
         PatchedAcademicTerm: {
             readonly id?: number;
             /** @description Formato AAAA-S, por ejemplo 2026-1. */
@@ -1219,6 +1381,17 @@ export interface components {
             code?: string;
             name?: string;
             is_active?: boolean;
+        };
+        /** @description RN-006.8: attendance and slot are final; the rest changes for 48 hours. */
+        PatchedSessionUpdate: {
+            /** @description Temas de la asignatura trabajados. */
+            topic_ids?: string[];
+            /** @description Material de la asignatura usado. */
+            material_ids?: string[];
+            /** @description Observaciones del monitor; el estudiante no las ve. */
+            notes?: string;
+            /** @description Duración real. */
+            duration_minutes?: number;
         };
         /** @description Fields a monitor sets on a slot; the end and the term are derived (ADR-010). */
         PatchedSlotUpdate: {
@@ -1338,6 +1511,28 @@ export interface components {
          * @enum {string}
          */
         RolesEnum: "STUDENT" | "MONITOR" | "TEACHER" | "ADMIN";
+        /** @description The monitor is always the authenticated user, never a field of the body. */
+        SessionCreate: {
+            /** @description Id de la franja ya iniciada. */
+            slot_id: number;
+            /** @description Asistencia de cada reserva confirmada de la franja. */
+            attendance: components["schemas"]["AttendanceMark"][];
+            /** @description Temas de la asignatura trabajados. */
+            topic_ids?: string[];
+            /** @description Material de la asignatura usado. */
+            material_ids?: string[];
+            /** @description Observaciones del monitor; el estudiante no las ve. */
+            notes?: string;
+            /** @description Duración real; por defecto, la de la franja. */
+            duration_minutes?: number;
+        };
+        SessionMaterial: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Título */
+            readonly title: string;
+            readonly kind: components["schemas"]["MaterialKindEnum"];
+        };
         /** @description Fields a monitor sets on a slot; the end and the term are derived (ADR-010). */
         SlotCreate: {
             /**
@@ -1470,6 +1665,40 @@ export interface components {
             /** Grupo */
             readonly group: string;
             readonly monitors: components["schemas"]["AssignedMonitor"][];
+        };
+        Topic: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Nombre */
+            readonly name: string;
+        };
+        TopicCreate: {
+            subject_id: number;
+            name: string;
+        };
+        /** @description A session; a student reading it gets no notes and only their own attendance (RN-006.9). */
+        TutoringSession: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly slot: components["schemas"]["ReservationSlot"];
+            readonly topics: components["schemas"]["Topic"][];
+            readonly materials: components["schemas"]["SessionMaterial"][];
+            readonly notes: string | null;
+            /** Duración en minutos */
+            readonly duration_minutes: number;
+            readonly attendance: components["schemas"]["AttendanceRow"][];
+            /**
+             * Registrada
+             * Format: date-time
+             */
+            readonly recorded_at: string;
+            /**
+             * Actualizada
+             * Format: date-time
+             */
+            readonly updated_at: string;
+            /** Format: date-time */
+            readonly editable_until: string;
         };
         /** @description A subject where the user may add material, and why (ADR-012, item 5). */
         UploadableSubject: {
@@ -2871,6 +3100,272 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    topics_list: {
+        parameters: {
+            query: {
+                /** @description Id de la asignatura. */
+                subject: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Topic"][];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    topics_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopicCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["TopicCreate"];
+                "multipart/form-data": components["schemas"]["TopicCreate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Topic"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Topic"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    tutoring_sessions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["SessionCreate"];
+                "multipart/form-data": components["schemas"]["SessionCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutoringSession"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    tutoring_sessions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutoringSession"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    tutoring_sessions_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSessionUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSessionUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedSessionUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutoringSession"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    tutoring_sessions_history_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /**
+                 * @description * `COMPLETED` - COMPLETED
+                 *     * `NO_SHOW` - NO_SHOW
+                 */
+                status?: "COMPLETED" | "NO_SHOW";
+                /** @description Solo el propio estudiante o un administrador. */
+                student?: string;
+                /** @description Id de la asignatura. */
+                subject?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHistoryItemList"];
+                };
+            };
+        };
+    };
+    tutoring_sessions_mine_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Id de la asignatura. */
+                subject?: number;
+                /** @description Código del período, p. ej. 2026-2. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTutoringSessionList"];
+                };
             };
         };
     };
