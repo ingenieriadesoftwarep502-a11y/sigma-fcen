@@ -260,6 +260,8 @@ def test_t_07_8_ca_hu08_4_student_lists_the_material_of_a_subject(
 ) -> None:
     older = make_document(world["calculo"], world["sofia"], "Taller 1")
     newer = make_video(world["calculo"], world["teacher"], "Clase grabada")
+    # Both rows may share a timestamp on coarse clocks (Windows); the order must not hinge on it.
+    Material.objects.filter(pk=older.pk).update(created_at=newer.created_at - timedelta(minutes=1))
     make_document(world["algebra"], world["sofia"], "De otra asignatura")
     make_document(world["calculo"], world["sofia"], "Retirado", is_active=False)
 
