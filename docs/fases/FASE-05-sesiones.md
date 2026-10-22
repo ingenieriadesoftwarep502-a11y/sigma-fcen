@@ -5,7 +5,7 @@
 | Sprint | 5 (semanas 11–12) |
 | Historias | HU-06 Registro de sesión (8 pts) · HU-12 Historial del estudiante (3 pts) |
 | Puntos | 11 |
-| Estado | **En curso** — gate de entrada y diseño (G1) confirmados el 2026-10-22 |
+| Estado | **En revisión** — backend y frontend implementados el 2026-10-22; pendientes CI y aprobación de PRs |
 | ADR bloqueantes | Ninguno — ADR-010 cerrado el 2026-10-11; plazo de edición (RF-052) confirmado el 2026-10-22 |
 | Requisitos | RF-050 a RF-053, RF-046 |
 
@@ -200,17 +200,19 @@ pytest --cov=apps/tutoring_sessions --cov-report=term-missing
 ruff check . && ruff format --check . && mypy .
 ```
 
+**Resultado del 2026-10-22:** backend 1079 pruebas en verde, `ruff` y `mypy` sin hallazgos, cobertura de `apps/tutoring_sessions` del 97 %. Frontend: `eslint`, `tsc`, 485 pruebas de `vitest` y `next build` en verde.
+
 ---
 
 ## 8. Definition of Done
 
 - [x] Plazo de edición (RF-052) confirmado y documentado. *(48 h; TRD RF-052, DDD RN-006.6; 2026-10-22)*
-- [ ] Relación uno a uno con la franja y con la reserva garantizada en base de datos.
-- [ ] Los 9 criterios de aceptación con prueba automatizada.
-- [ ] Registrar una sesión y cambiar el estado de las reservas ocurre en una sola transacción.
-- [ ] `Topic` es entidad, no texto libre — habilita RF-083 y FASE-08.
-- [ ] Historial sin consultas N+1, con assert de número de consultas.
-- [ ] Esquema OpenAPI y tipos del frontend actualizados.
+- [x] Relación uno a uno con la franja y con la reserva garantizada en base de datos. *(`OneToOneField` en `TutoringSession.slot` y `SessionAttendance.reservation`; `test_session_models.py` lo prueba con `IntegrityError`; 2026-10-22)*
+- [x] Los 9 criterios de aceptación con prueba automatizada. *(CA-HU06-1 a 5 y CA-HU12-1 a 4 en `test_session_services.py` y `test_sessions_api.py`; CA-HU12-1 parcial: la evaluación llega con FASE-06; 2026-10-22)*
+- [x] Registrar una sesión y cambiar el estado de las reservas ocurre en una sola transacción. *(`test_t_05_19_a_failure_midway_leaves_no_session_and_no_changed_reservation`; 2026-10-22)*
+- [x] `Topic` es entidad, no texto libre — habilita RF-083 y FASE-08. *(modelo `Topic` por asignatura, único sin distinguir mayúsculas; 2026-10-22)*
+- [x] Historial sin consultas N+1, con assert de número de consultas. *(3 consultas en el historial y 5 en el listado del monitor, sin importar el número de filas; `test_t_05_15_*`; 2026-10-22)*
+- [x] Esquema OpenAPI y tipos del frontend actualizados. *(`spectacular --validate --fail-on-warn`; `npm run gen:api` y `npm run type-check` en verde; 2026-10-22)*
 - [ ] CI en verde; PRs aprobadas.
 
 ---

@@ -110,6 +110,18 @@ describe("AppNavigation", () => {
     expect(screen.queryByRole("link", { name: "Mis reservas" })).not.toBeInTheDocument();
   });
 
+  it("links monitors to their sessions and students to their history (FASE-05)", async () => {
+    await renderFor(["MONITOR"]);
+    expect(screen.getByRole("link", { name: "Sesiones" })).toHaveAttribute("href", "/sesiones");
+    expect(screen.queryByRole("link", { name: "Historial" })).not.toBeInTheDocument();
+  });
+
+  it("links students to their history only", async () => {
+    await renderFor(["STUDENT"]);
+    expect(screen.getByRole("link", { name: "Historial" })).toHaveAttribute("href", "/historial");
+    expect(screen.queryByRole("link", { name: "Sesiones" })).not.toBeInTheDocument();
+  });
+
   it("links monitors and teachers to the material they publish (FASE-07)", async () => {
     await renderFor(["MONITOR"]);
     expect(screen.getByRole("link", { name: "Material" })).toHaveAttribute("href", "/material");
