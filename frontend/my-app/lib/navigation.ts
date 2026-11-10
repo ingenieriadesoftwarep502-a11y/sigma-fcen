@@ -6,12 +6,14 @@
 import type { IconName } from "@/components/ui/icon";
 import {
   CATALOG_ADMIN_PATH,
+  HISTORY_PATH,
   HOME_PATH,
   MATERIALS_PATH,
   MY_COURSES_PATH,
   MY_MONITORING_PATH,
   MY_RESERVATIONS_PATH,
   type RoleCode,
+  SESSIONS_PATH,
   SUBJECTS_PATH,
   USERS_ADMIN_PATH,
 } from "@/lib/auth";
@@ -33,7 +35,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
     icon: "calendar",
     roles: ["STUDENT", "MONITOR"],
   },
+  { href: HISTORY_PATH, label: "Historial", icon: "clock", roles: ["STUDENT"] },
   { href: MY_MONITORING_PATH, label: "Mis monitorías", icon: "support", roles: ["MONITOR"] },
+  { href: SESSIONS_PATH, label: "Sesiones", icon: "edit", roles: ["MONITOR"] },
   { href: MY_COURSES_PATH, label: "Mis cursos", icon: "courses", roles: ["TEACHER"] },
   { href: MATERIALS_PATH, label: "Material", icon: "folder", roles: ["MONITOR", "TEACHER"] },
   { href: CATALOG_ADMIN_PATH, label: "Catálogo", icon: "catalog", roles: ["ADMIN"] },

@@ -9,7 +9,12 @@ from django.db import models
 
 from apps.accounts.models import User
 from apps.availability.models import AvailabilitySlot
-from apps.reservations.domain.rules import MAX_NOTE_LENGTH, ReservationStatus, ensure_transition
+from apps.reservations.domain.rules import (
+    MAX_NOTE_LENGTH,
+    ReservationStatus,
+    ensure_session_outcome,
+    ensure_transition,
+)
 
 STATUS_CHOICES = [(status.value, status.value) for status in ReservationStatus]
 
@@ -94,3 +99,9 @@ class Reservation(models.Model):
             self.cancellation_reason = reason
             fields += ["cancelled_at", "cancelled_by", "cancellation_reason"]
         self.save(update_fields=fields)
+
+    def close_by_session(self, target: ReservationStatus) -> None:
+        """RN-006.5: the session record, and nothing else, sets COMPLETED or NO_SHOW."""
+        ensure_session_outcome(ReservationStatus(self.status), target)
+        self.status = target.value
+        self.save(update_fields=["status"])

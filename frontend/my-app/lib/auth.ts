@@ -39,6 +39,10 @@ export function myAssignmentPath(id: number, term: string): string {
 }
 /** A student's reservations, and the reservations on a monitor's slots (FASE-04). */
 export const MY_RESERVATIONS_PATH = "/mis-reservas";
+/** The monitor's sessions: the ones to record and the recorded ones (FASE-05). */
+export const SESSIONS_PATH = "/sesiones";
+/** A student's history of closed monitorings (HU-12). */
+export const HISTORY_PATH = "/historial";
 /** Where monitors and teachers pick the subject they add study material to (FASE-07). */
 export const MATERIALS_PATH = "/material";
 /** The repository of one subject, with the upload actions. */

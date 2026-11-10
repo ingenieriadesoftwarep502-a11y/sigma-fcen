@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "apps.availability",
     "apps.reservations",
     "apps.materials",
+    "apps.tutoring_sessions",
 ]
 
 MIDDLEWARE = [
@@ -161,6 +162,7 @@ SPECTACULAR_SETTINGS = {
         "StatusEnum": "apps.availability.domain.rules.SlotStatus",
         "ReservationStatusEnum": "apps.reservations.domain.rules.ReservationStatus",
         "MaterialKindEnum": "apps.materials.domain.rules.MaterialKind",
+        "AttendanceEnum": "apps.tutoring_sessions.domain.rules.AttendanceStatus",
     },
 }
 
@@ -182,6 +184,11 @@ RESERVATION_CANCEL_WINDOW_HOURS = 4
 MEDIA_ROOT = env.path("MEDIA_ROOT", default=BASE_DIR / "media")
 MEDIA_URL = "media/"
 MATERIAL_MAX_FILE_BYTES = 20 * 1024 * 1024
+
+# --- Tutoring sessions (FASE-05, RF-052) ----------------------------------------------------
+
+# A recorded session can be corrected for this many hours; then it is final.
+SESSION_EDIT_WINDOW_HOURS = 48
 
 # --- Logging --------------------------------------------------------------------------------
 

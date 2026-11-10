@@ -128,7 +128,7 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 |---|---|---|---|---|
 | RF-050 | El monitor debe poder registrar asistencia, temas, observaciones y material de una sesión | Alta | `[PROPUESTA]` | ADR-010 |
 | RF-051 | Solo se pueden registrar sesiones sobre reservas confirmadas y ya iniciadas | Alta | `[PROPUESTA]` | — |
-| RF-052 | Una sesión registrada no debe poder editarse pasado un plazo definido | Media | `[PENDIENTE]` | pendiente de definir el plazo |
+| RF-052 | Una sesión registrada no debe poder editarse pasadas 48 horas desde su registro | Media | `[CONFIRMADO]` | Nicolás García Orozco, 2026-10-22 |
 | RF-053 | El sistema debe conservar el historial completo de sesiones por estudiante, monitor y asignatura | Alta | `[PROPUESTA]` | — |
 
 ### 4.6 Evaluaciones (RF-06x)
