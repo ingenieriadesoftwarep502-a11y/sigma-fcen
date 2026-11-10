@@ -105,7 +105,7 @@ Reglas puras en `apps/tutoring_sessions/domain/rules.py`; casos de uso en `servi
 | RN-006.1 | Solo se registra sobre una franja con al menos una reserva `CONFIRMED`; las canceladas y las cancelaciones tardías (`NO_SHOW` por ADR-011) no entran | `400` |
 | RN-006.2 | Solo después de `slot.starts_at` | `400` (CA-HU06-2) |
 | RN-006.3 | Una franja admite a lo sumo una sesión | `409` (CA-HU06-3) |
-| RN-006.4 | Solo el monitor de la franja registra y edita | `403` (CA-HU06-5) |
+| RN-006.4 | Solo el monitor de la franja registra y edita, y solo mientras conserve el rol y la asignación de la asignatura en el período de la franja (RN-002) | `403` (CA-HU06-5) |
 | RN-006.5 | El registro debe marcar **todas** las reservas `CONFIRMED` de la franja, ni una más ni una menos; cada una pasa a `COMPLETED` (`ATTENDED`) o `NO_SHOW` en la misma transacción | `400` si falta o sobra una |
 | RN-006.6 | Se edita hasta 48 h después de `recorded_at` (`SESSION_EDIT_WINDOW_HOURS`); luego, `409` | `409` |
 | RN-006.7 | Si al menos un estudiante asistió, la sesión lleva al menos un tema (alimenta RF-083) | `400` |
@@ -117,7 +117,7 @@ El registro sigue el orden de bloqueos de reservas: usuario que actúa → franj
 
 | Método | Ruta | Rol | Respuestas |
 |---|---|---|---|
-| `POST` | `/api/v1/tutoring-sessions/` | monitor de la franja | `201` · `400` reglas · `403` franja ajena · `409` ya registrada |
+| `POST` | `/api/v1/tutoring-sessions/` | monitor de la franja | `201` · `400` reglas · `403` franja ajena o asignación revocada · `409` ya registrada |
 | `GET` | `/api/v1/tutoring-sessions/{id}/` | monitor, docente del curso, administrador, estudiantes de la sesión | `200` · `403` · `404` |
 | `PATCH` | `/api/v1/tutoring-sessions/{id}/` | monitor de la franja | `200` · `400` · `403` · `409` fuera de plazo |
 | `GET` | `/api/v1/tutoring-sessions/mine/` | monitor | `200` paginado. Filtros: `subject`, `term` |
@@ -170,7 +170,7 @@ El monitor se toma del usuario autenticado, nunca del cuerpo. Las reservas por m
 | T-05.6 | Sesión duplicada | `409` | CA-HU06-3 |
 | T-05.7 | Inasistencia | Reserva pasa a `NO_SHOW` | CA-HU06-4 |
 | T-05.8 | Asistencia | Reserva pasa a `COMPLETED` | RN-006.5 |
-| T-05.9 | Autorización del monitor | Monitor ajeno → `403` | CA-HU06-5, RN-006.4 |
+| T-05.9 | Autorización del monitor | Monitor ajeno o sin asignación vigente → `403` | CA-HU06-5, RN-006.4 |
 | T-05.10 | Plazo de edición | Dentro de 48 h se edita; fuera → `409`; la asistencia no se edita | RN-006.6, RN-006.8, RF-052 |
 | T-05.11 | Historial del estudiante | Asignatura, fecha, monitor y evaluación | CA-HU12-1 |
 | T-05.12 | Historial vacío | Lista vacía con `200` | CA-HU12-2 |

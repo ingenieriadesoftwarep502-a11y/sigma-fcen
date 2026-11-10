@@ -12,6 +12,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.academics.models import MonitorAssignment
 from apps.accounts.models import Role, User
 from apps.reservations.domain.rules import ReservationStatus
 from apps.reservations.models import Reservation
@@ -177,6 +178,16 @@ def test_t_05_9_ca_hu06_5_another_monitor_gets_403(world: dict[str, Any]) -> Non
     assert not TutoringSession.objects.exists()
 
 
+def test_t_05_9_rn_002_monitor_without_assignment_gets_403(world: dict[str, Any]) -> None:
+    MonitorAssignment.objects.filter(monitor=world["sofia"]).delete()
+
+    response = post_session(world["sofia"], body(world))
+
+    assert response.status_code == 403
+    assert response.json().keys() >= PROBLEM_KEYS
+    assert not TutoringSession.objects.exists()
+
+
 def test_t_05_9_a_student_cannot_record_a_session(world: dict[str, Any]) -> None:
     response = post_session(world["ana"], body(world))
 
@@ -333,6 +344,13 @@ def test_t_05_10_another_user_cannot_patch(world: dict[str, Any]) -> None:
     session = recorded(world)
 
     assert patch(world["ana"], session, {"notes": "x"}).status_code == 403
+
+
+def test_t_05_10_rn_002_monitor_without_assignment_cannot_patch(world: dict[str, Any]) -> None:
+    session = recorded(world)
+    MonitorAssignment.objects.filter(monitor=world["sofia"]).delete()
+
+    assert patch(world["sofia"], session, {"notes": "x"}).status_code == 403
 
 
 # --- GET /tutoring-sessions/mine/ ---------------------------------------------------------------

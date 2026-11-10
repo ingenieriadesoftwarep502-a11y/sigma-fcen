@@ -20,7 +20,7 @@ from django.utils import timezone
 
 from apps.academics.models import Subject
 from apps.academics.selectors import current_term
-from apps.academics.services import is_monitor_assigned
+from apps.academics.services import NOT_ASSIGNED_MESSAGE, is_monitor_assigned
 from apps.accounts.models import Role, User
 from apps.availability.models import AvailabilitySlot
 from apps.materials.models import Material
@@ -66,9 +66,11 @@ def _lock_user(user: User) -> None:
 
 
 def _ensure_slot_monitor(slot: AvailabilitySlot, user: User) -> None:
-    """RN-006.4, CA-HU06-5."""
+    """RN-006.4, CA-HU06-5; RN-002: a revoked role or assignment withdraws the authorization."""
     if slot.monitor_id != user.pk:
         raise SessionForbiddenError(NOT_SLOT_MONITOR_MESSAGE)
+    if not is_monitor_assigned(user, slot.subject, slot.term):
+        raise SessionForbiddenError(NOT_ASSIGNED_MESSAGE)
 
 
 def _already_recorded(slot: AvailabilitySlot) -> bool:
@@ -121,7 +123,11 @@ def record_session(
     absence (RN-006.5). The monitor is always the authenticated user.
     """
     _lock_user(monitor)
-    locked = AvailabilitySlot.objects.select_for_update().get(pk=slot.pk)
+    locked = (
+        AvailabilitySlot.objects.select_for_update(of=("self",))
+        .select_related("subject", "term")
+        .get(pk=slot.pk)
+    )
     _ensure_slot_monitor(locked, monitor)
     if _already_recorded(locked):
         raise SessionConflictError("already_recorded", ALREADY_RECORDED_MESSAGE)
@@ -174,7 +180,7 @@ def update_session(
     """
     locked = (
         TutoringSession.objects.select_for_update(of=("self",))
-        .select_related("slot")
+        .select_related("slot__subject", "slot__term")
         .get(pk=session.pk)
     )
     _ensure_slot_monitor(locked.slot, actor)

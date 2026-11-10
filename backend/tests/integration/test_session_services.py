@@ -11,7 +11,8 @@ from uuid import UUID
 import pytest
 from django.utils import timezone
 
-from apps.accounts.models import Role, User
+from apps.academics.models import MonitorAssignment
+from apps.accounts.models import Role, User, UserRole
 from apps.reservations.domain.rules import ReservationStatus
 from apps.reservations.models import Reservation
 from apps.tutoring_sessions import services
@@ -235,6 +236,18 @@ def test_t_05_9_ca_hu06_5_another_monitor_is_forbidden(world: dict[str, Any]) ->
     assert not TutoringSession.objects.exists()
 
 
+def test_t_05_9_rn_002_monitor_whose_assignment_was_revoked_cannot_record(
+    world: dict[str, Any],
+) -> None:
+    MonitorAssignment.objects.filter(monitor=world["sofia"]).delete()
+
+    with pytest.raises(SessionForbiddenError, match="No tienes asignada"):
+        record(world)
+
+    assert not TutoringSession.objects.exists()
+    assert status_of(world["ana_reservation"]) == ReservationStatus.CONFIRMED
+
+
 # --- T-05.20 · topics and material of the subject (RN-006.7) ----------------------------------
 
 
@@ -342,6 +355,17 @@ def test_t_05_10_rn_006_4_only_the_slot_monitor_edits(world: dict[str, Any]) -> 
 
     with pytest.raises(SessionForbiddenError):
         update_session(session=session, actor=world["ana"], changes={"notes": "Hackeado"})
+
+
+def test_t_05_10_rn_002_monitor_whose_role_was_revoked_cannot_edit(world: dict[str, Any]) -> None:
+    session = record(world)
+    UserRole.objects.filter(user=world["sofia"], role__code=Role.Code.MONITOR).delete()
+
+    with pytest.raises(SessionForbiddenError, match="No tienes asignada"):
+        update_session(session=session, actor=world["sofia"], changes={"notes": "Tarde"})
+
+    session.refresh_from_db()
+    assert session.notes == "Repasamos derivadas."
 
 
 def test_t_05_10_rn_006_7_edit_cannot_remove_every_topic_if_someone_attended(
