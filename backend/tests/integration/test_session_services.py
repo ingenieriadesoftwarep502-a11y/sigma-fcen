@@ -3,13 +3,12 @@
 CA-HU06-1 to CA-HU06-5, RN-006.1 to RN-006.8, RF-052.
 """
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest import mock
 from uuid import UUID
 
 import pytest
-from django.utils import timezone
 
 from apps.academics.models import MonitorAssignment
 from apps.accounts.models import Role, User, UserRole
@@ -34,6 +33,7 @@ pytestmark = pytest.mark.django_db
 
 ATTENDED = AttendanceStatus.ATTENDED
 NO_SHOW = AttendanceStatus.NO_SHOW
+RECORDED_AT = datetime(2026, 10, 20, 15, 0, tzinfo=UTC)
 
 
 @pytest.fixture
@@ -339,11 +339,27 @@ def test_t_05_10_rn_006_6_inside_the_window_topics_notes_and_duration_change(
     assert updated.duration_minutes == 45
 
 
+def edit_at(session: TutoringSession, actor: User, at: datetime) -> TutoringSession:
+    """Edits the notes with the clock frozen at `at`, so the window boundary is exact."""
+    with mock.patch("django.utils.timezone.now", return_value=at):
+        return update_session(session=session, actor=actor, changes={"notes": "Corregida"})
+
+
+def test_t_05_10_rn_006_6_one_second_before_48_hours_the_edit_is_allowed(
+    world: dict[str, Any],
+) -> None:
+    session = make_session(world["slot"], recorded_at=RECORDED_AT)
+
+    updated = edit_at(session, world["sofia"], RECORDED_AT + timedelta(hours=48, seconds=-1))
+
+    assert updated.notes == "Corregida"
+
+
 def test_t_05_10_rn_006_6_after_48_hours_the_session_is_final(world: dict[str, Any]) -> None:
-    session = make_session(world["slot"], recorded_at=timezone.now() - timedelta(hours=48))
+    session = make_session(world["slot"], recorded_at=RECORDED_AT)
 
     with pytest.raises(SessionConflictError, match="48 horas") as exc:
-        update_session(session=session, actor=world["sofia"], changes={"notes": "Tarde"})
+        edit_at(session, world["sofia"], RECORDED_AT + timedelta(hours=48))
 
     assert exc.value.code == "edit_window_closed"
     session.refresh_from_db()
