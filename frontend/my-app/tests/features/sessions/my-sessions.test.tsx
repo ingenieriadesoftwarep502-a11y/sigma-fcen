@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import MySessions from "@/features/sessions/components/my-sessions";
+import { formatDateTime } from "@/lib/format";
 import { listMaterials } from "@/lib/materials";
 import { listMySessions, listPendingSlots, listTopics } from "@/lib/sessions";
 
@@ -59,6 +60,19 @@ describe("MySessions (T-05.16)", () => {
     expect(item).toHaveTextContent("Regla de la cadena");
     expect(item).toHaveTextContent("1 asistió · 1 no asistió");
     expect(within(item).getByRole("button", { name: /Editar sesión/ })).toBeInTheDocument();
+  });
+
+  it("takes the edit deadline from the server, not from a local window (RF-052)", async () => {
+    const recorded = session();
+    vi.mocked(listMySessions).mockResolvedValue(pageOf([recorded]));
+    render(<MySessions />);
+
+    const list = await screen.findByRole("list", { name: "Sesiones registradas" });
+    expect(within(list).getByRole("listitem")).toHaveTextContent(
+      // Intl puts narrow no-break spaces in the time; the matcher collapses whitespace.
+      `Editable hasta ${formatDateTime(recorded.editable_until)}`.replace(/\s+/g, " "),
+    );
+    expect(screen.queryByText(/48 horas/)).not.toBeInTheDocument();
   });
 
   it("says when a session can no longer be edited (RF-052)", async () => {

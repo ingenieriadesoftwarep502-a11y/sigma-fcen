@@ -4,7 +4,6 @@ import { forgetCsrfToken } from "@/lib/api-client";
 import type { Reservation } from "@/lib/reservations";
 import {
   addTopic,
-  EDIT_WINDOW_HOURS,
   groupPendingBySlot,
   isEditable,
   listHistory,
@@ -155,8 +154,25 @@ describe("tutoring sessions API (FASE-05)", () => {
     await listPendingSlots();
 
     expect(onlyRequest().url).toBe(
-      `${BASE_URL}/reservations/mine/?role=monitor&status=CONFIRMED&when=past&page_size=100`,
+      `${BASE_URL}/reservations/mine/?role=monitor&status=CONFIRMED&when=past&page=1&page_size=100`,
     );
+  });
+
+  it("follows the pages of pending reservations until the last one", async () => {
+    const first = reservation("a", 1, "2026-10-20T15:00:00Z");
+    const second = reservation("b", 2, "2026-10-21T15:00:00Z");
+    const pages: Record<string, unknown> = {
+      "1": { count: 2, next: "page-2", previous: null, results: [first] },
+      "2": { count: 2, next: null, previous: "page-1", results: [second] },
+    };
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve(jsonResponse(pages[new URL(String(url)).searchParams.get("page") ?? ""])),
+    );
+
+    const groups = await listPendingSlots();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(groups.map((group) => group.slot.id)).toEqual([2, 1]);
   });
 });
 
@@ -182,7 +198,7 @@ describe("isEditable (RF-052)", () => {
     return { editable_until: editableUntil.toISOString() };
   }
 
-  it(`allows corrections during the ${EDIT_WINDOW_HOURS} hours after recording`, () => {
+  it("allows corrections until the editable_until the server sent", () => {
     expect(isEditable(session(new Date(now.getTime() + HOUR)), now)).toBe(true);
   });
 

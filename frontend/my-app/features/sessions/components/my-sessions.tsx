@@ -12,7 +12,6 @@ import { slotDayLabel, slotTimeRange } from "@/features/availability/labels";
 import { requestErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import {
-  EDIT_WINDOW_HOURS,
   isEditable,
   listMySessions,
   listPendingSlots,
@@ -90,7 +89,7 @@ export default function MySessions() {
       <PageHeader
         title="Sesiones"
         titleId="sessions-title"
-        lead={`Registra la asistencia y los temas de cada monitoría que ya empezó. Puedes corregir una sesión durante las ${EDIT_WINDOW_HOURS} horas siguientes a su registro.`}
+        lead={`Registra la asistencia y los temas de cada monitoría que ya empezó. Cada sesión registrada indica hasta cuándo puedes corregirla.`}
       />
 
       {notice && <Alert tone="success">{notice}</Alert>}
@@ -260,16 +259,22 @@ function RecordedCard({
         <p className={styles.topics}>{session.topics.map((topic) => topic.name).join(" · ")}</p>
       )}
       {editable ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={styles.cardAction}
-          aria-label={`Editar sesión de ${slotLabel(session.slot)}`}
-          onClick={onEdit}
-        >
-          <Icon name="edit" />
-          Editar
-        </Button>
+        <>
+          <p className={styles.who}>
+            <Icon name="clock" size={14} />
+            {`Editable hasta ${formatDateTime(session.editable_until)}`}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={styles.cardAction}
+            aria-label={`Editar sesión de ${slotLabel(session.slot)}`}
+            onClick={onEdit}
+          >
+            <Icon name="edit" />
+            Editar
+          </Button>
+        </>
       ) : (
         <p className={styles.locked}>
           {`Ya no se puede editar · registrada el ${formatDateTime(session.recorded_at)}`}

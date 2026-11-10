@@ -1,6 +1,7 @@
 /**
  * Tutoring-session endpoints (FASE-05): the slot's monitor records what happened in a slot
- * that already started, and corrects it for 48 hours; a student reads their history.
+ * that already started, and corrects it until the `editable_until` the API sends; a student
+ * reads their history.
  *
  * One session per slot (group slots included): it marks the attendance of every CONFIRMED
  * reservation of the slot, which then becomes COMPLETED or NO_SHOW. Attendance is final once
@@ -28,13 +29,15 @@ export type HistoryStatus = Schemas["HistoryItemStatusEnum"];
 export type Topic = Schemas["Topic"];
 export type SessionSlot = Schemas["ReservationSlot"];
 
-/** RF-052: a recorded session can be corrected for this many hours. */
-export const EDIT_WINDOW_HOURS = 48;
+/**
+ * Mirrors of backend/apps/tutoring_sessions/domain/rules.py, for form hints only: the API
+ * stays authoritative and its 400 is what the form finally shows.
+ */
 export const MAX_NOTES_LENGTH = 2000;
 export const MAX_DURATION_MINUTES = 180;
 export const MAX_TOPIC_NAME_LENGTH = 80;
 
-/** Pending reservations come in one page; a monitor never has this many unrecorded. */
+/** Pending reservations are read page after page; this only keeps the request count low. */
 const PENDING_PAGE_SIZE = 100;
 
 export type MySessionFilters = { subject: number | null };
@@ -121,16 +124,21 @@ export function groupPendingBySlot(reservations: readonly Reservation[]): Pendin
 
 /** The monitor's started slots whose session is still to be recorded. */
 export async function listPendingSlots(signal?: AbortSignal): Promise<PendingSlot[]> {
-  const page = await apiRequest<{ results: Reservation[] }>(
-    `/reservations/mine/${queryString({
-      role: "monitor",
-      status: "CONFIRMED",
-      when: "past",
-      page_size: PENDING_PAGE_SIZE,
-    })}`,
-    { signal },
-  );
-  return groupPendingBySlot(page.results);
+  const reservations: Reservation[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await apiRequest<{ results: Reservation[]; next: string | null }>(
+      `/reservations/mine/${queryString({
+        role: "monitor",
+        status: "CONFIRMED",
+        when: "past",
+        page,
+        page_size: PENDING_PAGE_SIZE,
+      })}`,
+      { signal },
+    );
+    reservations.push(...result.results);
+    if (!result.next) return groupPendingBySlot(reservations);
+  }
 }
 
 /** RF-052: the session can still be corrected. */
