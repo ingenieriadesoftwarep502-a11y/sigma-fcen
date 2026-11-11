@@ -41,17 +41,18 @@ ADR-010 cerrado el 2026-10-11 y ADR-011 cerrado el 2026-10-19; ambos registrados
 - **Estado:** `[PENDIENTE]`
 - **Bloquea:** FASE-09, HU-10
 - **Contexto:** HU-10 vale 13 puntos y es la historia más grande del backlog. Sin fórmulas explícitas, cada número del panel sería una interpretación del implementador.
+- **Confirmación parcial (2026-11-10, dueño de producto, gate de FASE-06):** para la valoración de monitores quedan confirmadas la **escala entera de 1 a 5** y el **mínimo de 2 evaluaciones** para publicar el promedio; con menos se muestra "sin datos suficientes". Esto desbloquea FASE-06. Las demás métricas siguen `[PENDIENTE]` y el ADR continúa abierto para FASE-09.
 
 | Métrica | Fórmula propuesta | Duda a resolver |
 |---|---|---|
 | Monitorías realizadas | Conteo de sesiones con estado `COMPLETED` en el rango | ¿Cuentan las sesiones con inasistencia del estudiante? |
 | Demanda por asignatura | Conteo de reservas creadas, agrupado por asignatura | ¿Reservas creadas o reservas efectivamente atendidas? |
 | Horarios de mayor demanda | Conteo de reservas agrupado por día de semana y hora | ¿Se incluyen las canceladas? |
-| Valoración de monitores | Promedio de calificaciones, mínimo 5 evaluaciones para publicarse | ¿Cuál es el mínimo real? ¿Escala 1–5? |
+| Valoración de monitores | Promedio de calificaciones en escala entera 1–5, publicado a partir de 2 evaluaciones | `[CONFIRMADO]` 2026-11-10 (FASE-06) |
 | Estudiantes atendidos | Conteo distinto de estudiantes con al menos una sesión `COMPLETED` | — |
 | Cumplimiento del programa | Horas atendidas / horas comprometidas por el monitor | ¿Dónde se registran las horas comprometidas? |
 
-- **Pregunta:** ¿Puedes validar las seis fórmulas y responder las dudas de la columna derecha?
+- **Pregunta:** ¿Puedes validar las cinco fórmulas restantes y responder las dudas de la columna derecha?
 
 ---
 
@@ -347,7 +348,7 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-03 | Ninguno (ADR-010 confirmado el 2026-10-11) |
 | FASE-04 | Ninguno (ADR-010 confirmado el 2026-10-11 y ADR-011 el 2026-10-19) |
 | FASE-05 | Ninguno por ADR (ADR-010 confirmado) |
-| FASE-06 | ADR-013 (escala de calificación) |
+| FASE-06 | Ninguno (escala 1–5 y mínimo de 2 evaluaciones de ADR-013, y anonimato frente al monitor de RF-062, confirmados el 2026-11-10) |
 | FASE-07 | Ninguno (ADR-012 confirmado el 2026-10-20) |
 | FASE-08 | Ninguno por ADR (ADR-008 confirmado); sigue abierta la definición de RF-083 |
 | FASE-09 | ADR-013 |

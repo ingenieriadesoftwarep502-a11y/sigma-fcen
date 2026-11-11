@@ -21,6 +21,8 @@ api_v1_patterns: list[URLPattern | URLResolver] = [
     path("", include("apps.materials.urls")),
     # Tutoring sessions (FASE-05): record, correct, history and the topic catalog.
     path("", include("apps.tutoring_sessions.urls")),
+    # Evaluations (FASE-06): rate an attended session and read a monitor's average.
+    path("", include("apps.evaluations.urls")),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]

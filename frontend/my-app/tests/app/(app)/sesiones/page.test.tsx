@@ -17,6 +17,16 @@ vi.mock("@/lib/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/auth")>()),
   getCurrentUser: vi.fn(),
 }));
+vi.mock("@/lib/evaluations", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/evaluations")>()),
+  getMonitorRating: vi.fn().mockResolvedValue({
+    monitor: { id: "m-1", full_name: "Sofía Díaz" },
+    published: false,
+    average: null,
+    evaluation_count: null,
+    minimum_evaluations: 2,
+  }),
+}));
 vi.mock("@/lib/sessions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/sessions")>()),
   listMySessions: vi.fn(),

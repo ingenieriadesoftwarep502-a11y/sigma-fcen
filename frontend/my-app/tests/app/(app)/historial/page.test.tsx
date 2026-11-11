@@ -17,6 +17,10 @@ vi.mock("@/lib/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/auth")>()),
   getCurrentUser: vi.fn(),
 }));
+vi.mock("@/lib/evaluations", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/evaluations")>()),
+  countPendingEvaluations: vi.fn().mockResolvedValue(0),
+}));
 vi.mock("@/lib/sessions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/sessions")>()),
   listHistory: vi.fn(),

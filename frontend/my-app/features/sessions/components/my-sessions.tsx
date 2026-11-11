@@ -9,6 +9,7 @@ import EmptyState from "@/components/ui/empty-state";
 import Icon from "@/components/ui/icon";
 import PageHeader from "@/components/ui/page-header";
 import { slotDayLabel, slotTimeRange } from "@/features/availability/labels";
+import OwnRating from "@/features/evaluations/components/own-rating";
 import { requestErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -91,6 +92,8 @@ export default function MySessions() {
         titleId="sessions-title"
         lead={`Registra la asistencia y los temas de cada monitoría que ya empezó. Cada sesión registrada indica hasta cuándo puedes corregirla.`}
       />
+
+      <OwnRating />
 
       {notice && <Alert tone="success">{notice}</Alert>}
 

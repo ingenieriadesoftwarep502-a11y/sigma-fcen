@@ -14,6 +14,7 @@ import TabList, { panelId, tabId } from "@/components/ui/tabs";
 import MonitorSlots from "@/features/availability/components/monitor-slots";
 import { availableSlotsLabel, nextSlotLabel } from "@/features/availability/labels";
 import { useSession } from "@/features/auth/session/session-provider";
+import MonitorRating from "@/features/evaluations/components/monitor-rating";
 import MaterialLibrary from "@/features/materials/components/material-library";
 import { ApiError, requestErrorMessage } from "@/lib/api-client";
 import { SUBJECTS_PATH } from "@/lib/auth";
@@ -236,6 +237,7 @@ function MonitorRoster({ subject, term }: RosterProps) {
           sheet
           onClose={close}
         >
+          <MonitorRating key={`rating-${open.id}`} monitorId={open.id} />
           <MonitorSlots
             key={open.id}
             subject={{ id: subject.id, code: subject.code, name: subject.name }}

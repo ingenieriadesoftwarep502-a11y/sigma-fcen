@@ -273,6 +273,40 @@ export interface paths {
         patch: operations["departments_partial_update"];
         trace?: never;
     };
+    "/api/v1/evaluations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A student rates a session they attended, once (HU-07, CA-HU07-1 to CA-HU07-5). */
+        post: operations["evaluations_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/evaluations/mine/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The signed-in student's own evaluations, latest first. */
+        get: operations["evaluations_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/": {
         parameters: {
             query?: never;
@@ -403,6 +437,23 @@ export interface paths {
         };
         /** @description The requesting monitor's own assignments and their subjects' teachers (RN-009.1). */
         get: operations["monitor_assignments_mine_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/monitors/{id}/rating/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description RF-063: a monitor's average, or "sin datos suficientes" below the minimum (RN-007.5). */
+        get: operations["monitors_rating_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -723,6 +774,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tutoring-sessions/pending-evaluation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description T-06.10: the signed-in student's attended sessions still to evaluate, latest first. */
+        get: operations["tutoring_sessions_pending_evaluation_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/": {
         parameters: {
             query?: never;
@@ -1010,6 +1078,49 @@ export interface components {
             /** Nombre */
             readonly name: string;
         };
+        /** @description An evaluation as its author reads it: the session, its slot, the rating and comment. */
+        Evaluation: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly session_id: string;
+            readonly slot: components["schemas"]["ReservationSlot"];
+            /** Calificación */
+            readonly rating: number;
+            /** Comentario */
+            readonly comment: string;
+            /**
+             * Creada
+             * Format: date-time
+             */
+            readonly created_at: string;
+        };
+        /** @description The author is always the authenticated student, never a field of the body. */
+        EvaluationCreate: {
+            /**
+             * Format: uuid
+             * @description Id de la sesión a la que asististe.
+             */
+            session_id: string;
+            /** @description Calificación entera de 1 a 5. */
+            rating: number;
+            /** @description Comentario opcional; el monitor no lo ve. */
+            comment?: string;
+        };
+        /** @description The student's own evaluation, as their history shows it (CA-HU12-1). */
+        EvaluationSummary: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Calificación */
+            readonly rating: number;
+            /** Comentario */
+            readonly comment: string;
+            /**
+             * Creada
+             * Format: date-time
+             */
+            readonly created_at: string;
+        };
         Health: {
             status: string;
             database: string;
@@ -1021,7 +1132,7 @@ export interface components {
             readonly slot: components["schemas"]["ReservationSlot"];
             readonly status: components["schemas"]["HistoryItemStatusEnum"];
             readonly session: components["schemas"]["HistorySession"] | null;
-            readonly evaluation: unknown;
+            readonly evaluation: components["schemas"]["EvaluationSummary"] | null;
         };
         /**
          * @description * `COMPLETED` - COMPLETED
@@ -1137,6 +1248,20 @@ export interface components {
             /** @description Plantillas semanales activas de la monitoría. */
             readonly active_templates: number;
         };
+        /** @description RF-063, RN-007.5: below the minimum, `published` is false and there are no figures. */
+        MonitorRating: {
+            monitor: components["schemas"]["MonitorReference"];
+            published: boolean;
+            /**
+             * Format: double
+             * @description Promedio redondeado a 2 decimales; nulo sin datos suficientes.
+             */
+            average: number | null;
+            /** @description Número de evaluaciones; nulo sin datos suficientes. */
+            evaluation_count: number | null;
+            /** @description Evaluaciones necesarias para publicar el promedio. */
+            minimum_evaluations: number;
+        };
         /** @description Only what a student needs to recognize the monitor; no email (RNF-SEC). */
         MonitorReference: {
             /** Format: uuid */
@@ -1217,6 +1342,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Department"][];
+        };
+        PaginatedEvaluationList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Evaluation"][];
         };
         PaginatedHistoryItemList: {
             /** @example 123 */
@@ -2299,6 +2439,76 @@ export interface operations {
             };
         };
     };
+    evaluations_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvaluationCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvaluationCreate"];
+                "multipart/form-data": components["schemas"]["EvaluationCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Evaluation"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    evaluations_mine_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedEvaluationList"];
+                };
+            };
+        };
+    };
     health_retrieve: {
         parameters: {
             query?: never;
@@ -2590,6 +2800,34 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginatedMonitorOwnAssignmentList"];
                 };
+            };
+        };
+    };
+    monitors_rating_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorRating"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3365,6 +3603,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedTutoringSessionList"];
+                };
+            };
+        };
+    };
+    tutoring_sessions_pending_evaluation_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHistoryItemList"];
                 };
             };
         };

@@ -10,11 +10,14 @@ from django.db.models import Prefetch, QuerySet
 
 from apps.academics.models import Course
 from apps.accounts.models import Role, User
+from apps.evaluations.models import Evaluation
 from apps.reservations.domain.rules import SESSION_OUTCOMES
 from apps.reservations.models import Reservation
 from apps.tutoring_sessions.models import SessionAttendance, Topic, TutoringSession
 
 CLOSED_STATUSES = sorted(status.value for status in SESSION_OUTCOMES)
+# Where student_history leaves the student's own evaluation of each session (FASE-06).
+OWN_EVALUATIONS = "own_evaluations"
 
 
 def sessions_with_details() -> QuerySet[TutoringSession]:
@@ -51,12 +54,20 @@ def student_history(
 
     COMPLETED and NO_SHOW, including late cancellations (ADR-011), which have no session.
     The session hangs from the reservation's own attendance, so a late canceller never sees
-    the session the others attended.
+    the session the others attended. Only the student's own evaluation of each session comes
+    along, never another participant's (RF-062).
     """
     history = (
         Reservation.objects.filter(student_id=student_id, status__in=CLOSED_STATUSES)
         .select_related("slot__subject", "slot__monitor", "slot__term", "attendance__session")
-        .prefetch_related("attendance__session__topics")
+        .prefetch_related(
+            "attendance__session__topics",
+            Prefetch(
+                "attendance__session__evaluations",
+                queryset=Evaluation.objects.filter(student_id=student_id),
+                to_attr=OWN_EVALUATIONS,
+            ),
+        )
     )
     if subject is not None:
         history = history.filter(slot__subject_id=subject)

@@ -158,6 +158,11 @@
   color: var(--text-subtle);
 }
 
+.pendingHint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
 .pager {
   display: flex;
   align-items: center;
