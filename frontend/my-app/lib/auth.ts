@@ -31,6 +31,8 @@ export function subjectPath(id: number): string {
 }
 /** A teacher's own courses and their monitors (T-02.8). */
 export const MY_COURSES_PATH = "/mis-cursos";
+/** A teacher's follow-up of their courses: sessions, students and frequent topics (FASE-08). */
+export const TEACHING_PATH = "/seguimiento";
 /** A monitor's own assigned subjects and their teachers (RN-009.1). */
 export const MY_MONITORING_PATH = "/mis-monitorias";
 /** One assignment's workspace, where the monitor organizes its availability. */

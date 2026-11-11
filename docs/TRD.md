@@ -156,7 +156,7 @@ Mismo vocabulario en documentos, código, pruebas e interfaz. El detalle semánt
 | RF-080 | El docente debe poder consultar los monitores asignados a sus cursos | Media | `[PROPUESTA]` | — (ADR-008 cerrado) |
 | RF-081 | El docente debe poder consultar las sesiones realizadas en sus cursos | Media | `[PROPUESTA]` | — |
 | RF-082 | El docente debe poder consultar los estudiantes atendidos | Media | `[PROPUESTA]` | — |
-| RF-083 | El docente debe poder consultar las dificultades frecuentes reportadas | Media | `[PENDIENTE]` | falta definir cómo se clasifica una "dificultad" |
+| RF-083 | El docente debe poder consultar las dificultades frecuentes reportadas | Media | `[CONFIRMADO]` 2026-11-10 — opción A: los `Topic` más repetidos en las sesiones de sus cursos, agrupados y ordenados por frecuencia (desempate determinista), con agregación en base de datos y sin campos nuevos en `TutoringSession` | — |
 
 ### 4.9 Métricas (RF-09x)
 
@@ -341,7 +341,7 @@ Redacción de las historias conservada del documento base. Los criterios de acep
 | CA-HU09-1 | **Dado** un docente con cursos asignados, **cuando** consulta sus monitores, **entonces** obtiene solo los de sus cursos | `[PROPUESTA]` |
 | CA-HU09-2 | **Dado** un curso propio, **cuando** consulto las sesiones, **entonces** veo fecha, monitor, estudiante y temas | `[PROPUESTA]` |
 | CA-HU09-3 | **Dado** un curso ajeno, **cuando** intento consultarlo, **entonces** recibo `403` | `[PROPUESTA]` |
-| CA-HU09-4 | **Dado** sesiones con temas registrados, **cuando** consulto dificultades frecuentes, **entonces** obtengo los temas agrupados y ordenados por frecuencia | `[PENDIENTE]` RF-083 |
+| CA-HU09-4 | **Dado** sesiones con temas registrados, **cuando** consulto dificultades frecuentes, **entonces** obtengo los temas agrupados y ordenados por frecuencia | `[CONFIRMADO]` 2026-11-10 (RF-083, opción A) |
 
 ---
 
@@ -440,7 +440,7 @@ Cada requisito se conecta con su historia, su fase y su regla de negocio. Un req
 | RF-050 a RF-053 | HU-06, HU-12 | FASE-05 | RN-006 | Bloqueado |
 | RF-060 a RF-063 | HU-07 | FASE-06 | RN-007 | Bloqueado |
 | RF-070 a RF-073 | HU-08 | FASE-07 | RN-008 | En curso |
-| RF-080 a RF-083 | HU-09 | FASE-08 | RN-009 | Bloqueado |
+| RF-080 a RF-083 | HU-09 | FASE-08 | RN-009 | En revisión |
 | RF-090 a RF-092 | HU-10 | FASE-09 | RN-010 | Bloqueado |
 
 ---

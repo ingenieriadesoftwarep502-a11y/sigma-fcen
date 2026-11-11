@@ -32,7 +32,7 @@
 | [05](FASE-05-sesiones.md) | Sesiones e historial | HU-06, HU-12 | 11 | 010 (confirmado); RF-052 confirmado | Implementada — en revisión |
 | [06](FASE-06-evaluaciones.md) | Evaluación del servicio | HU-07 | 5 | 013 (escala y mínimo confirmados); RF-062 confirmado | Implementada — en revisión |
 | [07](FASE-07-materiales.md) | Repositorio académico | HU-08 | 8 | 012 (confirmado) | Implementada — en revisión |
-| [08](FASE-08-seguimiento-docente.md) | Seguimiento docente | HU-09 | 8 | 008 | Bloqueada |
+| [08](FASE-08-seguimiento-docente.md) | Seguimiento docente | HU-09 | 8 | 008 (confirmado); RF-083 confirmado | Implementada — en revisión |
 | [09](FASE-09-metricas.md) | Métricas administrativas | HU-10 | 13 | 013 | Bloqueada |
 | [10](FASE-10-hardening-despliegue.md) | Endurecimiento y despliegue | — | 0 | 014, 015 | Bloqueada |
 
@@ -182,6 +182,6 @@ Se actualiza al cerrar cada fase.
 | FASE-05 | Abierto (RF-052, temas y sesión por franja confirmados el 2026-10-22) | Completa | Pendiente: CI y PRs | — |
 | FASE-06 | Abierto (escala 1–5, mínimo de 2 evaluaciones y anonimato RF-062 confirmados el 2026-11-10) | Completa | Pendiente: CI y PRs | — |
 | FASE-07 | Abierto (ADR-012 confirmado el 2026-10-20) | Completa — adelantada por capacidad libre | Pendiente: CI, PRs y ticket de antivirus | — |
-| FASE-08 | Bloqueado | No iniciada | — | — |
+| FASE-08 | Abierto (RF-083 confirmado el 2026-11-10: temas más repetidos, opción A) | Completa | Pendiente: CI, PRs y verificación manual con dos docentes | — |
 | FASE-09 | Bloqueado | No iniciada | — | — |
 | FASE-10 | Bloqueado | No iniciada | — | — |

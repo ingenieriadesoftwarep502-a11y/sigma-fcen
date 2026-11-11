@@ -350,7 +350,7 @@ Provienen de la definición original del proyecto y se consideran confirmadas po
 | FASE-05 | Ninguno por ADR (ADR-010 confirmado) |
 | FASE-06 | Ninguno (escala 1–5 y mínimo de 2 evaluaciones de ADR-013, y anonimato frente al monitor de RF-062, confirmados el 2026-11-10) |
 | FASE-07 | Ninguno (ADR-012 confirmado el 2026-10-20) |
-| FASE-08 | Ninguno por ADR (ADR-008 confirmado); sigue abierta la definición de RF-083 |
+| FASE-08 | Ninguno (ADR-008 confirmado; RF-083 confirmado el 2026-11-10 por el dueño de producto: "dificultades frecuentes" son los `Topic` más repetidos en las sesiones de los cursos del docente, ordenados por frecuencia, sin migraciones nuevas) |
 | FASE-09 | ADR-013 |
 | FASE-10 | ADR-014, ADR-015 |
 
