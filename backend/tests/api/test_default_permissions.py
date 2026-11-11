@@ -1,7 +1,7 @@
 """Endpoints are private unless they explicitly opt out (T-00.5, RNF-SEC-003).
 
-With SessionAuthentication DRF answers 403 (not 401) to anonymous requests, because the
-scheme has no WWW-Authenticate challenge. The 401 status depends on ADR-007.
+The JWT cookie authentication of ADR-007 sends a WWW-Authenticate challenge, so DRF answers
+401 (not 403) to anonymous requests.
 """
 
 import pytest
@@ -15,7 +15,7 @@ PROTECTED_URL = "/test-only/protected/"
 def test_endpoint_without_explicit_permissions_rejects_anonymous(api_client: APIClient) -> None:
     response = api_client.get(PROTECTED_URL)
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -23,7 +23,9 @@ def test_endpoint_without_explicit_permissions_rejects_anonymous(api_client: API
 def test_endpoint_without_explicit_permissions_allows_authenticated(
     api_client: APIClient,
 ) -> None:
-    user = get_user_model().objects.create_user(username="probe", password="probe-pass-123")
+    user = get_user_model().objects.create_user(
+        email="probe@unal.edu.co", password="probe-pass-123"
+    )
     api_client.force_authenticate(user=user)
 
     response = api_client.get(PROTECTED_URL)

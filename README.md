@@ -82,6 +82,8 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+**Datos semilla del catálogo (opcional, solo desarrollo):** `python manage.py seed_catalog` crea seis departamentos de la FCEN (MAT, FIS, QUI, BIO, GEO, EST), 42 asignaturas de ejemplo y los períodos `2026-1` y `2026-2`. Es idempotente: se puede repetir sin duplicar datos ni sobrescribir cambios hechos por un administrador. No crea personas, cursos ni asignaciones de monitores.
+
 Comprobación: `http://localhost:8000/api/v1/health/` responde `{"status": "ok", "database": "ok"}`. La documentación de la API está en `http://localhost:8000/api/v1/docs/`.
 
 ### 2.4 Frontend

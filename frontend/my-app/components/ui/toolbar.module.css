@@ -1,0 +1,56 @@
+/* Layout of a list's filter toolbar: filters on one side, the count and actions on the other. */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.filters {
+  display: flex;
+  flex: 1 1 32rem;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+
+.select {
+  flex: 0 1 11rem;
+  min-width: 9.5rem;
+}
+
+.count {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 599.98px) {
+  .search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .select {
+    flex: 1 1 8rem;
+    min-width: 0;
+  }
+
+  .summary {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

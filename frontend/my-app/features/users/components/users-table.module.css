@@ -1,0 +1,17 @@
+.userColumn {
+  width: 40%;
+}
+
+.stateColumn {
+  width: 8.5rem;
+}
+
+.dateColumn {
+  width: 9rem;
+}
+
+.date {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

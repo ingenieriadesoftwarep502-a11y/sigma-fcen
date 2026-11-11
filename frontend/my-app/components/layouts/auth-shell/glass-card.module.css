@@ -1,0 +1,99 @@
+@property --spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2.5rem 2.25rem 2.25rem;
+  border-radius: 1.75rem;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.03) 55%),
+    rgb(10 14 12 / 0.4);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow:
+    0 40px 80px -30px rgb(0 0 0 / 0.75),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+  color: #fff;
+  animation: enter 1.2s var(--ease-out-expo) 0.2s both;
+}
+
+/* A thin band of light that travels around the edge. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--spin),
+    rgb(255 255 255 / 0.14) 0deg,
+    rgb(185 220 90 / 0.9) 45deg,
+    rgb(255 255 255 / 0.14) 100deg,
+    rgb(255 255 255 / 0.14) 200deg,
+    rgb(255 255 255 / 0.6) 245deg,
+    rgb(255 255 255 / 0.14) 290deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: edge 10s linear infinite;
+  pointer-events: none;
+}
+
+/* Soft light under the pointer. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    20rem circle at var(--glow-x, 50%) var(--glow-y, 0%),
+    rgb(255 255 255 / 0.1),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes edge {
+  to { --spin: 360deg; }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.97);
+    filter: blur(10px);
+  }
+}
+
+@media (max-width: 900px) {
+  .card {
+    padding: 2rem 1.5rem 1.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card::before {
+    animation: none;
+  }
+}

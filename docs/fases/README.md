@@ -24,14 +24,15 @@
 | Fase | Nombre | Historias | Puntos | ADR bloqueantes | Estado |
 |---|---|---|---:|---|---|
 | [00](FASE-00-fundaciones.md) | Fundaciones técnicas | — | 0 | 001, 002, 003, 004, 005, 006 (confirmados) | Cerrada |
-| [01](FASE-01-identidad-acceso.md) | Identidad y acceso | HU-01, HU-11 | 13 | 007, 008, 009 (confirmados) | Lista para iniciar |
-| [02](FASE-02-catalogo-academico.md) | Catálogo académico | HU-11 (parcial) | 5 | 008 (confirmado) | Pendiente de FASE-01 |
-| [03](FASE-03-disponibilidad.md) | Disponibilidad y búsqueda | HU-05, HU-02 | 10 | 010 | Bloqueada |
-| [04](FASE-04-reservas.md) | Reservas y cancelación | HU-03, HU-04 | 11 | 010, 011 | Bloqueada |
-| [05](FASE-05-sesiones.md) | Sesiones e historial | HU-06, HU-12 | 11 | 010 | Bloqueada |
-| [06](FASE-06-evaluaciones.md) | Evaluación del servicio | HU-07 | 5 | 013 | Bloqueada |
-| [07](FASE-07-materiales.md) | Repositorio académico | HU-08 | 8 | 012 | Bloqueada |
-| [08](FASE-08-seguimiento-docente.md) | Seguimiento docente | HU-09 | 8 | 008 | Bloqueada |
+| [01](FASE-01-identidad-acceso.md) | Identidad y acceso | HU-01, HU-11 | 13 | 007, 008, 009 (confirmados) | Implementada — PR #15 aprobada el 2026-10-22 |
+| [02](FASE-02-catalogo-academico.md) | Catálogo académico | HU-11 (parcial) | 5 | 008 (confirmado) | Implementada — en revisión (PR #16 aprobada) |
+| [03](FASE-03-disponibilidad.md) | Disponibilidad y búsqueda | HU-05, HU-02 | 10 | 010 (confirmado) | Implementada — en revisión |
+| [04](FASE-04-reservas.md) | Reservas y cancelación | HU-03, HU-04 | 11 | 010, 011 (confirmados) | Implementada — en revisión |
+| [04b](FASE-04b-notificaciones-correo.md) | Notificaciones por correo de reservas (fuera del plan original) | HU-03, HU-04 (eventos) | — | Ninguno | Implementada — en revisión |
+| [05](FASE-05-sesiones.md) | Sesiones e historial | HU-06, HU-12 | 11 | 010 (confirmado); RF-052 confirmado | Implementada — en revisión |
+| [06](FASE-06-evaluaciones.md) | Evaluación del servicio | HU-07 | 5 | 013 (escala y mínimo confirmados); RF-062 confirmado | Implementada — en revisión |
+| [07](FASE-07-materiales.md) | Repositorio académico | HU-08 | 8 | 012 (confirmado) | Implementada — en revisión |
+| [08](FASE-08-seguimiento-docente.md) | Seguimiento docente | HU-09 | 8 | 008 (confirmado); RF-083 confirmado | Implementada — en revisión |
 | [09](FASE-09-metricas.md) | Métricas administrativas | HU-10 | 13 | 013 | Bloqueada |
 | [10](FASE-10-hardening-despliegue.md) | Endurecimiento y despliegue | — | 0 | 014, 015 | Bloqueada |
 
@@ -173,13 +174,14 @@ Se actualiza al cerrar cada fase.
 | Fase | Gate de entrada | Implementación | DoD | Fecha de cierre |
 |---|---|---|---|---|
 | FASE-00 | Abierto (ADR 001–006) | Completa | Completa | 2026-09-27 |
-| FASE-01 | Abierto (ADR 007–009, contratos y CA confirmados) | No iniciada | — | — |
-| FASE-02 | Bloqueado | No iniciada | — | — |
-| FASE-03 | Bloqueado | No iniciada | — | — |
-| FASE-04 | Bloqueado | No iniciada | — | — |
-| FASE-05 | Bloqueado | No iniciada | — | — |
-| FASE-06 | Bloqueado | No iniciada | — | — |
-| FASE-07 | Bloqueado | No iniciada | — | — |
-| FASE-08 | Bloqueado | No iniciada | — | — |
+| FASE-01 | Abierto (ADR 007–009, contratos y CA confirmados) | Completa | Pendiente: fusión de PR #15 | — |
+| FASE-02 | Abierto (ADR-008, contratos y formato de período confirmados el 2026-09-29) | Completa | Pendiente: CI y PRs | — |
+| FASE-03 | Abierto (ADR-010 confirmado el 2026-10-11) | Completa | Pendiente: CI y PRs | — |
+| FASE-04 | Abierto (ADR-011 confirmado el 2026-10-19) | Completa | Pendiente: CI y PRs | — |
+| FASE-04b | Abierto (sin ADR bloqueante; amplía ADR-011 punto 3) | Completa | Pendiente: CI, PRs y credenciales de Resend en producción | — |
+| FASE-05 | Abierto (RF-052, temas y sesión por franja confirmados el 2026-10-22) | Completa | Pendiente: CI y PRs | — |
+| FASE-06 | Abierto (escala 1–5, mínimo de 2 evaluaciones y anonimato RF-062 confirmados el 2026-11-10) | Completa | Pendiente: CI y PRs | — |
+| FASE-07 | Abierto (ADR-012 confirmado el 2026-10-20) | Completa — adelantada por capacidad libre | Pendiente: CI, PRs y ticket de antivirus | — |
+| FASE-08 | Abierto (RF-083 confirmado el 2026-11-10: temas más repetidos, opción A) | Completa | Pendiente: CI, PRs y verificación manual con dos docentes | — |
 | FASE-09 | Bloqueado | No iniciada | — | — |
 | FASE-10 | Bloqueado | No iniciada | — | — |

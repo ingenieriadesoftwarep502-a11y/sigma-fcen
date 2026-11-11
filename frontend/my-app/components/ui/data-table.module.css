@@ -1,0 +1,250 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.scroller {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+}
+
+.scroller:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Loading a page: a bar sweeps along the top edge while the rows stay fully legible. */
+.scroller:has(> .table[aria-busy="true"])::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent) 0 0 / 40% 100%
+    no-repeat;
+  animation: sweep 1.1s var(--ease-out-expo) infinite;
+}
+
+@keyframes sweep {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+
+/* Fixed layout with explicit widths, so long names ellipsize instead of growing. */
+.table {
+  width: 100%;
+  min-width: 44rem;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.table[aria-busy="true"] {
+  cursor: progress;
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table thead th {
+  height: 2.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table tbody tr + tr {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.table tbody th {
+  font-weight: 400;
+}
+
+.table tbody tr {
+  transition: background var(--duration-fast);
+}
+
+.table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.table tbody tr[data-selected] {
+  background: var(--surface-selected);
+}
+
+.table tbody tr:hover:has(> .empty) {
+  background: none;
+}
+
+.empty {
+  padding: var(--space-7) var(--space-4);
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.state::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.state[data-active="false"] {
+  color: var(--text-muted);
+}
+
+.state[data-active="false"]::before {
+  border: 1.5px solid var(--text-subtle);
+  background: transparent;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* A page boundary is not a wait: override the shared button's busy cursor. */
+.pager button:is(:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.pageInfo {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 0;
+}
+
+.skeletonRow {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 8rem) minmax(0, 6rem);
+  align-items: center;
+  gap: var(--space-5);
+  height: 3.5rem;
+  padding: 0 var(--space-4);
+}
+
+.skeletonRow + .skeletonRow {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.skeletonLine {
+  height: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonLine[data-short] {
+  width: 70%;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonLine {
+    animation: none;
+  }
+
+  /* A still bar across the top still says "loading" without movement. */
+  .scroller:has(> .table[aria-busy="true"])::before {
+    background: var(--accent-line);
+  }
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-1) 0;
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.primary {
+  overflow: hidden;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: text-decoration-color var(--duration-fast);
+}
+
+.trigger:hover:not(:disabled) .primary {
+  text-decoration-color: var(--accent-line);
+}
+
+.secondary {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Numbers in their own column: tabular, muted when they are zero. */
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
