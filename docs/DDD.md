@@ -413,8 +413,8 @@ Catálogo normativo. **Cada regla exige al menos dos pruebas: camino feliz y vio
 
 | # | Regla | Estado |
 |---|---|---|
-| 009.1 | El docente solo ve información de sus propios cursos | `[PROPUESTA]` |
-| 009.2 | Las dificultades frecuentes se calculan agrupando `Topic` por frecuencia | `[PROPUESTA]` |
+| 009.1 | El docente solo ve información de sus propios cursos; una sesión es de un curso cuando su franja tiene la asignatura y el período del curso | `[CONFIRMADO]` 2026-11-10 (FASE-08) |
+| 009.2 | Las dificultades frecuentes se calculan agrupando `Topic` por frecuencia (número de sesiones descendente; empate por nombre y luego id) | `[CONFIRMADO]` 2026-11-10 (RF-083, opción A) |
 
 ### RN-010 · Métricas · `[PENDIENTE]` ADR-013
 

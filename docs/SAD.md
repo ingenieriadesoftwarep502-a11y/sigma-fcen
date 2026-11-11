@@ -278,8 +278,11 @@ Todos en `[PROPUESTA]`, salvo los de la fase 01, implementados en FASE-01 (permi
 | `GET` | `/api/v1/materials/subjects/` | autenticado: asignaturas donde puede subir | HU-08 | 07 |
 | `GET` | `/api/v1/materials/{id}/download/` | autenticado | HU-08 | 07 |
 | `DELETE` | `/api/v1/materials/{id}/` | autor o admin | HU-08 | 07 |
-| `GET` | `/api/v1/teaching/monitors/` | docente | HU-09 | 08 |
-| `GET` | `/api/v1/teaching/sessions/` | docente | HU-09 | 08 |
+| `GET` | `/api/v1/teaching/courses/` · `/api/v1/teaching/courses/{id}/` | docente (solo sus cursos) | HU-09 | 08 |
+| `GET` | `/api/v1/teaching/monitors/` | docente (solo sus cursos) | HU-09 | 08 |
+| `GET` | `/api/v1/teaching/sessions/` | docente (solo sus cursos) | HU-09 | 08 |
+| `GET` | `/api/v1/teaching/students/` | docente (solo sus cursos) | HU-09 | 08 |
+| `GET` | `/api/v1/teaching/frequent-topics/` | docente (solo sus cursos) | HU-09 | 08 |
 | `GET` | `/api/v1/analytics/dashboard/` | admin | HU-10 | 09 |
 
 ### 6.3 Manejo de errores · `[PROPUESTA]`

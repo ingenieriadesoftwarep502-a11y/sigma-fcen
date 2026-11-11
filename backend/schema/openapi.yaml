@@ -1486,6 +1486,240 @@ paths:
                 items:
                   $ref: '#/components/schemas/SubjectMonitor'
           description: ''
+  /api/v1/teaching/courses/:
+    get:
+      operationId: teaching_courses_list
+      description: The teacher's courses of a term with their indicators (panel course
+        selector).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - teaching
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeachingCourseList'
+          description: ''
+  /api/v1/teaching/courses/{id}/:
+    get:
+      operationId: teaching_courses_retrieve
+      description: One of the teacher's courses with its indicators, whatever its
+        term.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - teaching
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeachingCourse'
+          description: ''
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/teaching/frequent-topics/:
+    get:
+      operationId: teaching_frequent_topics_list
+      description: 'RF-083 (confirmed 2026-11-10), CA-HU09-4: topics most repeated
+        first.'
+      parameters:
+      - in: query
+        name: course
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de uno de tus cursos; si se indica, manda sobre el período.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - teaching
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFrequentTopicList'
+          description: ''
+  /api/v1/teaching/monitors/:
+    get:
+      operationId: teaching_monitors_list
+      description: 'RF-080, CA-HU09-1: the monitors assigned to the teacher''s courses.'
+      parameters:
+      - in: query
+        name: course
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de uno de tus cursos; si se indica, manda sobre el período.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - teaching
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeachingMonitorList'
+          description: ''
+  /api/v1/teaching/sessions/:
+    get:
+      operationId: teaching_sessions_list
+      description: 'RF-081, CA-HU09-2: the sessions of the teacher''s courses, latest
+        first.'
+      parameters:
+      - in: query
+        name: course
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de uno de tus cursos; si se indica, manda sobre el período.
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+        description: Desde este día (hora de Bogotá), incluido.
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+        description: Hasta este día (hora de Bogotá), incluido.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - teaching
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeachingSessionList'
+          description: ''
+  /api/v1/teaching/students/:
+    get:
+      operationId: teaching_students_list
+      description: 'RF-082: distinct students who attended; `count` is the number
+        of students.'
+      parameters:
+      - in: query
+        name: course
+        schema:
+          type: integer
+          minimum: 1
+        description: Id de uno de tus cursos; si se indica, manda sobre el período.
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: term
+        schema:
+          type: string
+          title: Código
+        description: Código del período; por defecto, el actual.
+      tags:
+      - teaching
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeachingStudentList'
+          description: ''
   /api/v1/terms/:
     get:
       operationId: terms_list
@@ -2311,6 +2545,15 @@ components:
       - attendance
       - reservation_id
       - student
+    Attendee:
+      type: object
+      description: 'A student who attended: only the name (RNF-SEC-004).'
+      properties:
+        full_name:
+          type: string
+          readOnly: true
+      required:
+      - full_name
     AuditEntry:
       type: object
       properties:
@@ -2637,6 +2880,32 @@ components:
       - created_at
       - id
       - rating
+    FrequentTopic:
+      type: object
+      description: 'RF-083: a topic and how many of the scope''s sessions worked on
+        it.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          title: Nombre
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        session_count:
+          type: integer
+          readOnly: true
+          description: Sesiones en las que se trabajó el tema.
+      required:
+      - id
+      - name
+      - session_count
+      - subject
     Health:
       type: object
       properties:
@@ -3118,6 +3387,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Evaluation'
+    PaginatedFrequentTopicList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrequentTopic'
     PaginatedHistoryItemList:
       type: object
       required:
@@ -3302,6 +3594,98 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TeacherCourse'
+    PaginatedTeachingCourseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeachingCourse'
+    PaginatedTeachingMonitorList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeachingMonitor'
+    PaginatedTeachingSessionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeachingSession'
+    PaginatedTeachingStudentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeachingStudent'
     PaginatedTutoringSessionList:
       type: object
       required:
@@ -4013,6 +4397,156 @@ components:
       - monitors
       - subject
       - term
+    TeachingCourse:
+      type: object
+      description: One of the teacher's courses with its follow-up indicators.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        group:
+          type: string
+          readOnly: true
+          title: Grupo
+        monitor_count:
+          type: integer
+          readOnly: true
+          description: Monitores asignados.
+        session_count:
+          type: integer
+          readOnly: true
+          description: Sesiones registradas.
+        student_count:
+          type: integer
+          readOnly: true
+          description: Estudiantes distintos que asistieron.
+      required:
+      - group
+      - id
+      - monitor_count
+      - session_count
+      - student_count
+      - subject
+      - term
+    TeachingMonitor:
+      type: object
+      description: 'RF-080: a monitor assigned to a subject and term of the teacher''s
+        courses.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        term:
+          type: string
+          title: Código
+          readOnly: true
+        committed_hours:
+          type: integer
+          readOnly: true
+          title: Horas comprometidas
+        session_count:
+          type: integer
+          readOnly: true
+          description: Sesiones que registró en la asignatura y el período.
+      required:
+      - committed_hours
+      - email
+      - full_name
+      - id
+      - session_count
+      - subject
+      - term
+    TeachingSession:
+      type: object
+      description: 'CA-HU09-2: date, monitor, students who attended and topics of
+        a session.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/SubjectReference'
+          readOnly: true
+        term:
+          type: string
+          readOnly: true
+        monitor:
+          allOf:
+          - $ref: '#/components/schemas/MonitorReference'
+          readOnly: true
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Topic'
+          readOnly: true
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attendee'
+          readOnly: true
+        duration_minutes:
+          type: integer
+          readOnly: true
+          title: Duración en minutos
+      required:
+      - duration_minutes
+      - ends_at
+      - id
+      - monitor
+      - starts_at
+      - students
+      - subject
+      - term
+      - topics
+    TeachingStudent:
+      type: object
+      description: 'RF-082: a distinct student who attended; only the name and their
+        attendance.'
+      properties:
+        full_name:
+          type: string
+          readOnly: true
+        session_count:
+          type: integer
+          description: Sesiones a las que asistió.
+        last_attended_at:
+          type: string
+          format: date-time
+          description: Inicio de su última sesión.
+      required:
+      - full_name
+      - last_attended_at
+      - session_count
     Topic:
       type: object
       properties:

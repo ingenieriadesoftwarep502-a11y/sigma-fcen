@@ -141,6 +141,20 @@ describe("AppNavigation", () => {
     expect(screen.queryByRole("link", { name: "Mis monitorías" })).not.toBeInTheDocument();
   });
 
+  it("links teachers, and only teachers, to the follow-up of their courses (FASE-08)", async () => {
+    await renderFor(["TEACHER"]);
+    expect(screen.getByRole("link", { name: "Seguimiento" })).toHaveAttribute(
+      "href",
+      "/seguimiento",
+    );
+  });
+
+  it("offers no follow-up link to students, monitors or administrators", async () => {
+    await renderFor(["STUDENT", "MONITOR", "ADMIN"]);
+
+    expect(screen.queryByRole("link", { name: "Seguimiento" })).not.toBeInTheDocument();
+  });
+
   it("links administrators to the catalog", async () => {
     await renderFor(["ADMIN"]);
 

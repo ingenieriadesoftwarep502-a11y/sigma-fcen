@@ -23,6 +23,8 @@ api_v1_patterns: list[URLPattern | URLResolver] = [
     path("", include("apps.tutoring_sessions.urls")),
     # Evaluations (FASE-06): rate an attended session and read a monitor's average.
     path("", include("apps.evaluations.urls")),
+    # Teacher follow-up (FASE-08): read-only views of the teacher's own courses.
+    path("teaching/", include("apps.analytics.urls")),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]

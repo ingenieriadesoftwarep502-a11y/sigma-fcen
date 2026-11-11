@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "apps.tutoring_sessions",
     "apps.evaluations",
     "apps.notifications",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [

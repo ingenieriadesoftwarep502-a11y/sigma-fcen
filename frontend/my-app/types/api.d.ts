@@ -634,6 +634,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teaching/courses/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The teacher's courses of a term with their indicators (panel course selector). */
+        get: operations["teaching_courses_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teaching/courses/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One of the teacher's courses with its indicators, whatever its term. */
+        get: operations["teaching_courses_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teaching/frequent-topics/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description RF-083 (confirmed 2026-11-10), CA-HU09-4: topics most repeated first. */
+        get: operations["teaching_frequent_topics_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teaching/monitors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description RF-080, CA-HU09-1: the monitors assigned to the teacher's courses. */
+        get: operations["teaching_monitors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teaching/sessions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description RF-081, CA-HU09-2: the sessions of the teacher's courses, latest first. */
+        get: operations["teaching_sessions_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teaching/students/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description RF-082: distinct students who attended; `count` is the number of students. */
+        get: operations["teaching_students_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/terms/": {
         parameters: {
             query?: never;
@@ -983,6 +1085,10 @@ export interface components {
             readonly student: components["schemas"]["MonitorReference"];
             readonly attendance: components["schemas"]["AttendanceEnum"];
         };
+        /** @description A student who attended: only the name (RNF-SEC-004). */
+        Attendee: {
+            readonly full_name: string;
+        };
         AuditEntry: {
             id: number;
             action: components["schemas"]["ActionEnum"];
@@ -1120,6 +1226,16 @@ export interface components {
              * Format: date-time
              */
             readonly created_at: string;
+        };
+        /** @description RF-083: a topic and how many of the scope's sessions worked on it. */
+        FrequentTopic: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Nombre */
+            readonly name: string;
+            readonly subject: components["schemas"]["SubjectReference"];
+            /** @description Sesiones en las que se trabajó el tema. */
+            readonly session_count: number;
         };
         Health: {
             status: string;
@@ -1358,6 +1474,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Evaluation"][];
         };
+        PaginatedFrequentTopicList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["FrequentTopic"][];
+        };
         PaginatedHistoryItemList: {
             /** @example 123 */
             count: number;
@@ -1477,6 +1608,66 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["TeacherCourse"][];
+        };
+        PaginatedTeachingCourseList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TeachingCourse"][];
+        };
+        PaginatedTeachingMonitorList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TeachingMonitor"][];
+        };
+        PaginatedTeachingSessionList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TeachingSession"][];
+        };
+        PaginatedTeachingStudentList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TeachingStudent"][];
         };
         PaginatedTutoringSessionList: {
             /** @example 123 */
@@ -1805,6 +1996,63 @@ export interface components {
             /** Grupo */
             readonly group: string;
             readonly monitors: components["schemas"]["AssignedMonitor"][];
+        };
+        /** @description One of the teacher's courses with its follow-up indicators. */
+        TeachingCourse: {
+            readonly id: number;
+            readonly subject: components["schemas"]["SubjectReference"];
+            /** Código */
+            readonly term: string;
+            /** Grupo */
+            readonly group: string;
+            /** @description Monitores asignados. */
+            readonly monitor_count: number;
+            /** @description Sesiones registradas. */
+            readonly session_count: number;
+            /** @description Estudiantes distintos que asistieron. */
+            readonly student_count: number;
+        };
+        /** @description RF-080: a monitor assigned to a subject and term of the teacher's courses. */
+        TeachingMonitor: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly full_name: string;
+            /** Format: email */
+            readonly email: string;
+            readonly subject: components["schemas"]["SubjectReference"];
+            /** Código */
+            readonly term: string;
+            /** Horas comprometidas */
+            readonly committed_hours: number;
+            /** @description Sesiones que registró en la asignatura y el período. */
+            readonly session_count: number;
+        };
+        /** @description CA-HU09-2: date, monitor, students who attended and topics of a session. */
+        TeachingSession: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: date-time */
+            readonly starts_at: string;
+            /** Format: date-time */
+            readonly ends_at: string;
+            readonly subject: components["schemas"]["SubjectReference"];
+            readonly term: string;
+            readonly monitor: components["schemas"]["MonitorReference"];
+            readonly topics: components["schemas"]["Topic"][];
+            readonly students: components["schemas"]["Attendee"][];
+            /** Duración en minutos */
+            readonly duration_minutes: number;
+        };
+        /** @description RF-082: a distinct student who attended; only the name and their attendance. */
+        TeachingStudent: {
+            readonly full_name: string;
+            /** @description Sesiones a las que asistió. */
+            session_count: number;
+            /**
+             * Format: date-time
+             * @description Inicio de su última sesión.
+             */
+            last_attended_at: string;
         };
         Topic: {
             /** Format: uuid */
@@ -3214,6 +3462,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubjectMonitor"][];
+                };
+            };
+        };
+    };
+    teaching_courses_list: {
+        parameters: {
+            query?: {
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTeachingCourseList"];
+                };
+            };
+        };
+    };
+    teaching_courses_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeachingCourse"];
+                };
+            };
+            /** @description Error en el formato de SAD §6.3 (type, title, detail…). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    teaching_frequent_topics_list: {
+        parameters: {
+            query?: {
+                /** @description Id de uno de tus cursos; si se indica, manda sobre el período. */
+                course?: number;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedFrequentTopicList"];
+                };
+            };
+        };
+    };
+    teaching_monitors_list: {
+        parameters: {
+            query?: {
+                /** @description Id de uno de tus cursos; si se indica, manda sobre el período. */
+                course?: number;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTeachingMonitorList"];
+                };
+            };
+        };
+    };
+    teaching_sessions_list: {
+        parameters: {
+            query?: {
+                /** @description Id de uno de tus cursos; si se indica, manda sobre el período. */
+                course?: number;
+                /** @description Desde este día (hora de Bogotá), incluido. */
+                date_from?: string;
+                /** @description Hasta este día (hora de Bogotá), incluido. */
+                date_to?: string;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTeachingSessionList"];
+                };
+            };
+        };
+    };
+    teaching_students_list: {
+        parameters: {
+            query?: {
+                /** @description Id de uno de tus cursos; si se indica, manda sobre el período. */
+                course?: number;
+                /** @description Un número de página dentro del conjunto de resultados paginado. */
+                page?: number;
+                /** @description Número de resultados a devolver por página. */
+                page_size?: number;
+                /** @description Código del período; por defecto, el actual. */
+                term?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTeachingStudentList"];
                 };
             };
         };
