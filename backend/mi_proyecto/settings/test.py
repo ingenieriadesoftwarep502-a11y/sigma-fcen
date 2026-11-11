@@ -6,3 +6,6 @@ DEBUG = False
 
 # Fast hashing keeps tests quick; never use this hasher outside tests.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# Messages stay in django.core.mail.outbox; nothing leaves the machine.
+EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

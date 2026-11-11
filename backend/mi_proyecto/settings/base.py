@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.reservations",
     "apps.materials",
     "apps.tutoring_sessions",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -189,6 +190,23 @@ MATERIAL_MAX_FILE_BYTES = 20 * 1024 * 1024
 
 # A recorded session can be corrected for this many hours; then it is final.
 SESSION_EDIT_WINDOW_HOURS = 48
+
+# --- Transactional email (reservation notifications) ----------------------------------------
+
+# Development prints messages to the console. Production delivers through Resend's SMTP relay
+# with Django's standard backend; the API key is the SMTP password and never lives in the repo.
+EMAIL_BACKEND = env.str("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = env.str("EMAIL_HOST", default="smtp.resend.com")
+EMAIL_PORT = env.int("EMAIL_PORT", default=465)
+# Port 465 is implicit TLS; Django rejects SSL and STARTTLS together.
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=True)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="resend")
+EMAIL_HOST_PASSWORD = env.str("RESEND_API_KEY", default="")
+# Resend only accepts senders on a verified domain.
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="SIGMA-FCEN <notificaciones@localhost>")
+# Seconds; a slow relay must not hold a worker for long.
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
 
 # --- Logging --------------------------------------------------------------------------------
 

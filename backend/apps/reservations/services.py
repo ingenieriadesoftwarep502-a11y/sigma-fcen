@@ -13,8 +13,9 @@ Lock order is always the acting user's row, then the slot, then the reservation:
 lock only the slot. With one order, a same-user reserve and cancel on one slot cannot
 deadlock. No external call runs inside a transaction (FASE-04 §11).
 
-Domain events `ReservationConfirmed` and `ReservationCancelled` (DDD §7) are documented
-extension points: notifications are not implemented in v1 (ADR-011, item 3).
+Domain events `ReservationConfirmed` and `ReservationCancelled` (DDD §7) notify the student
+and the monitor by email (FASE-04b). The messages are queued with `transaction.on_commit`, so
+they leave only after the commit and a failed send never undoes the change.
 """
 
 from datetime import datetime
@@ -26,6 +27,7 @@ from django.utils import timezone
 from apps.accounts.models import Role, User
 from apps.availability.domain.rules import SlotStatus
 from apps.availability.models import AvailabilitySlot
+from apps.notifications.services import notify_reservation_booked, notify_reservation_cancelled
 from apps.reservations.domain.rules import (
     SLOT_FIELD,
     ReservationConflictError,
@@ -160,6 +162,7 @@ def reserve_slot(*, student: User, slot: AvailabilitySlot, note: str | None = No
     if confirmed + 1 >= locked.capacity:
         locked.transition_to(SlotStatus.RESERVED)
     slot.status = locked.status
+    notify_reservation_booked(reservation, slot=locked)
     return reservation
 
 
@@ -207,4 +210,5 @@ def cancel_reservation(
     locked.transition_to(outcome, by=actor, at=now, reason=cleaned)
     if slot.status == SlotStatus.RESERVED:
         slot.transition_to(SlotStatus.AVAILABLE)
+    notify_reservation_cancelled(locked, slot=slot)
     return locked
