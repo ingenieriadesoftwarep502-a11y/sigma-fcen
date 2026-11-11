@@ -3,6 +3,7 @@
 import hashlib
 import importlib
 import logging
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -38,6 +39,10 @@ def isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> pytest.Monk
     empty_env_file = tmp_path / "empty.env"
     empty_env_file.write_text("", encoding="utf-8")
     monkeypatch.setenv("DJANGO_ENV_FILE", str(empty_env_file))
+    # The developer's .env is already in os.environ (loaded at startup); drop what it may set.
+    for key in list(os.environ):
+        if key.startswith("EMAIL_"):
+            monkeypatch.delenv(key)
     for key, value in REQUIRED_ENV.items():
         monkeypatch.setenv(key, value)
     return monkeypatch

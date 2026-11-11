@@ -422,7 +422,7 @@ def test_t_05_11_ca_hu12_1_history_shows_subject_date_monitor_and_evaluation(
         {"id": str(world["cadena"].pk), "name": "Regla de la cadena"}
     ]
     assert "notes" not in item["session"]
-    assert item["evaluation"] is None  # FASE-06
+    assert item["evaluation"] is None  # not evaluated yet (FASE-06)
 
 
 def test_t_05_11_history_includes_no_shows_and_late_cancellations(world: dict[str, Any]) -> None:
@@ -528,7 +528,8 @@ def test_t_05_15_history_has_no_n_plus_one(world: dict[str, Any]) -> None:
         response = client.get(HISTORY_URL)
 
     assert response.json()["count"] == 5
-    assert len(queries) <= 3, [query["sql"] for query in queries]
+    # Count, page, topics and the student's own evaluations (FASE-06): fixed, whatever the rows.
+    assert len(queries) <= 4, [query["sql"] for query in queries]
 
 
 # --- /topics/ (T-05.21) ---------------------------------------------------------------------------

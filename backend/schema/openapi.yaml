@@ -650,6 +650,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/Department'
           description: ''
+  /api/v1/evaluations/:
+    post:
+      operationId: evaluations_create
+      description: A student rates a session they attended, once (HU-07, CA-HU07-1
+        to CA-HU07-5).
+      tags:
+      - evaluations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluationCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EvaluationCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EvaluationCreate'
+        required: true
+      security:
+      - cookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evaluation'
+          description: ''
+        '400':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '403':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+        '409':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
+  /api/v1/evaluations/mine/:
+    get:
+      operationId: evaluations_mine_list
+      description: The signed-in student's own evaluations, latest first.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      tags:
+      - evaluations
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEvaluationList'
+          description: ''
   /api/v1/health/:
     get:
       operationId: health_retrieve
@@ -950,6 +1012,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedMonitorOwnAssignmentList'
           description: ''
+  /api/v1/monitors/{id}/rating/:
+    get:
+      operationId: monitors_rating_retrieve
+      description: 'RF-063: a monitor''s average, or "sin datos suficientes" below
+        the minimum (RN-007.5).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - monitors
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitorRating'
+          description: ''
+        '404':
+          description: Error en el formato de SAD §6.3 (type, title, detail…).
   /api/v1/reservations/:
     post:
       operationId: reservations_create
@@ -1781,6 +1868,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedTutoringSessionList'
           description: ''
+  /api/v1/tutoring-sessions/pending-evaluation/:
+    get:
+      operationId: tutoring_sessions_pending_evaluation_list
+      description: 'T-06.10: the signed-in student''s attended sessions still to evaluate,
+        latest first.'
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      tags:
+      - tutoring-sessions
+      security:
+      - cookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHistoryItemList'
+          description: ''
   /api/v1/users/:
     get:
       operationId: users_list
@@ -2437,6 +2553,90 @@ components:
       - code
       - id
       - name
+    Evaluation:
+      type: object
+      description: 'An evaluation as its author reads it: the session, its slot, the
+        rating and comment.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        session_id:
+          type: string
+          format: uuid
+          readOnly: true
+        slot:
+          allOf:
+          - $ref: '#/components/schemas/ReservationSlot'
+          readOnly: true
+        rating:
+          type: integer
+          readOnly: true
+          title: Calificación
+        comment:
+          type: string
+          readOnly: true
+          title: Comentario
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Creada
+      required:
+      - comment
+      - created_at
+      - id
+      - rating
+      - session_id
+      - slot
+    EvaluationCreate:
+      type: object
+      description: The author is always the authenticated student, never a field of
+        the body.
+      properties:
+        session_id:
+          type: string
+          format: uuid
+          description: Id de la sesión a la que asististe.
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+          description: Calificación entera de 1 a 5.
+        comment:
+          type: string
+          description: Comentario opcional; el monitor no lo ve.
+          maxLength: 500
+      required:
+      - rating
+      - session_id
+    EvaluationSummary:
+      type: object
+      description: The student's own evaluation, as their history shows it (CA-HU12-1).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        rating:
+          type: integer
+          readOnly: true
+          title: Calificación
+        comment:
+          type: string
+          readOnly: true
+          title: Comentario
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Creada
+      required:
+      - comment
+      - created_at
+      - id
+      - rating
     Health:
       type: object
       properties:
@@ -2469,6 +2669,8 @@ components:
           nullable: true
           readOnly: true
         evaluation:
+          allOf:
+          - $ref: '#/components/schemas/EvaluationSummary'
           nullable: true
           readOnly: true
       required:
@@ -2738,6 +2940,33 @@ components:
       - teachers
       - term
       - upcoming_slots
+    MonitorRating:
+      type: object
+      description: 'RF-063, RN-007.5: below the minimum, `published` is false and
+        there are no figures.'
+      properties:
+        monitor:
+          $ref: '#/components/schemas/MonitorReference'
+        published:
+          type: boolean
+        average:
+          type: number
+          format: double
+          nullable: true
+          description: Promedio redondeado a 2 decimales; nulo sin datos suficientes.
+        evaluation_count:
+          type: integer
+          nullable: true
+          description: Número de evaluaciones; nulo sin datos suficientes.
+        minimum_evaluations:
+          type: integer
+          description: Evaluaciones necesarias para publicar el promedio.
+      required:
+      - average
+      - evaluation_count
+      - minimum_evaluations
+      - monitor
+      - published
     MonitorReference:
       type: object
       description: Only what a student needs to recognize the monitor; no email (RNF-SEC).
@@ -2866,6 +3095,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Department'
+    PaginatedEvaluationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evaluation'
     PaginatedHistoryItemList:
       type: object
       required:

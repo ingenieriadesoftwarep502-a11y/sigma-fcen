@@ -11,6 +11,8 @@ from apps.academics.models import Subject
 from apps.accounts.models import User
 from apps.availability.models import AvailabilitySlot
 from apps.availability.serializers import MonitorReferenceSerializer
+from apps.evaluations.models import Evaluation
+from apps.evaluations.serializers import EvaluationSummarySerializer
 from apps.materials.domain.rules import MaterialKind
 from apps.materials.models import Material
 from apps.reservations.models import Reservation
@@ -21,7 +23,7 @@ from apps.tutoring_sessions.domain.rules import (
     AttendanceStatus,
 )
 from apps.tutoring_sessions.models import SessionAttendance, Topic, TutoringSession
-from apps.tutoring_sessions.selectors import CLOSED_STATUSES
+from apps.tutoring_sessions.selectors import CLOSED_STATUSES, OWN_EVALUATIONS
 
 ATTENDANCE_CHOICES = [status.value for status in AttendanceStatus]
 FINAL_ATTENDANCE_MESSAGE = "La asistencia no se puede editar después de registrar la sesión."
@@ -142,10 +144,20 @@ class HistoryItemSerializer(serializers.ModelSerializer[Reservation]):
             return None
         return dict(HistorySessionSerializer(session).data)
 
-    @extend_schema_field(serializers.JSONField(allow_null=True))
-    def get_evaluation(self, reservation: Reservation) -> None:
-        """The student's evaluation arrives with FASE-06 (ADR-013); null until then."""
-        return None
+    @extend_schema_field(EvaluationSummarySerializer(allow_null=True))
+    def get_evaluation(self, reservation: Reservation) -> dict[str, Any] | None:
+        """The reservation's student's own evaluation of the session (FASE-06), or null.
+
+        `student_history` prefetches it; the lookup is only a fallback for other querysets.
+        """
+        try:
+            session = reservation.attendance.session
+        except SessionAttendance.DoesNotExist:
+            return None
+        own: list[Evaluation] | None = getattr(session, OWN_EVALUATIONS, None)
+        if own is None:
+            own = list(session.evaluations.filter(student_id=reservation.student_id))
+        return dict(EvaluationSummarySerializer(own[0]).data) if own else None
 
 
 class AttendanceMarkSerializer(serializers.Serializer[dict[str, Any]]):

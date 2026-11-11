@@ -2,11 +2,13 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import MySessions from "@/features/sessions/components/my-sessions";
+import { getMonitorRating } from "@/lib/evaluations";
 import { formatDateTime } from "@/lib/format";
 import { listMaterials } from "@/lib/materials";
 import { listMySessions, listPendingSlots, listTopics } from "@/lib/sessions";
 
 import { pageOf } from "../availability/fixtures";
+import { NOT_ENOUGH_DATA } from "../evaluations/fixtures";
 import { CADENA, pendingSlot, session } from "./fixtures";
 
 vi.mock("@/lib/sessions", async (importOriginal) => ({
@@ -14,6 +16,26 @@ vi.mock("@/lib/sessions", async (importOriginal) => ({
   listPendingSlots: vi.fn(),
   listMySessions: vi.fn(),
   listTopics: vi.fn(),
+}));
+vi.mock("@/features/auth/session/session-provider", () => ({
+  useSession: () => ({
+    session: {
+      status: "authenticated",
+      user: {
+        id: "m-1",
+        email: "sofia@unal.edu.co",
+        first_name: "Sofía",
+        last_name: "Díaz",
+        roles: ["MONITOR"],
+      },
+    },
+    reload: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+vi.mock("@/lib/evaluations", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/evaluations")>()),
+  getMonitorRating: vi.fn(),
 }));
 vi.mock("@/lib/materials", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/materials")>()),
@@ -28,6 +50,7 @@ describe("MySessions (T-05.16)", () => {
     vi.mocked(listMySessions).mockResolvedValue(pageOf([session()]));
     vi.mocked(listTopics).mockResolvedValue([CADENA]);
     vi.mocked(listMaterials).mockResolvedValue(pageOf([]));
+    vi.mocked(getMonitorRating).mockResolvedValue(NOT_ENOUGH_DATA);
   });
 
   afterEach(() => {
@@ -97,5 +120,12 @@ describe("MySessions (T-05.16)", () => {
     render(<MySessions />);
 
     expect(await screen.findByText("No tienes monitorías por registrar.")).toBeInTheDocument();
+  });
+
+  it("shows the monitor's own rating, never who gave it (T-06.12, RF-062)", async () => {
+    render(<MySessions />);
+
+    expect(await screen.findByText("Sin datos suficientes")).toBeInTheDocument();
+    expect(getMonitorRating).toHaveBeenCalledWith("m-1", expect.any(AbortSignal));
   });
 });

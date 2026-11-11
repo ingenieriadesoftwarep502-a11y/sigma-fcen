@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.reservations",
     "apps.materials",
     "apps.tutoring_sessions",
+    "apps.evaluations",
     "apps.notifications",
 ]
 
@@ -190,6 +191,11 @@ MATERIAL_MAX_FILE_BYTES = 20 * 1024 * 1024
 
 # A recorded session can be corrected for this many hours; then it is final.
 SESSION_EDIT_WINDOW_HOURS = 48
+
+# --- Evaluations (FASE-06, RN-007.5, confirmed 2026-11-10) ----------------------------------
+
+# A monitor's average is published from this many evaluations; below it, "sin datos suficientes".
+EVALUATION_MIN_TO_PUBLISH = 2
 
 # --- Transactional email (reservation notifications) ----------------------------------------
 

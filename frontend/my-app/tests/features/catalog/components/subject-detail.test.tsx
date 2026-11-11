@@ -8,9 +8,11 @@ import { ApiError } from "@/lib/api-client";
 import { getCurrentUser } from "@/lib/auth";
 import { NO_SLOT_SEARCH_FILTERS, searchSlots } from "@/lib/availability";
 import { getCurrentTerm, getSubject, listAllTerms, listSubjectMonitors } from "@/lib/catalog";
+import { getMonitorRating } from "@/lib/evaluations";
 import { listMaterials } from "@/lib/materials";
 
 import { CALCULO_REF, INDIVIDUAL_SLOT, pageOf, TERM_1, TERM_2 } from "../../availability/fixtures";
+import { rating } from "../../evaluations/fixtures";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -31,6 +33,10 @@ vi.mock("@/lib/catalog", async (importOriginal) => ({
 vi.mock("@/lib/materials", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/materials")>()),
   listMaterials: vi.fn(),
+}));
+vi.mock("@/lib/evaluations", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/evaluations")>()),
+  getMonitorRating: vi.fn(),
 }));
 vi.mock("@/lib/availability", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/availability")>()),
@@ -82,6 +88,9 @@ describe("SubjectDetail", () => {
     getSubjectMock.mockResolvedValue(CALCULO);
     monitorsMock.mockResolvedValue(MONITORS);
     searchMock.mockResolvedValue(pageOf([INDIVIDUAL_SLOT]));
+    vi.mocked(getMonitorRating).mockResolvedValue(
+      rating({ monitor: { id: "m-2", full_name: "Luis Rojas" } }),
+    );
   });
 
   afterEach(() => {
@@ -169,6 +178,9 @@ describe("SubjectDetail", () => {
 
     const panel = await screen.findByRole("dialog", { name: "Luis Rojas" });
     expect(await within(panel).findByText("1 franja disponible")).toBeInTheDocument();
+    // T-06.12: the student sees the monitor's average before booking.
+    expect(await within(panel).findByText("4,5 de 5")).toBeInTheDocument();
+    expect(getMonitorRating).toHaveBeenCalledWith("m-2", expect.any(AbortSignal));
     expect(searchMock).toHaveBeenCalledWith(
       1,
       {
