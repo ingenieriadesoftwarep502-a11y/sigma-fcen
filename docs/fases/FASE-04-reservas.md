@@ -55,7 +55,7 @@ Un `if` en el serializer **no** resuelve esto. Entre la comprobación y la escri
 ### No entra
 
 - Registro de lo ocurrido en la sesión — es FASE-05.
-- Notificaciones por correo (se documentan como evento de dominio, no se implementan).
+- Notificaciones por correo (se documentan como evento de dominio; se implementaron después en [FASE-04b](FASE-04b-notificaciones-correo.md)).
 - Lista de espera sobre franjas ocupadas (fuera de alcance de la versión 1).
 - Reprogramación: cancelar y volver a reservar es el flujo de la versión 1.
 
